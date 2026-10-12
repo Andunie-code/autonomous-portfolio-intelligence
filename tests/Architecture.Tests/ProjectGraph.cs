@@ -26,7 +26,9 @@ internal sealed class ProjectGraph
         var packages = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
         foreach (var file in Directory.EnumerateFiles(sourceRoot, "*.csproj", SearchOption.AllDirectories))
         {
-            var document = XDocument.Load(file);
+            // Load from a stream: XDocument.Load(string) treats the argument as a URI and fails on some valid paths.
+            using var stream = File.OpenRead(file);
+            var document = XDocument.Load(stream);
             var name = System.IO.Path.GetFileNameWithoutExtension(file);
             direct[name] = document.Descendants("ProjectReference")
                 .Select(e => System.IO.Path.GetFileNameWithoutExtension(e.Attribute("Include")!.Value))
