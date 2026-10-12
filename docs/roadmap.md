@@ -2,7 +2,7 @@
 
 Son güncelleme: 2026-10-13 (rev. 3) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
-> Durum: Hiçbir milestone'a başlanmadı. Kod, iskelet ve altyapı yok. Bir milestone, kabul kriterlerindeki testler **gerçekten uygulanıp geçtiğinde** tamamlanmış sayılır. M0 için kullanıcı onayı gerekir (B3).
+> Durum: **M0 yerelde tamamlandı** (2026-10-13; doğrulama `716a1bd` commit'inde, temiz klonda). Uzak depo: private GitHub deposu `Andunie-code/autonomous-portfolio-intelligence`. M1 ve sonrası başlamadı; her milestone ayrı kullanıcı onayı gerektirir. Bir milestone, kabul kriterlerindeki testler **gerçekten uygulanıp geçtiğinde** tamamlanmış sayılır.
 
 ## Sıralamanın mantığı
 1. Önce kanıt altyapısı (veri, backtest, değerlendirme), sonra para hareketi.
@@ -22,9 +22,9 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
 
 ---
 
-### M0 — Temel (S)
+### M0 — Temel (S) — ✅ yerelde tamamlandı (2026-10-13)
 - **Kapsam:**
-  - git deposu (yalnızca yerel; uzak repo TBD);
+  - git deposu (yerel; uzak repo olarak private GitHub deposu kullanıcı onaylı, kimlik doğrulama bekleniyor);
   - solution iskeleti: kernel, modüller, iki host;
   - docker-compose ile dev PostgreSQL; migration altyapısı;
   - **tek komutluk yerel doğrulama script'i** (build, test, mimari testler; T16);

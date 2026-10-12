@@ -17,6 +17,14 @@ Kapsam: yerel iskelet, migration altyapısı, loglama/redaction, mimari ve repo 
 | Barındırılan CI (GitHub Actions) **eklenmedi** | Private repoda dakika kotası ücretlendirilebilir; T16'ya göre yerel doğrulama script'i yeterli. İleride kullanıcı kararıyla eklenebilir |
 | Script'lerde regex eşleştirmesi kültürden bağımsız | tr-TR yerel ayarında büyük/küçük harfe duyarsız `[A-Z]` aralığı `I` harfini eşleştirmiyor (M0'da yakalanan hata) |
 
+**M0 doğrulama sonuçları (2026-10-13)**
+- `scripts/verify.ps1`: build 0 uyarı ve 0 hata; testler 44/44 geçti (Architecture 28, Infrastructure 16); secret scan geçti. **Temiz klonda** da geçti.
+- `scripts/dev-up.ps1`: volume silindikten sonra sıfırdan çalıştırıldı, migration 1 uygulandı; ikinci koşu idempotent (0 yeni). Port yalnızca `127.0.0.1:55432`.
+- Kanarya testi: her iki host'un gerçek console çıktısında maskelendi.
+- Claude Code deny kuralları **canlı denendi:** `ssh`, `WebFetch(data.binance.vision)` ve `.env` okuma engellendi.
+- gitleaks v8.28.0: tüm geçmişte sızıntı yok.
+- M0 sırasında testlerin yakaladığı hatalar: `Migration` record'unun `with` ile kopyalanınca eski checksum'ı taşıması; `XDocument.Load(string)`'in yolu URI olarak yorumlaması; tr-TR yerel ayarında regex eşleştirmesi.
+
 ## 2026-10-13 — rev. 3 (teknik lider revizyonu)
 Yetki: Kullanıcının 2026-10-13 tarihli talimatı. Teknik kararlar teknik lidere devredildi; bütçe, Anthropic, risk limitleri, holdout'un kaldırılması, gerçek para ve satın alma kullanıcıda kaldı.
 
