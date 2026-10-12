@@ -1,0 +1,23 @@
+# Local development only. Production topology (VPS, four networks, holdout DB) is described in
+# docs/adr/0009 and is NOT part of this file. There is deliberately no holdout service here.
+name: portfolio-intelligence
+
+services:
+  dev-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: portfolio_dev
+      POSTGRES_USER: pi_dev
+      POSTGRES_PASSWORD: ${PI_DEV_DB_PASSWORD:?PI_DEV_DB_PASSWORD missing; run scripts/dev-up.ps1 to create .env}
+    ports:
+      - "127.0.0.1:${PI_DEV_DB_PORT:-55432}:5432"   # loopback only
+    volumes:
+      - dev-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pi_dev -d portfolio_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  dev-db-data:

@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Pure, deterministic domain code shared by live trading, backtest and the holdout evaluator.
+       Must not reference any other project or infrastructure package (enforced by architecture tests). -->
+</Project>

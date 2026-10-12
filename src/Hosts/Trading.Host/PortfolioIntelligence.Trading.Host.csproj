@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+  <!-- The only process that will ever hold exchange credentials (D9, ADR-0001). -->
+  <PropertyGroup>
+    <UserSecretsId>portfolio-intelligence-trading-host</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Kernel\PortfolioIntelligence.Kernel.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\PortfolioIntelligence.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Execution\PortfolioIntelligence.Execution.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+</Project>

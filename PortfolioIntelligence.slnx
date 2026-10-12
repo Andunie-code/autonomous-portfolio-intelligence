@@ -1,0 +1,34 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Hosts/" />
+  <Folder Name="/src/Hosts/Research.Host/">
+    <Project Path="src/Hosts/Research.Host/PortfolioIntelligence.Research.Host.csproj" />
+  </Folder>
+  <Folder Name="/src/Hosts/Trading.Host/">
+    <Project Path="src/Hosts/Trading.Host/PortfolioIntelligence.Trading.Host.csproj" />
+  </Folder>
+  <Folder Name="/src/Infrastructure/">
+    <Project Path="src/Infrastructure/PortfolioIntelligence.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Kernel/">
+    <Project Path="src/Kernel/PortfolioIntelligence.Kernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Execution/">
+    <Project Path="src/Modules/Execution/PortfolioIntelligence.Execution.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Research/">
+    <Project Path="src/Modules/Research/PortfolioIntelligence.Research.csproj" />
+  </Folder>
+  <Folder Name="/src/Tools/" />
+  <Folder Name="/src/Tools/DbMigrator/">
+    <Project Path="src/Tools/DbMigrator/PortfolioIntelligence.DbMigrator.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/Architecture.Tests/">
+    <Project Path="tests/Architecture.Tests/PortfolioIntelligence.Architecture.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Infrastructure.Tests/">
+    <Project Path="tests/Infrastructure.Tests/PortfolioIntelligence.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>

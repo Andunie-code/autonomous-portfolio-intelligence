@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Research module: hypotheses, experiments, Researcher agent (M3+).
+       Must never reference Execution or Trading.Host (ADR-0001, enforced by architecture tests). -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Kernel\PortfolioIntelligence.Kernel.csproj" />
+  </ItemGroup>
+</Project>

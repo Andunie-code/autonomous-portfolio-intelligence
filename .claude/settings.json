@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Read(.env.local)",
+      "Read(**/secrets/**)",
+      "Read(**/*.pem)",
+      "Read(**/*.pfx)",
+      "Read(~/.ssh/**)",
+      "Edit(~/.ssh/**)",
+      "Bash(ssh *)",
+      "Bash(scp *)",
+      "Bash(sftp *)",
+      "PowerShell(ssh *)",
+      "PowerShell(scp *)",
+      "PowerShell(sftp *)",
+      "WebFetch(domain:data.binance.vision)",
+      "Bash(curl *data.binance.vision*)",
+      "Bash(wget *data.binance.vision*)",
+      "PowerShell(*data.binance.vision*)"
+    ],
+    "ask": [
+      "Edit(**/*Holdout*)",
+      "Edit(**/*Holdout*/**)",
+      "Bash(git push *)",
+      "PowerShell(git push *)"
+    ]
+  }
+}

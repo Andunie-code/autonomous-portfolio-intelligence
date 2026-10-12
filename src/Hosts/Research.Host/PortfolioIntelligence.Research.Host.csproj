@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+  <!-- Never holds exchange credentials and never references Execution (D9, ADR-0001). -->
+  <PropertyGroup>
+    <UserSecretsId>portfolio-intelligence-research-host</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Kernel\PortfolioIntelligence.Kernel.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\PortfolioIntelligence.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Research\PortfolioIntelligence.Research.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+</Project>
