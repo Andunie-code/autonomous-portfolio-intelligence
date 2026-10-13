@@ -1,13 +1,13 @@
 # Yol Haritası
 
-Son güncelleme: 2026-10-13 (rev. 3) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-13 (rev. 4) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: **M0 yerelde tamamlandı** (2026-10-13; doğrulama `716a1bd` commit'inde, temiz klonda). Uzak depo: private GitHub deposu `Andunie-code/autonomous-portfolio-intelligence`. M1 ve sonrası başlamadı; her milestone ayrı kullanıcı onayı gerektirir. Bir milestone, kabul kriterlerindeki testler **gerçekten uygulanıp geçtiğinde** tamamlanmış sayılır.
 
 ## Sıralamanın mantığı
 1. Önce kanıt altyapısı (veri, backtest, değerlendirme), sonra para hareketi.
 2. Sistem LLM olmadan tam işlevli olmalı. LLM görev sınıfları ancak nitelik kazanınca devreye girer.
-3. Gerçek holdout ortamı, D5'teki VPS ile birlikte M5'te kurulur. O zamana kadar gerçek holdout değerlendirmesi yapılmaz (T3).
+3. Gerçek holdout ortamı, D5'teki VPS ile birlikte M5'te kurulur. O zamana kadar gerçek holdout değerlendirmesi yapılmaz (T3). Testnet doğrulamaya bağlı değildir. İlk `Validated` sonucu en erken, kohortun dondurulmasından 6 ay sonra gelir.
 4. M4 (AI hattı) ile M5–M6 (operasyon hattı) M3'ten sonra paralel ilerleyebilir.
 
 ```
@@ -38,15 +38,21 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Kanarya secret'ı loglarda maskeli görünüyor.
   - Talimat dosyası ve izin kuralları repoda; içerikleri `architecture.md` §10 ile uyumlu.
 
-### M1 — Veri temeli (M)
+### M1 — Veri temeli (M) — başlamadı (B4)
 - **Kapsam:**
-  - Binance public data import (1h, 4h); checksum; ms/µs normalizasyonu; OHLC kontrolleri; boşluk tespiti ve REST ile doldurma; exchangeInfo; `DatasetSnapshot`.
-  - **1. holdout dönemi:** `H_end` = M1 başlangıç tarihi, `H_start` = `H_end − 9 ay`; dondurulur ve kaydedilir (T4).
-  - Pencere koruması: importçu, REST boşluk doldurucu, dosya listesi (sınır ayı günlük dosya, T6) ve dev DB `CHECK` kısıtı.
+  - Binance public data import (1h, 4h); checksum; ms/µs normalizasyonu; OHLC kontrolleri; boşluk raporu; `DatasetSnapshot`.
+  - **Araştırma kesim tarihi** `C = 2026-01-01T00:00:00Z`: tek doğruluk kaynağı (migration ve kod), "tam aralık" mum üyeliği, `market.candles` üzerinde `CHECK`, dosya planlayıcı ve HTTP koruması (T4, T6).
+  - **Çekirdek parite evreni:** kayıt zamanına göre seçim (`U = 2022-01-01`), elenenler ve hayatta kalma yanlılığı raporu. E1 adayları **yalnızca listelenir**; verileri import edilmez (ADR-0012).
+  - Tüm testler çevrimdışı (sahte zip ve handler). Gerçek indirme ayrı bir CLI komutudur: önce `--dry-run`, sonra gerçek indirme.
 - **Kabul kriterleri:**
-  - 20 parite için, pencere hariç ≥ 4 yıllık 1h ve 4h veri yüklü.
-  - Bozuk checksum reddediliyor; 2025 ms/µs testi geçiyor; import idempotent; hash kararlı; boşluk raporu üretiliyor.
-  - **H1, H2, H2b, H3, H4** (`testing-strategy.md` §7.1) geçiyor. dev DB'sinde pencere içinde mum sayısı 0. İndirme klasöründe pencereyle kesişen aylık zip yok.
+  1. `C` hem migration'da hem kodda aynı; bir test eşitliği doğruluyor.
+  2. Üyelik testleri (1h, 4h, 1d, 1w, 1M): 2025-12-31T23:00Z açılışlı 1h mum dahil; 2026-01-01T00:00Z açılışlı 1h mum hariç; 2025-12-29 açılışlı 1w mumu hariç; 2025-12-31 açılışlı 1d mumu dahil.
+  3. UTC: ms ve µs girdileri aynı anı üretiyor; ayrıştırılan değerlerin offset'i 0; DB oturumu `Europe/Istanbul` olsa bile `CHECK` doğru karşılaştırma yapıyor; testler UTC dışı makine saat diliminde de geçiyor.
+  4. **H1, H2, H2b, H3, H4** geçiyor. Kesimden sonraki satır sayısı 0; önbellekte kesimden sonrasını kapsayan dosya yok.
+  5. HTTP: kesim tarihine uzanan aralıklar ağa gitmeden reddediliyor; host allowlist'i ve redirect reddi uygulanıyor; testlerin ağa çıkmadığını doğrulayan bir test var.
+  6. 20 çekirdek parite için `[2022-01-01, C)` aralığında kalite şartlarını sağlayan 1h ve 4h veri. 20'ye ulaşılamazsa **sessizce gevşetilmez;** rapor hazırlanır ve durulur.
+  7. Bozuk checksum reddediliyor; import idempotent; hash kararlı; 1h ve 4h verisi birbiriyle tutarlı; boşluk raporu üretiliyor.
+  8. Gerçek veri kabul raporu (kapsam, boşluklar, hash, H1) üretildi.
 
 ### M2 — Baseline backtest (L) ← ilk dilimin sonu
 - **Kapsam:**
@@ -64,17 +70,31 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
 - **Kapsam:**
   - DSL ve validator, interpreter.
   - Walk-forward, bootstrap, parametre komşuluğu, Deflated Sharpe.
-  - **`TrialFamily` yapı hash'i** ve deneme sayacı.
-  - Yaşam döngüsü (`Candidate → HoldoutTested`, `HoldoutEnvironmentVerified` bayrağına bağlı).
-  - **HoldoutEvaluator servisi:** dar API, kota, aile kuralı, sürüm kontrolü, yuvarlanmış yanıt, audit. Yerelde ayrı bir container'da, ayrı kimlik bilgileriyle ve **yalnızca sentetik veriyle** çalışır.
-  - Kapı eşiklerinin sentetik kalibrasyonu; kalibrasyon protokolü ön kayıtla.
+  - **Aile kimliği** (normalizasyon, yapı hash'i, benzerlik kontrolü) ve deneme sayacı.
+  - **Kohort registry'si:** değiştirilemez manifesto, GitHub zaman damgası, `A_c` hesaplaması.
+  - **İki izli yaşam döngüsü** (ADR-0012): operasyonel iz ve türetilmiş doğrulama durumu.
+  - **Protokol v1:** zorunlu alanlar; bloke edici değerlerin önerisi ve kullanıcı incelemesi (B5).
+  - **Süre protokolü aracı:** güç simülasyonu, rejim etiketleri, "gücü yetersiz" işareti.
+  - **Evaluator** (tanısal ve ileriye dönük): yerelde ayrı bir container, ayrı roller, **yalnızca sentetik veri.**
+  - Sınırlar: K_D, açık kohort sınırı, aile kotası. Sonuç ve `Invalid` kuralları.
+  - E1 verisinin import'u ve E1 kategorisi.
+  - Kapı eşiklerinin sentetik kalibrasyonu.
 - **Kabul kriterleri:**
-  - DSL ve kodlanmış baseline parity'si sağlanıyor.
-  - Kalibrasyon protokolü kaydedildi; random walk testinde yanlış pozitif oranı protokoldeki hedefin altında; yerleştirilmiş avantaj testi geçiyor.
-  - `TrialFamily` hash testleri geçiyor.
-  - **H7, H8, H9, H10, H11, H15, H16, H17, H18** sentetik ortamda geçiyor.
-  - `HoldoutEnvironmentVerified = false` iken `Candidate → HoldoutTested` geçişi reddediliyor.
-  - Yetkisiz yaşam döngüsü geçişleri reddediliyor.
+  - DSL ve baseline parity'si sağlanıyor; kalibrasyon protokolü kaydedildi; yanlış pozitif ve doğru pozitif testleri geçiyor.
+  - **Manifesto:**
+    - şema doğrulaması; eksik protokol "doğrulamaya uygun değil" olarak işaretleniyor;
+    - `A_c ≥` F_c + 24 saatten sonraki ilk UTC gece yarısı;
+    - dondurulmuş kohortta değişiklik reddediliyor; değiştirilmiş strateji yeni kohort ve `A > now` alıyor.
+  - **Aile kotası:** Parametre değişikliği ve sonucu etkileyen engine değişikliği aynı aile sayılıyor; 3. deneme reddediliyor; benzerlik kontrolü bir kopyayı yakalıyor (pozitif kontrol).
+  - **Sınırlar:** K_D, 2 × 3 açık kohort ve aile kotası aşılınca istek reddediliyor.
+  - **`Validated` yazımı:** `Validated` durumunu sonuç kaydı dışında set etmenin her yolu reddediliyor; paper ve Testnet verisi doğrulama hesabına girmiyor; gücü yetersiz ya da protokolü eksik kohort `Validated` olamıyor; işlem sayısı yetersizse sonuç `Inconclusive`.
+  - **Erken değerlendirme ve import:** enjekte edilmiş saatle reddediliyor (uygulama katmanı ve DB trigger'ı ayrı ayrı test edilir).
+  - **`Invalid`:** yalnızca kanıtla veriliyor; yeniden değerlendirme yalnızca aynı manifesto, pencere ve digest ile yapılabiliyor ve sınırı var; tüm koşular audit'te.
+  - **Roller:** `eval_diagnostic` ve `eval_prospective` birbirinin şemasını okuyamıyor; Research ve Trading rolleri holdout şemalarını okuyamıyor.
+  - **Tekrar üretilebilirlik:** aynı girdiler aynı sonuç hash'ini üretiyor.
+  - **Değiştirilemezlik:** kohort silinemiyor, geri çekilemiyor; operasyonel devre dışı bırakma sonucu değiştirmiyor.
+  - **H7–H11, H15–H18** sentetik ortamda geçiyor.
+  - **Kohort 0** (baseline'lar) dondurulup push edildi.
 - **Not:** Gerçek holdout verisi bu milestone'da hiçbir yere indirilmez.
 
 ### M4 — ModelRouter, yeterlilik altyapısı ve Researcher (M)
@@ -98,14 +118,17 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
 - **Kapsam:**
   - VPS sertleştirme (yalnızca SSH, parolalı anahtar, ssh-agent'a yüklenmeyen anahtar).
   - Dört ağlı docker-compose; etkileşimli deploy (T19).
-  - ops DB (`research.candles` view'ı ve yetkiler); holdout DB ve evaluator; gerçek holdout verisinin **yalnızca evaluator tarafından** import edilmesi.
-  - Trading.Host: canlı veri, ledger, risk, simüle execution, reconciliation, kill switch, audit, Ops API.
+  - ops DB: `market.live_candles` (yalnızca Trading), `research.*` view'ları (`candles`, `revealed_cohorts`, `revealed_paper_summary`) ve tüm DB rolleri (architecture §6.2).
+  - Holdout DB ve evaluator: kohort penceresine bağlı import ve erken import'u reddeden DB trigger'ı. Holdout verisini **yalnızca evaluator**, kaynaktan import eder.
+  - Trading.Host: canlı veri, ledger, risk (`ExperimentalPairsMaxExposure` dahil), simüle execution, reconciliation, kill switch, audit, Ops API (açık kohortların PnL'i görünür; manifesto ve sonuç değiştirilemez).
   - Research.Host'un VPS'e taşınması.
   - Yedek ve geri yükleme.
   - Korelasyon izleme ve P1 için tarihsel etki analizi.
 - **Kabul kriterleri:**
-  - **H-ENV (H5, H6, H6b, H13, H14, H19, H20)** gerçek ortamda geçti; ardından `HoldoutEnvironmentVerified` kullanıcı oturumuyla set edildi ve audit'e yazıldı.
-  - 1. dönemin K ve α değerleri, açılıştan önce kayda geçirildi.
+  - **H-ENV (H5, H6, H6b, H13, H14, H19–H24)** gerçek ortamda geçti; ardından `HoldoutEnvironmentVerified` kullanıcı oturumuyla set edildi ve audit'e yazıldı. Bu bayrak yalnızca `Validated` yazımını kapılar.
+  - Research rolü canlı mumları ve açığa çıkmamış paper sonuçlarını okuyamıyor; `eval_*` rolleri ops DB'sine bağlanamıyor; erken import reddediliyor (gerçek ortamda).
+  - Deneysel parite tavanı için risk tablosu testleri geçiyor (tavanın tam sınırı, kırpma, çıkışın serbestliği, yetkisiz değişikliğin reddi).
+  - Operasyonel güvenlik eylemleri (devre dışı bırakma, kill switch, pozisyon kapatma) çalışıyor ve audit'e yazılıyor; kohort kayıtlarını değiştirmiyor.
   - Parity replay geçiyor; risk tablosunun her satırı test edildi; bayat veride yalnızca çıkışlar çalışıyor; restart tutarlı.
   - 7 gün kesintisiz paper çalışması; yedekten geri yükleme denendi.
   - P1 analiz raporu kullanıcıya sunuldu.
@@ -116,6 +139,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Testnet'te ≥ 20 emrin tam yaşam döngüsü tamamlandı.
   - Filtre ihlali yapan emir borsaya gitmeden reddediliyor.
   - Anahtar yalnızca Trading.Host'ta.
+  - `PaperTrading → TestnetActive` geçişi yalnızca `Frozen` stratejiler için ve kullanıcı oturumuyla mümkün; **doğrulama gerektirmiyor** (ADR-0012). `Validated` olmayan stratejiler "deneysel" etiketi taşıyor.
 
 ### M7 — Kontrollü web araştırması (M)
 - **Ön koşul:** allowlist kesinleşmiş; arXiv ve Semantic Scholar koşulları doğrulanmış; PDF kütüphanesi seçilmiş.
@@ -136,6 +160,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Gölge mod ≥ 4 hafta (süre güç analiziyle uzatılabilir) tamamlandı.
   - AllocationProposal protokolü ve sonucu kaydedildi.
   - Aktif moda geçiş yalnızca nitelik varsa ve kullanıcı onayıyla.
+  - Allocator ağırlığı yalnızca `Validated` stratejilere veriliyor; diğerlerinde varsayılan politika uygulanıyor.
 
 ### M9 — Dashboard (M)
 - **Kabul kriterleri:**

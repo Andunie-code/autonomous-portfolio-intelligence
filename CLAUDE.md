@@ -22,7 +22,8 @@ Kullanıcıdan açık onay alınmadan yapılmaz:
 - Uzak depoya push dışında herhangi bir yayın, paylaşım ya da erişim yetkisi değişikliği.
 
 ## Holdout kuralları (ADR-0006, ADR-0009)
-- Holdout penceresine ait piyasa verisi bu makineye **indirilmez, okunmaz ve incelenmez**; WebFetch, curl, script ya da başka yolla da.
+- Araştırma kesim tarihi `2026-01-01T00:00:00Z`. Bu tarih ve sonrasına ait piyasa verisi bu makineye araştırma amacıyla **indirilmez, okunmaz ve incelenmez**; WebFetch, curl, script ya da başka yolla da (tanısal ve ileriye dönük holdout, ADR-0006).
+- Kohort manifestoları ve değerlendirme sonuçları değiştirilmez ve silinmez. `Validated` durumu yalnızca ileriye dönük evaluator'dan gelir.
 - Holdout veritabanına, evaluator'a ya da VPS'e erişim denenmez. VPS'e SSH bağlantısı kurulmaz.
 - Holdout koruma kodu (adında `Holdout` geçen dosyalar) ve evaluator kodu, kullanıcının açık isteği olmadan değiştirilmez.
 - Holdout ortamına ait sır adları (`tests/Architecture.Tests/HoldoutSecretReferenceTests.cs`) evaluator projesi dışında hiçbir kaynak, config ya da script dosyasında kullanılmaz.

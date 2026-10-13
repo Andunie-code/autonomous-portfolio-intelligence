@@ -2,6 +2,27 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-13 — rev. 4: holdout stratejisi (kullanıcı kararları U1–U7)
+Yalnızca planlama belgeleri değişti; kod yok, M1 başlamadı.
+
+**Yeni ya da değişen kararlar:**
+- **D3 (revize):** Testnet doğrulamaya bağlı değil; paper'a girmeden önce dondurma şartı; `Validated` yalnızca ileriye dönük değerlendirmeden gelir.
+- **D10 (revize):** Araştırma kesim tarihi `2026-01-01T00:00:00Z`; tanısal holdout yalnızca eler; kohort bazlı ileriye dönük holdout `Validated` durumunun tek kaynağı.
+- **D21:** `L_min` = 6 ay, `L_max` = 12 ay (varsayılandır, garanti değildir); gücü yetersiz kohort `Inconclusive`; K_D = aile başına 1 ve dönem başına 10; açık kohort sınırı 2 × 3; aile başına 2 deneme.
+- **D22:** E1 ve E2 parite kategorileri; 30 günlük listeleme karantinası; deneysel paritelere %10 toplam maruziyet tavanı.
+- **D23:** Operasyonel güvenlik eylemleri her zaman serbest; manifestolar, sonuçlar ve audit geçmişi değiştirilemez.
+- **T3–T6 yeniden yazıldı:** zaman semantiği, `market.candles` ve `market.live_candles` ayrımı, kohort ve protokol, dosya planlayıcı.
+- **Yeni ADR-0012** (iki izli yaşam döngüsü ve parite kategorileri). **ADR-0006 yeniden yazıldı.** ADR-0009'a roller, DB trigger'ı ve API eklendi.
+- `architecture.md` §6–7 yeniden yazıldı; `roadmap.md` M1, M3, M5, M6 ve M8; `testing-strategy.md` §7 (H1–H24, V1–V10); `risk-model.md`; `requirements.md`; `CLAUDE.md`.
+
+**Geçersiz kılınanlar:**
+- Dönem bazlı tarihsel birincil holdout (`HoldoutEpoch`, K ve Holm'un dönem bazında uygulanması).
+- `Candidate → HoldoutTested → PaperTrading` zinciri.
+- M1 incelemesindeki K1/K2 önerisi (`H_end = 2026-10-01` ve ambargo) ve "dünkü güne kadar import" önerisi.
+- Önceki plandaki "ileriye dönük veri pencere bitene kadar hiçbir yerde saklanmaz" ifadesi (yanlıştı; koruma erişim kontrolüne dayanır).
+
+**Bloke edici TBD'ler:** kohort içi α, hedef güç, ekonomik δ, drawdown kuralı (M3'te Protokol v1). Bunlar belirlenmeden hiçbir kohort `Validated` olamaz.
+
 ## 2026-10-13 — M0 uygulaması (kullanıcı onayıyla)
 Kapsam: yerel iskelet, migration altyapısı, loglama/redaction, mimari ve repo kuralı testleri, Claude Code korkulukları, doğrulama script'leri, yerel git ve private GitHub deposu.
 

@@ -33,14 +33,23 @@
 3. **Kimlik bilgileri:**
    - Holdout DB parolası yalnızca evaluator secret'ında.
    - Research.Host'ta yalnızca **submit-only** bir evaluator token'ı var.
-   - ops DB'sinde Research rolünün `market.candles` üzerinde yetkisi yok; yalnızca pencereleri dışlayan `research.candles` view'ına erişebilir.
-4. **Evaluator API'si:** `POST /evaluations` (DSL, hash, engine SHA) ve `GET /evaluations/{id}`. Yanıt yalnızca geçti/kaldı ve yuvarlanmış özet. Ham veri döndüren bir uç nokta **yok.** Politika: ADR-0006.
+   - **(rev. 4)** Ayrı DB rolleri: `research_app`, `trading_app`, `market_import`, `ops_api`, `eval_diagnostic`, `eval_prospective`.
+     - Research yalnızca `research.*` view'larını okur: kesimden önceki `market.candles` ve açığa çıkmış kohortlar.
+     - Canlı veri ayrı tabloda (`market.live_candles`) ve yalnızca Trading'in erişiminde.
+     - Evaluator rollerinin ops DB'sine erişimi yok; `eval_diagnostic` ve `eval_prospective` birbirinin şemasını okuyamaz.
+     - İzin tablosunun tamamı `architecture.md` §6.2'de.
+4. **Evaluator API'si (rev. 4):** `POST /cohorts` (manifesto), `POST /diagnostic-evaluations` ve `GET /cohorts/{id}/status`. Yanıtlarda yalnızca durum ve açığa çıkmış yuvarlanmış özet bulunur. Ham veri ya da zaman serisi döndüren bir uç nokta **yoktur.** "Şimdi değerlendir" diye bir uç nokta da yoktur; ileriye dönük değerlendirmeyi evaluator'ın zamanlayıcısı pencere kapandıktan sonra başlatır. Politika: ADR-0006.
+   - **Erken değerlendirme ve yetkisiz import'a karşı iki katman:**
+     1. enjekte edilebilir saatle uygulama kontrolü;
+     2. penceresi kapanmamış kohort için `prospective.*` ve `results.*` tablolarına `INSERT`'i reddeden DB trigger'ı.
+
+     İmport yalnızca kayıtlı kohort pencereleri için yapılır.
 5. **Yönetim ve deploy (T19):**
    - VPS SSH anahtarı parolalı ve ssh-agent'a yüklenmez.
    - Deploy, `docker save | ssh vps docker load` ile insan tarafından **etkileşimli** yapılır; image digest'i `EvaluatorRelease` olarak kaydedilir.
    - Evaluator kodundaki her değişiklik deploy kontrol listesinde vurgulanır ve `HoldoutEnvironmentVerified`'ı sıfırlar.
    - Harici image registry kullanılmaz.
-6. **Gerçek ortam doğrulaması:** `HoldoutEnvironmentVerified` yalnızca H-ENV testleri (H5, H6, H6b, H13, H14, H19, H20) gerçek ortamda geçtikten sonra, kullanıcı oturumuyla set edilir. Bundan önce `Candidate → HoldoutTested` geçişi kapalıdır.
+6. **Gerçek ortam doğrulaması:** `HoldoutEnvironmentVerified` yalnızca H-ENV testleri (H5, H6, H6b, H13, H14, H19, H20) gerçek ortamda geçtikten sonra, kullanıcı oturumuyla set edilir. Bu bayrak **yalnızca `Validated` sonucunun yazılmasını kapılar;** Testnet'i etkilemez (ADR-0012).
 7. **Claude Code korkulukları (T17, M0):** proje talimat dosyası ve proje izin kurallarında deny kuralları. Bunlar ek bir savunma katmanıdır; güven sınırı, 2–6. maddelerdeki ağ ve kimlik kontrolleridir.
 
 ## Gerekçe

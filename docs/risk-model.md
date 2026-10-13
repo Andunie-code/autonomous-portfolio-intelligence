@@ -1,6 +1,6 @@
 # Risk Modeli
 
-Son güncelleme: 2026-10-13 (rev. 3) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-13 (rev. 4) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: Buradaki kontroller **planlanmıştır, uygulanmamıştır**. Etiketler (U/T/P/TBD) için bkz. `requirements.md`.
 
@@ -21,6 +21,7 @@ Son güncelleme: 2026-10-13 (rev. 3) · Değişiklikler: [CHANGELOG.md](CHANGELO
 | Veri tazeliği | Son mum, beklenenden 2 mumdan fazla gecikmişse yeni giriş yok | U (D7) |
 | Minimum emir | Exchange `NOTIONAL`/`MIN_NOTIONAL` değeri ve fee'ye göre anlamsız küçük emirlerin engellenmesi | T (exchange kuralı) |
 | Emir tipleri | Limit ve koruma bantlı market | T |
+| **Deneysel parite toplam maruziyeti** (`ExperimentalPairsMaxExposure`) | Portföy değerinin **%10'u** (E1 ve E2 paritelerinin toplamı). Mevcut limitlere **ek olarak** uygulanır; en kısıtlayıcı limit geçerlidir. Tavanı aşacak alım kırpılır ya da reddedilir. Fiyat hareketiyle aşılırsa zorunlu satış yapılmaz, yalnızca yeni deneysel girişler durur. Çıkışlar her zaman serbesttir. Yalnızca kullanıcı, kimliği doğrulanmış Ops API üzerinden ve versiyonlu `RiskConfig` ile değiştirebilir; LLM, Research ve evaluator erişemez | U (U5, 2026-10-13) |
 | Korelasyon | **Bağlayıcı değil.** Korelasyon kümeleri ve etkin bağımsız pozisyon sayısı her döngüde hesaplanır, raporlanır ve eşik aşımında uyarı üretilir (uyarı eşiği TBD, M5'teki analizle; yalnızca bilgilendirme amaçlı). Bağlayıcı bir küme tavanı **P1** olarak bekliyor (M5'te tarihsel etki analiziyle önerilecek). Önceki onaysız %40 değeri kaldırıldı | T12 / P1 |
 
 ## 3. Kill switch'ler
@@ -57,15 +58,21 @@ LLM'in durdurulması trading'i durdurmaz. Operasyon varsayılan deterministik po
 | **LLM hatası, geçersiz çıktı, nitelikli model yok, bütçe aşımı ya da LLM acil durdurma** | **Varsayılan deterministik allocation politikası** (T11, ADR-0011): onaylı tavanlar içinde ters volatilite ağırlıklandırma. Backtest'te ve paper'da doğrulanmış olan aynı politika. Olay audit'e yazılır. Önceki onaysız "tavanların yarısı" kuralı kaldırıldı |
 | Research'te LLM yok | Grid/parametrik arama ve insan onaylı hipotezler. Danışma amaçlı metinler yerine şablon kullanılır |
 | Web kaynağına erişilemiyor (M7) | Önbellek kullanılır; yoksa iş atlanır |
-| Evaluator'a erişilemiyor ya da `HoldoutEnvironmentVerified = false` | Adaylar `Candidate` durumunda bekler. Hiçbir aday holdout'u atlayamaz |
+| Evaluator'a erişilemiyor ya da `HoldoutEnvironmentVerified = false` | Paper ve Testnet devam eder (ADR-0012). `Validated` sonucu yazılamaz; değerlendirme ortam doğrulandıktan sonra aynı girdilerle yapılır |
+| Operasyonel güvenlik eylemi (devre dışı bırakma, kill switch, pozisyon kapatma) | Her zaman serbesttir ve audit'e yazılır. Doğrulama durumundan ve kohort yaşam döngüsünden bağımsızdır; kohort kayıtlarını değiştirmez |
 
 ## 5. Araştırma ve sistem riskleri
 | Risk | Önlem | Kalan risk |
 |---|---|---|
 | Overfitting ve data snooping | Walk-forward, Deflated Sharpe, yapı hash'iyle hesaplanan `TrialFamily`, holdout kotası ve Holm düzeltmesi | Sınırlı veri; paper ile doğrulama gerekir |
 | Holdout kontaminasyonu | `architecture.md` §6.2'deki katmanlı kontroller (veri, yetki, ağ, yönetim erişimi, süreç, audit) | Kamuya açık veri, internetten doğrudan indirilebilir. Süreç kuralı ve audit ile ele alınır |
-| Tekrarlı değerlendirmeyle holdout'a uydurma | Aile başına bir değerlendirme, dönem kotası K, yuvarlanmış özet, yeni evaluator sürümüyle tekrar değerlendirme yasağı | Kota içindeki yapısal varyantlar. Holm düzeltmesi bunu sınırlar |
+| Tekrarlı değerlendirmeyle holdout'a uydurma | Tanısal: aile başına 1, kesim dönemi başına 10, yalnızca eleme. İleriye dönük: her kohort yalnızca kendi penceresinde ve bir kez değerlendirilir; açığa çıkmış pencere tekrar kullanılamaz; aile başına 2 deneme; yeniden değerlendirme yalnızca aynı manifesto ve digest ile | Kota içindeki yapısal varyantlar. Global sınırlar ve tam raporlama bunu sınırlar |
 | Kötü niyetli ya da hatalı bir evaluator sürümü | Sürümler (`EvaluatorRelease`) kaydedilir; deploy etkileşimli yapılır; evaluator kodunda değişiklik kontrol listesinde vurgulanır; her değişiklik `HoldoutEnvironmentVerified`'ı sıfırlar | İnsan incelemesine bağlı |
+| Bilgi kontaminasyonu (tanısal holdout insanlar ve LLM'ler tarafından biliniyor olabilir) | Tanısal holdout yalnızca eler, terfi ettirmez. Model bilgi kesim tarihi her hipotezde kaydedilir ve işaretlenir | Claude'un eğitim kesim tarihi Haziran 2026; Gemini'ninki doğrulanmadı |
+| İleriye dönük güç ve bekleme süresi | Ön kayıtlı güç analizi. Gücü yetersizse sonuç `Inconclusive`, asla `Validated` | İlk `Validated` en erken 6 ay sonra. Düşük frekanslı stratejiler büyük olasılıkla `Inconclusive` |
+| Seçim yanlılığı (paralel kohortlar, varyantlar) | 2 × 3 açık kohort sınırı, aile kotası, kohort içinde Holm, "n denemeden k Validated" raporlaması | Aile kimliği atlatılabilir (hash ve benzerlik sınırları); global sınırlar asıl güvence |
+| Deneysel pariteler (kısa geçmiş) | E1 ve E2 kategorileri, %10 maruziyet tavanı, kanıt düzeyi etiketleri, doğrulamanın kategoriler arasında taşınmaması | Hayatta kalma yanlılığı çekirdekte tasarım gereği var; raporlanır |
+| Root ya da saat manipülasyonu | Etkileşimli yönetim erişimi, audit, kaynak dosyaların tarih başlıkları | Kabul edilmiş artık risk |
 | Prompt injection (M7) | Tool'suz Extractor, şema, alıntı doğrulaması | — |
 | Nitelikli olmayan modelin kullanılması | Görev politikası; downgrade yasağı test edilir | — |
 | AI maliyetinin kontrolden çıkması | Rezervasyon, çok katmanlı tavanlar, LLM acil durdurma, aylık mutabakat | Geliştirme makinesindeki API anahtarının kodu atlayarak kullanılması. Google tarafındaki limitler ve mutabakat ile yakalanır |

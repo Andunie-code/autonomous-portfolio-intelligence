@@ -1,6 +1,6 @@
 # Test Stratejisi
 
-Son güncelleme: 2026-10-13 (rev. 3) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-13 (rev. 4) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: Buradaki testler **planlanmıştır, yazılmamıştır.** Bir kontrol, testi uygulanıp geçmeden "uygulandı" olarak raporlanmaz.
 
@@ -98,35 +98,64 @@ Son güncelleme: 2026-10-13 (rev. 3) · Değişiklikler: [CHANGELOG.md](CHANGELO
 ### 6.4 Web araştırmasının değeri (M7)
 Aynı bütçeyle web'li ve web'siz Researcher karşılaştırılır. Injection seti güvenlik değişmezlerine tabidir.
 
-## 7. Holdout izolasyon testleri (D17, ADR-0006, ADR-0009)
+## 7. Holdout, kohort ve doğrulama testleri (D10, D17, D21–D23; ADR-0006, ADR-0009, ADR-0012)
+Kesim tarihi `C = 2026-01-01T00:00:00Z`. Mum üyeliği: `S ≤ o` ve `o + Δ ≤ E`.
 
-### 7.1 H-DEV (her koşu)
-| # | Test | Beklenen |
-|---|---|---|
-| H1 | Ortam kontrol script'i: dev DB'sinde ilan edilmiş pencerelerdeki mum sayısı | 0 |
-| H2 | Importçu ve REST boşluk doldurucuyla pencereyle kesişen istek | Reddedilir ve loglanır |
-| H2b | Dosya listesi üretici: pencereyle kesişen aylık zip listede yer almaz; sınır ayı için günlük dosyalar listelenir | Doğru liste |
-| H3 | dev DB'sinde pencereye doğrudan satır ekleme | `CHECK` reddeder |
-| H4 | Repo ve geliştirme secret/config taraması: holdout DB parolası, evaluator token'ı, VPS anahtarı | Bulunmaz |
-| H7 | `GetDatasetCatalog` | Pencereleri içermez |
-| H8 | Pencereyle kesişen `SubmitExperiment` ya da tuning isteği | Reddedilir ve audit'e yazılır |
-| H9 | (Evaluator, sentetik veriyle) Aynı aile için ikinci değerlendirme | Reddedilir ve audit'e yazılır |
-| H10 | (Evaluator) Yanıt şeması | Yalnızca izin verilen alanlar; değerler yuvarlanmış |
-| H11 | (Evaluator) Audit | İstek, hash, sonuç, sürüm ve zaman mevcut |
-| H15 | (Evaluator) `engineSha` uyuşmazlığı | Reddedilir |
-| H16 | (Evaluator) Dönem kotası K doluyken istek | Reddedilir |
-| H17 | (Evaluator) Sonuçta `evaluatorVersion` ve `epochId` | Mevcut |
-| H18 | (Evaluator) İstemcinin gönderdiği `familyId` yanlışsa | Evaluator kendi hesapladığını kullanır; uyuşmazlık reddedilir |
+### 7.1 H-DEV (her koşu; çevrimdışı)
+| # | Test | Beklenen | Milestone |
+|---|---|---|---|
+| H1 | Ortam kontrol script'i: dev DB'sinde `open_time + interval > C` olan satır sayısı | 0 | M1 |
+| H1b | Üyelik kuralı: 2025-12-31T23:00Z açılışlı 1h mum dahil; 2026-01-01T00:00Z açılışlı 1h mum hariç; 2025-12-29 açılışlı 1w mumu hariç; 2025-12-31 açılışlı 1d mumu dahil | Doğru | M1 |
+| H1c | UTC: ms ve µs aynı anı veriyor; offset 0; DB oturumu `Europe/Istanbul` iken `CHECK` doğru çalışıyor; UTC dışı makine saat diliminde testler geçiyor | Doğru | M1 |
+| H1d | `C` migration'da ve kodda aynı | Eşit | M1 |
+| H2 | Importçu ya da HTTP istemcisiyle `C` sonrasına uzanan istek | Ağa gitmeden reddedilir ve loglanır | M1 |
+| H2b | Dosya planlayıcı (rastgele tarihlerle property testi) | `≥ C` aralığını kapsayan hiçbir dosya listelenmez | M1 |
+| H2c | Host allowlist'i, redirect reddi; testler gerçek ağa çıkmıyor | Doğru | M1 |
+| H3 | `market.candles`'a sınırdaki satırları (haftalık mum dahil) doğrudan ekleme | `CHECK` reddeder | M1 |
+| H4 | Repo ve geliştirme secret/config taraması | Holdout ya da VPS secret'ı bulunmaz | M0/M1 |
+| H7 | `GetDatasetCatalog` | `≥ C` verisini içermez | M3 |
+| H8 | `C` sonrasına uzanan `SubmitExperiment` ya da tuning isteği | Reddedilir ve audit'e yazılır | M3 |
+| H9 | Tanısal: aynı aile için ikinci değerlendirme; kesim dönemi kotası (10) doluyken istek | Reddedilir ve audit'e yazılır | M3 |
+| H10 | Evaluator yanıt şeması | Yalnızca izin verilen alanlar, yuvarlanmış; ham veri yok | M3 |
+| H11 | Audit | Manifesto, koşu ve açıklama olaylarının her biri hash'leriyle | M3 |
+| H15 | `engineSha` ve image digest uyuşmazlığı | Reddedilir | M3 |
+| H16 | Kohort sınırları: 3. açık kohort, kohortta 4. strateji, ailenin 3. ileriye dönük denemesi | Reddedilir | M3 |
+| H17 | Aile kimliği: parametre, zaman dilimi, parite, model sürümü ya da engine değişikliği aynı aile; kural grafiği değişikliği yeni aile; benzerlik kontrolü bir kopyayı yakalıyor | Doğru | M3 |
+| H18 | İstemcinin beyan ettiği `familyId` | Yok sayılır; sistem kendisi hesaplar | M3 |
+| V1 | `Validated` durumunu `results` dışında bir yoldan set etme (Registry, Ops API, Research, Trading rolleri) | Reddedilir | M3 |
+| V2 | Paper ve Testnet PnL'i ne olursa olsun doğrulama durumu | Değişmez | M3 |
+| V3 | Gücü yetersiz kohort, eksik protokol, yetersiz işlem | En iyi ihtimalle `Inconclusive` | M3 |
+| V4 | Enjekte edilmiş saatle `now < A_c + L_c + tampon` iken değerlendirme ya da P import'u (uygulama katmanı **ve** DB trigger'ı ayrı ayrı) | Reddedilir | M3 |
+| V5 | Dondurulmuş manifestoda değişiklik; kohort silme ya da geri çekme | Reddedilir | M3 |
+| V6 | `Invalid`: kanıtsız istek reddedilir; yeniden değerlendirme yalnızca aynı manifesto, pencere ve digest ile; sınır aşımı reddedilir; tüm koşular audit'te | Doğru | M3 |
+| V7 | Aynı girdilerle iki koşu | Aynı sonuç hash'i | M3 |
+| V8 | `eval_diagnostic` ile `eval_prospective` birbirinin şemasını; Research ve Trading rolleri holdout şemalarını okuma girişimi | Yetki hatası | M3 |
+| V9 | Operasyonel devre dışı bırakma ve kill switch sonrasında kohort sonucu | Hesaplanır ve değişmeden gösterilir | M3 |
+| V10 | `PaperTrading → TestnetActive` kullanıcı oturumu olmadan | Reddedilir | M6 |
 
 ### 7.2 H-ENV (gerçek ortam, M5)
 | # | Test | Beklenen |
 |---|---|---|
-| H5 | Geliştirme makinesinden VPS'in holdout DB ve evaluator portlarına bağlantı | Ağ düzeyinde başarısız (port yayınlanmamış) |
-| H6 | Research.Host container'ından holdout DB'sine bağlantı | Ağ ya da kimlik doğrulama hatası |
-| H6b | ops DB'sinde Research rolüyle `market.candles` okuma; `research.candles`'da pencere verisi | Yetki hatası; 0 satır |
-| H13 | Geliştirme makinesinden `ssh -o BatchMode=yes <vps> true` | Başarısız (etkileşimsiz SSH yok) |
-| H14 | Trading.Host container'ından evaluator'a istek | Ağ düzeyinde başarısız (yalnızca Research.Host ağında) |
-| H19 | Gerçek evaluator'da H9, H10, H15, H16 tekrarı | Aynı sonuçlar |
+| H5 | Geliştirme makinesinden holdout DB ve evaluator portlarına bağlantı | Ağ düzeyinde başarısız |
+| H6 | Research.Host'tan holdout DB'sine bağlantı | Ağ ya da kimlik doğrulama hatası |
+| H6b | Research rolüyle `market.live_candles`, `trading.*` ve açığa çıkmamış kohort view'larını okuma | Yetki hatası ya da 0 satır |
+| H13 | Geliştirme makinesinden `ssh -o BatchMode=yes <vps> true` | Başarısız |
+| H14 | Trading.Host'tan evaluator'a istek | Ağ düzeyinde başarısız |
+| H19 | Gerçek evaluator'da H9, H10, H15, H16, V4 ve V5'in tekrarı | Aynı sonuçlar |
 | H20 | Evaluator image digest'i ile `EvaluatorRelease` kaydı | Eşleşir |
+| H21 | `eval_*` rolleriyle ops DB'sine bağlantı | Başarısız |
+| H22 | Gerçek DB trigger'ı ile erken P import'u | Reddedilir |
+| H23 | `ExperimentalPairsMaxExposure` değerini kullanıcı olmayan bir rolle değiştirme | Reddedilir |
+| H24 | Ops API: açık kohortun PnL'i görünüyor; manifesto ya da sonuç değiştirme uç noktası yok | Doğru |
 
-H-ENV testlerinin tamamı geçmeden `HoldoutEnvironmentVerified` set edilemez. Sahte ortamda geçmeleri gerçek izolasyonun kanıtı sayılmaz.
+H-ENV testlerinin tamamı geçmeden `HoldoutEnvironmentVerified` set edilemez. Bu bayrak yalnızca `Validated` yazımını kapılar. Sahte ortamda geçen testler gerçek izolasyonun kanıtı sayılmaz.
+
+### 7.3 Risk motoru (deneysel parite tavanı, D22)
+Risk tablosuna eklenecek satırlar:
+- tavanın tam sınırı;
+- tavanı aşacak alımın kırpılması ya da reddedilmesi;
+- fiyat hareketiyle tavan aşıldığında zorunlu satış yapılmaması ve yeni deneysel girişlerin durması;
+- çıkışların her zaman serbest olması;
+- mevcut limitlerin (varlık başına %20, toplam %80, 5 pozisyon) değişmemesi.
+
+**Mimari test:** Risk ve Execution modülleri holdout ve kohort modüllerine referans vermez.
