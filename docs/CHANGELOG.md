@@ -2,6 +2,24 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-13 — rev. 4.1: `2b0278b` denetiminin düzeltmeleri (kullanıcı onaylı)
+Yalnızca belgeler, `CLAUDE.md` ve `.claude/settings.json` değişti. Kod yok, M1 başlamadı.
+
+| # | Bulgu | Düzeltme |
+|---|---|---|
+| K1 | `results.*` iki evaluator rolü arasında ortaktı; trigger manifesto kaydını da engelliyordu | Ayrı tablolar: `cohort_manifests`, `diagnostic_results` (yalnızca `NotRejected` / `Rejected`), `prospective_runs` ve `prospective_results` (yalnızca `eval_prospective`). `ValidationStatus` yalnızca `prospective_results`'tan türetiliyor. Trigger yalnızca ileriye dönük tablolarda |
+| K2 | Research "açığa çıktı" kapısını kendisi yazabilirdi | Ayrı bir `status_relay` container'ı ve `research.cohort_status` tablosu; Research bu tabloyu yalnızca okuyabiliyor |
+| O1 | `A_c` istemciden gelebiliyordu; sınırlar yalnızca Registry'deydi | `registered_at` ve `A_c` sunucu tarafından atanıyor; sınırlar holdout DB'sinde `eval_registry` ile uygulanıyor |
+| O2 | Zorunlu GitHub push'u; `CLAUDE.md` push'u onaydan muaf gösteriyordu | Yetkili zaman damgası evaluator kaydı; GitHub isteğe bağlı ve onaylı; `CLAUDE.md` düzeltildi; force-push deny kuralları |
+| O3 | Güven aralığı tanımsızdı; Failed ve Inconclusive örtüşüyordu | Tek yönlü `(1 − α)` güven sınırları ve düzeltme sırası; kesin karar sırası (drawdown ihlali her zaman Failed); δ'nın uygulanma biçimi Protokol v1'de kullanıcı kararı |
+| O4 | Kohort 0 ile Protokol v1'in sırası belirsizdi | Kohort 0, Protokol v1 onayından sonra dondurulur |
+| O5 | K_D'nin kapsamı ve "geçti" ifadesi belirsizdi | "Aile başına ömür boyu 1"; sonuç değerleri `NotRejected` / `Rejected` |
+| D1 | ops DB'sindeki Registry sürümleri değiştirilebilirdi | Değiştirilemez sürümler; Trading çalıştırmadan önce hash kontrolü yapar |
+| D2 | İnsan kanalıyla sızıntı | `CLAUDE.md` kuralı: açığa çıkmamış sonuçlar araştırma girdisi olarak kullanılmaz |
+| D3 | Git'teki manifestolar değiştirilebilirdi | `Edit(docs/cohorts/**)` için ask kuralı; force-push deny; yetkili kayıt evaluator DB'si |
+
+Yeni testler: V11–V14, H25. Güncellenen testler: V1, V4, V8.
+
 ## 2026-10-13 — rev. 4: holdout stratejisi (kullanıcı kararları U1–U7)
 Yalnızca planlama belgeleri değişti; kod yok, M1 başlamadı.
 

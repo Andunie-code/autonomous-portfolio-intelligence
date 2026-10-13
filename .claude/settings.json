@@ -17,11 +17,20 @@
       "WebFetch(domain:data.binance.vision)",
       "Bash(curl *data.binance.vision*)",
       "Bash(wget *data.binance.vision*)",
-      "PowerShell(*data.binance.vision*)"
+      "PowerShell(*data.binance.vision*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f*)",
+      "PowerShell(git push --force*)",
+      "PowerShell(git push -f*)",
+      "PowerShell(git push * --force*)",
+      "PowerShell(git push * -f*)"
     ],
     "ask": [
       "Edit(**/*Holdout*)",
       "Edit(**/*Holdout*/**)",
+      "Edit(docs/cohorts/**)",
       "Bash(git push *)",
       "PowerShell(git push *)"
     ]

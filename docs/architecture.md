@@ -18,8 +18,10 @@ GELİŞTİRME MAKİNESİ (Windows, Claude Code burada çalışır)
         │ yalnızca insan tarafından, etkileşimli başlatılan deploy (T19)
         ▼
 PROD VPS (M5'ten itibaren, D5). Host'a hiçbir container portu yayınlanmaz.
-  net "ops"     (internet çıkışı var) : Trading.Host, Research.Host, ops PostgreSQL
-  net "eval"    (internal)            : Research.Host, HoldoutEvaluator         ← dar API, submit-only token
+  net "ops"     (internet çıkışı var) : Trading.Host, Research.Host, StatusRelay, ops PostgreSQL
+  net "eval"    (internal)            : Research.Host, StatusRelay, HoldoutEvaluator   ← dar API, submit-only ve read-status token'ları
+  StatusRelay: ayrı ve küçük bir container (`status_relay` kimliği). Yalnızca evaluator'ın durum uç noktasını okur
+               ve `research.cohort_status`'a ekleme yapar. Research.Host bu kimliğe sahip değildir.
   net "holdout" (internal)            : HoldoutEvaluator, holdout PostgreSQL (ayrı instance)
   net "egress"  (internet çıkışı var) : yalnızca HoldoutEvaluator (data.binance.vision'dan import)
   Trading.Host "eval" ağında değil → evaluator'a erişemez. Research.Host "holdout" ağında değil → holdout DB'sine erişemez.
@@ -180,7 +182,10 @@ Submitting --timeout/5xx--> Unknown --(origClientOrderId ile sorgu)--> gerçek d
 | `trading.*` (ops) | Paper ve Testnet emirleri, dolumlar, PnL | `trading_app` |
 | holdout DB `diagnostic.*` | Tanısal pencere verisi (evaluator'ın kendi import'u) | `eval_diagnostic` |
 | holdout DB `prospective.*` | P_c verisi; **yalnızca pencere kapandıktan sonra** import edilir | `eval_prospective` |
-| holdout DB `results.*` | Manifestolar, koşular ve sonuçlar (append-only) | Evaluator rolleri |
+| holdout DB `results.cohort_manifests` | Manifestolar. `registered_at` ve `A_c` **sunucu tarafından** atanır; append-only | Evaluator'ın kayıt yolu (`eval_registry`) |
+| holdout DB `results.diagnostic_results` | Tanısal sonuçlar. Sonuç alanı **yalnızca `NotRejected` ya da `Rejected`** olabilir (DB `CHECK`); append-only | Yalnızca `eval_diagnostic` |
+| holdout DB `results.prospective_runs` ve `results.prospective_results` | İleriye dönük koşular ve sonuçlar; append-only | Yalnızca `eval_prospective` |
+| ops DB `research.cohort_status` | Kohort durumu (`sealed` / `revealed`) ve açığa çıkmış yuvarlanmış özet; append-only | Yalnızca `status_relay` |
 
 **Evaluator'ın veri edinimi.** Evaluator ops DB'sine erişemez ve canlı veriyi kullanmaz. Pencere verisini, araştırma verisiyle aynı kanonik kaynaktan (Binance açık veri arşivi, checksum doğrulamalı) kendisi import eder. Bunu `A_c + L_c` artı 3 günlük yayın tamponundan (başlangıç değeri) sonra yapar. Isınma verisi de aynı yoldan gelir.
 
@@ -188,20 +193,24 @@ Submitting --timeout/5xx--> Unknown --(origClientOrderId ile sorgu)--> gerçek d
 
 | Kimlik | Okuyabilir | Okuyamaz |
 |---|---|---|
-| `research_app` | `research.candles`, deneyler, `research.revealed_cohorts` (yalnızca açığa çıkmış, yuvarlanmış özet), `research.revealed_paper_summary` (yalnızca açığa çıkmış kohortlar) | `market.live_candles`, `trading.*`, holdout DB'si |
-| `trading_app` | `market.live_candles`, `trading.*`, aktif strateji tanımları | holdout DB'si, araştırma tabloları |
+| `research_app` | `research.candles`, deneyler, `research.cohort_status` (**yalnızca okuma**), `research.revealed_cohorts` ve `research.revealed_paper_summary` (bu view'lar, `cohort_status`'ta `revealed` olan kohortları gösterir) | `market.live_candles`, `trading.*`, holdout DB'si. `cohort_status`'a **yazamaz** |
+| `status_relay` | Evaluator API'si `GET /cohorts/{id}/status` (`eval` ağı) | Başka hiçbir tablo. Yalnızca `research.cohort_status`'a ekleme yapabilir |
+| `trading_app` | `market.live_candles`, `trading.*`, aktif strateji tanımları (yalnızca okuma) | holdout DB'si, araştırma tabloları |
 | `ops_api` (kullanıcı) | Paper ve Testnet izlemesi (açık kohortlar dahil), kohort durumları, açığa çıkmış tam raporlar | holdout DB'sinin ham verisi |
-| `eval_diagnostic` | `diagnostic.*`, `results.*` (yalnızca ekleme) | `prospective.*`, ops DB'si |
-| `eval_prospective` | `prospective.*`, `results.*` (yalnızca ekleme) | `diagnostic.*`, ops DB'si |
+| `eval_registry` | Manifesto kaydı ve sınırların (açık kohort, aile kotası, K_D) uygulanması | Pencere verisi |
+| `eval_diagnostic` | `diagnostic.*`; `results.diagnostic_results`'a yalnızca ekleme | `prospective.*`, `results.prospective_*`, ops DB'si |
+| `eval_prospective` | `prospective.*`; `results.prospective_*`'a yalnızca ekleme | `diagnostic.*`, `results.diagnostic_results`'a yazma, ops DB'si |
 | VPS root (insan) | Teknik olarak her şey | Kabul edilmiş artık risk; süreç kuralı ve audit |
 
 **Tehditler ve engeller (en az iki katman):**
 
 | Tehdit | Engel |
 |---|---|
-| Erken değerlendirme | Evaluator zamanlayıcısı, enjekte edilebilir saatle `now < A_c + L_c + tampon` iken çalışmaz. "Şimdi değerlendir" API'si yoktur. DB trigger'ı, penceresi kapanmamış bir kohort için `prospective.*` ve sonuç tablolarına `INSERT`'i reddeder |
+| Erken değerlendirme | Evaluator zamanlayıcısı, enjekte edilebilir saatle `now < A_c + L_c + tampon` iken çalışmaz. "Şimdi değerlendir" API'si yoktur. DB trigger'ı, penceresi kapanmamış bir kohort için **yalnızca** `prospective.*`, `results.prospective_runs` ve `results.prospective_results` tablolarına `INSERT`'i reddeder. Manifesto ve tanısal tablolar bu trigger'ın kapsamında değildir |
+| Geçmiş tarihli manifesto | `registered_at` (DB `now()`) ve `A_c` (`registered_at` + 24 saatten sonraki ilk UTC gece yarısı) sunucu tarafından atanır. İstemcinin gönderdiği değer reddedilir. `CHECK (A_c > registered_at)` |
+| Sınırların atlatılması | Açık kohort sınırı, aile kotası ve K_D, yetkili kaynak olan holdout DB'sinde `eval_registry` tarafından kayıt anında, işlem içinde uygulanır. Registry'deki kontrol yalnızca erken uyarıdır |
 | Yetkisiz import | Importçu yalnızca kayıtlı kohort pencerelerini import eder; serbest tarih aralığı kabul etmez. Aynı DB trigger'ı ve host allowlist'i |
-| Erken açıklama | Sonuç pencere bitmeden hesaplanamaz. Research view'ları yalnızca `revealed` kohortları gösterir |
+| Erken açıklama | Sonuç pencere bitmeden hesaplanamaz. Research view'ları yalnızca `research.cohort_status`'ta `revealed` olan kohortları gösterir. Bu tabloya **yalnızca `status_relay`** yazabilir; Research kendi kapısını açamaz |
 | Research'ün dolaylı erişimi | Canlı mumlar, `trading.*` ve açığa çıkmamış kohortlar Research'e kapalı. Research yalnızca `< C` verisini okur |
 | Kullanıcının seçici davranması | Kullanıcı PnL'i görür, ama manifestoyu ve sonucu değiştiremez, kohortu silemez ya da geri çekemez. Her varyant yeni kohort ve yeni penceredir. Tüm kohortlar raporlanır |
 | Saat manipülasyonu | Yalnızca root yapabilir. Kabul edilmiş risk; kaynak dosyaların tarih başlıkları loglanır |
@@ -209,7 +218,13 @@ Submitting --timeout/5xx--> Unknown --(origClientOrderId ile sorgu)--> gerçek d
 **Ağ ve yönetim katmanları:** §1'deki dört ağ; hiçbir port yayınlanmaz; geliştirme makinesinin VPS'e etkileşimsiz erişimi yoktur (T19). İzolasyon gizlilik sağlamaz; amaç iş akışı kaynaklı kontaminasyonu önlemektir.
 
 ### 6.3 Kohortlar ve manifesto
-Kohort, birlikte dondurulan en fazla 3 strateji ve ortak protokoldür. Manifesto **değiştirilemez** ve git'e commit edilip GitHub'a push edilerek zaman damgası alır. M5'ten itibaren evaluator'a da kaydedilir.
+Kohort, birlikte dondurulan en fazla 3 strateji ve ortak protokoldür. Manifesto **değiştirilemez.**
+
+**Yetkili kayıt ve zaman damgası:** Holdout DB'sindeki `results.cohort_manifests` tablosudur (append-only, sunucu saati). M5'ten önce, yani gerçek evaluator yokken (Kohort 0), yerel git commit'i manifestoyu sabitler; `A_c` bu commit'in zamanından aynı kuralla hesaplanır ve M5'te evaluator'a aynı değerlerle aktarılır.
+
+**GitHub push'u isteğe bağlı ek kanıttır:** Her zaman kullanıcı onayına tabidir ve dondurmanın şartı değildir. Böylece otomatik dondurma, GitHub token'ı gerektirmez.
+
+**Git'teki manifestolar** (`docs/cohorts/`) yalnızca eklenir. Force-push yapılmaz; düzenleme için izin kuralı onay ister.
 
 **Manifesto alanları:**
 - strateji tanımları ve hash'leri;
@@ -229,7 +244,9 @@ Kohort, birlikte dondurulan en fazla 3 strateji ve ortak protokoldür. Manifesto
 - aynı anda en fazla 2 açık kohort;
 - kohort başına en fazla 3 strateji;
 - aile başına ömür boyu en fazla 2 ileriye dönük deneme (ikinci denemede α/2);
-- tanısal: aile başına 1, kesim dönemi başına toplam 10.
+- tanısal: **aile başına ömür boyu 1**, kesim dönemi başına toplam 10.
+
+Hepsi `eval_registry` tarafından holdout DB'sinde uygulanır.
 
 **Aile kimliği** (sistem hesaplar):
 - DSL normalize edilir: kanonik JSON, değişme özelliği olan operandların sıralanması, totolojilerin sadeleştirilmesi, tekrarların kaldırılması.
@@ -247,7 +264,7 @@ Kohort, birlikte dondurulan en fazla 3 strateji ve ortak protokoldür. Manifesto
 
 | Geçiş | Kapı | Yetki |
 |---|---|---|
-| `Candidate → Frozen` | Kapılar geçildi; tanısal sonuç (varsa) "eleme" değil; manifesto kaydedildi; açık kohort sınırı aşılmadı | Otomatik |
+| `Candidate → Frozen` | Kapılar geçildi; tanısal sonuç (varsa) `Rejected` değil; manifesto yetkili kayda yazıldı (GitHub push şart değil); `eval_registry` sınırları kabul etti | Otomatik |
 | `Frozen → PaperTrading` | Parity replay başarılı | **Otomatik (D3)** |
 | `PaperTrading → TestnetActive` | Asgari paper süresi (TBD) ve sıfır kritik hata | **Kullanıcı onayı (D3)** |
 | `* → Disabled / Retired` | Operasyonel güvenlik | Kullanıcı ya da risk motoru; her zaman serbest; audit'e yazılır |
@@ -255,7 +272,8 @@ Kohort, birlikte dondurulan en fazla 3 strateji ve ortak protokoldür. Manifesto
 **Doğrulama durumu** (ayrı eksen; bir view'dır ve sonuç tablosundan türetilir):
 `Unvalidated → ProspectiveSealed → Validated | Failed | Inconclusive | Invalid`
 
-- `Validated`, **yalnızca** `eval_prospective` tarafından yazılan bir sonuç kaydından türetilir. Registry, Ops API ve Research bu durumu set edemez. Paper ve Testnet metrikleri hesaba girmez. `HoldoutEnvironmentVerified` yalnızca bu yazımı kapılar.
+- `Validated`, **yalnızca** `results.prospective_results` tablosundan türetilir. Bu tabloya yalnızca `eval_prospective` yazabilir. Tanısal tablo, `Validated` değerini alanının alabileceği değerler arasında hiç içermez. Registry, Ops API, Research ve `eval_diagnostic` bu durumu set edemez. Paper ve Testnet metrikleri hesaba girmez. `HoldoutEnvironmentVerified` yalnızca bu yazımı kapılar.
+- **Registry'deki strateji sürümleri değiştirilemez** (`UPDATE` ve `DELETE` yetkisi yok). Trading.Host bir stratejiyi çalıştırmadan önce tanımın hash'ini manifesto hash'iyle karşılaştırır; uyuşmazlık varsa stratejiyi çalıştırmaz ve alarm üretir.
 - **Testnet doğrulama gerektirmez.** `Validated` olmayan stratejiler "deneysel" etiketi taşır.
 - **`Validated` gerektiren işler:** "doğrulanmış" etiketi, LLM Allocator'ın ağırlık vermesi (M8) ve kapsam dışı her türlü yüksek riskli terfi.
 - **Operasyonel güvenlik eylemleri** her zaman serbesttir ve kohort değerlendirmesini **etkilemez:** devre dışı bırakma, kill switch'ler, yeni emirlerin engellenmesi, pozisyonların kapatılması. Değiştirilemezlik yalnızca manifestolar, sonuçlar ve audit geçmişi için geçerlidir.
@@ -288,12 +306,32 @@ Kohort, birlikte dondurulan en fazla 3 strateji ve ortak protokoldür. Manifesto
 
 **Kalın** olanlar **bloke edici TBD**'dir (M3'te Protokol v1 ve kullanıcı incelemesi). Eksik protokolle dondurulan kohort "doğrulamaya uygun değil" olarak işaretlenir: paper ve Testnet'e girebilir, sonucu en iyi ihtimalle `Inconclusive (protocol incomplete)` olur. Eksik parametre sonradan eklenemez.
 
-| Sonuç | Koşul |
-|---|---|
-| Validated | Protokol eksiksiz; veri kalitesi kabul edildi; gerçekleşen işlem sayısı ≥ plan; düzeltilmiş p < α; nokta tahmini ≥ δ; drawdown kuralı sağlandı |
-| Failed | Protokol eksiksiz; veri kalitesi kabul edildi; işlem sayısı yeterli; ve (güven aralığının üst sınırı < δ **ya da** drawdown kuralı ihlal edildi) |
-| Inconclusive | Diğer tüm durumlar (gücü yetersiz; yetersiz işlem; güven aralığı δ'yı içeriyor; protokol eksik) |
-| Invalid | Yalnızca teknik nedenler (aşağıda) |
+**Test ve güven aralığı (tek yöntem):**
+- **H0:** birincil metrik (maliyetler düşülmüş excess getiri) ≤ 0. Test tek yönlüdür.
+- Kullanılan α, **düzeltilmiş α**'dır: önce aile içi Bonferroni (ailenin ikinci denemesinde α/2), sonra kohort içinde Holm.
+- Aynı block bootstrap'tan, düzeltilmiş α ile **tek yönlü `(1 − α)` güven sınırları** hesaplanır:
+  - "düzeltilmiş p < α" ile "alt sınır > 0" eşdeğerdir;
+  - Failed kuralındaki üst sınır da aynı düzeyde hesaplanır.
+
+**δ'nın uygulanma biçimi (Protokol v1'de kullanıcı kararı, B5):**
+- **(a)** nokta tahmini ≥ δ (varsayılan yazım);
+- **(b)** alt sınır ≥ δ (daha sıkı; daha uzun pencere gerektirir).
+
+Seçilen biçim protokolde ön kayıtlıdır.
+
+**Karar sırası** (ilk sağlanan koşul geçerlidir):
+
+| Sıra | Koşul | Sonuç |
+|---|---|---|
+| 1 | Kanıtlı teknik neden (aşağıda) | `Invalid` |
+| 2 | Protokol eksik ya da kohort doğrulamaya uygun değil | `Inconclusive (protocol incomplete)` |
+| 3 | Drawdown kuralı ihlal edildi (**işlem sayısı ve güçten bağımsız**) | `Failed` |
+| 4 | Üst sınır < δ (güçten bağımsız; aralık ekonomik bir etkiyi dışlıyor) | `Failed` |
+| 5 | Gücü yetersiz kohort ya da gerçekleşen işlem sayısı < plan | `Inconclusive` |
+| 6 | Alt sınır > 0 **ve** δ koşulu ((a) ya da (b)) sağlandı | `Validated` |
+| 7 | Diğer tüm durumlar | `Inconclusive` |
+
+Veri kalitesi kabul edilmezse 1. adım uygulanır.
 
 **İstatistiksel anlamlılık tek başına ekonomik başarı değildir.**
 
@@ -307,7 +345,7 @@ Kötü performans ve strateji tanımındaki hatalar `Invalid` **sayılmaz.**
 
 Yeniden değerlendirme yalnızca **aynı manifesto, aynı pencere, aynı kaynak ve aynı digest** ile yapılır; kullanıcı Ops API üzerinden gerekçeyle başlatır; 1. ve 4. nedenler için en fazla 2 kez. Engine hatasında kohort `Invalid (engine defect)` olarak kalır; düzeltilmiş engine ile açılan yeni kohort yeni bir penceredir ve aile kotasından düşer (aile ömrü boyunca bir kez audit'li istisna tanınır). Her koşu, Invalid olanlar dahil, append-only kaydedilir ve raporlanır.
 
-**Tanısal holdout kullanımı:** Aile başına 1 değerlendirme, dönem başına toplam 10. Research yalnızca geçti/elendi bilgisini görür, metrikleri yalnızca kullanıcı görür. **Eleyebilir, terfi ettiremez.** Sonuç kayıtlarında, hipotezi üreten modelin bilgi kesim tarihinin pencereyle çakışması işaretlenir (bilgi kontaminasyonu).
+**Tanısal holdout kullanımı:** Aile başına ömür boyu 1 değerlendirme, kesim dönemi başına toplam 10. Sonuç yalnızca `NotRejected` ya da `Rejected` olabilir. Research yalnızca bu değeri görür, metrikleri yalnızca kullanıcı görür. **Eleyebilir, terfi ettiremez.** `NotRejected` hiçbir geçişi açmaz. Sonuç kayıtlarında, hipotezi üreten modelin bilgi kesim tarihinin pencereyle çakışması işaretlenir (bilgi kontaminasyonu).
 
 **Fark raporu:** Sonuç açığa çıktıktan sonra, evaluator simülasyonu ile paper ve Testnet sonuçları karşılaştırılır (getiri farkı, işlem eşleşmesi, slippage). Rapor yalnızca bilgilendiricidir ve doğrulamaya girmez. Model düzeltmeleri yalnızca gelecek kohortlara uygulanır.
 
@@ -325,7 +363,7 @@ Deneme sayacı, menşeinden bağımsız olarak (LLM, grid, insan, `dev-assisted`
 
 ## 7. Domain varlıkları (özet)
 - **Veri:** `TradingPair`, `PairCategory` (Core / E1 / E2, `first_open`, `U0`), `Candle`, `LiveCandle`, `DatasetSnapshot`.
-- **Holdout ve doğrulama:** `Cohort`, `CohortManifest` (hash'li, değiştirilemez), `ProtocolVersion`, `DiagnosticResult`, `ProspectiveRun`, `ProspectiveResult`, `ValidationStatus` (view), `EvaluatorRelease`.
+- **Holdout ve doğrulama:** `Cohort`, `CohortManifest` (hash'li, değiştirilemez; `registered_at` ve `A_c` sunucu tarafından atanır), `ProtocolVersion`, `DiagnosticResult` (`NotRejected` / `Rejected`), `ProspectiveRun`, `ProspectiveResult`, `ValidationStatus` (view; yalnızca `ProspectiveResult`'tan türetilir), `CohortStatus` (ops DB; `status_relay` yazar), `EvaluatorRelease`.
 - **Araştırma:** `IndicatorSpec`, `StrategyDefinition`, `TrialFamily`, `Hypothesis` (menşei: `llm` / `grid` / `human` / `dev-assisted`; bilgi kesim tarihi), `Experiment`, `ExperimentResult`, `StrategyLifecycleRecord`.
 - **Operasyon:** `Signal`, `TargetAllocation`, `AllocationProposal`, `RiskDecision`, `OrderIntent`, `Order`, `Fill`, `Position`, `LedgerEntry`, `BalanceSnapshot`, `ReconciliationRun`.
 - **AI:** `TaskQualification`, `QualificationProtocol` (hash'li), `DecisionTrace`, `CostLedgerEntry`, `AiKillSwitchState`.

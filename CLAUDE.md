@@ -19,11 +19,12 @@ Kullanıcıdan açık onay alınmadan yapılmaz:
 - Runtime AI API çağrısı (Gemini dahil) ya da herhangi bir Anthropic runtime API kullanımı.
 - Ücretli servis kullanımı, altyapı (VPS vb.) oluşturma veya satın alma, D4 bütçesini aşan harcama.
 - Gerçek ya da simüle edilmiş alım satım, borsa hesabına bağlanma, risk limitlerini gevşetme.
-- Uzak depoya push dışında herhangi bir yayın, paylaşım ya da erişim yetkisi değişikliği.
+- Uzak depoya **her push** (her seferinde ayrı onay) ve herhangi bir yayın, paylaşım ya da erişim yetkisi değişikliği. Force-push yapılmaz.
 
 ## Holdout kuralları (ADR-0006, ADR-0009)
 - Araştırma kesim tarihi `2026-01-01T00:00:00Z`. Bu tarih ve sonrasına ait piyasa verisi bu makineye araştırma amacıyla **indirilmez, okunmaz ve incelenmez**; WebFetch, curl, script ya da başka yolla da (tanısal ve ileriye dönük holdout, ADR-0006).
-- Kohort manifestoları ve değerlendirme sonuçları değiştirilmez ve silinmez. `Validated` durumu yalnızca ileriye dönük evaluator'dan gelir.
+- Kohort manifestoları (`docs/cohorts/` ve yetkili kayıt) ile değerlendirme sonuçları değiştirilmez ve silinmez; yalnızca yeni kayıt eklenir. `Validated` durumu yalnızca ileriye dönük evaluator'dan gelir.
+- Açığa çıkmamış kohortların paper ve Testnet sonuçları ile tanısal metrikler, kullanıcı paylaşsa bile **araştırma ya da hipotez girdisi olarak kullanılmaz.**
 - Holdout veritabanına, evaluator'a ya da VPS'e erişim denenmez. VPS'e SSH bağlantısı kurulmaz.
 - Holdout koruma kodu (adında `Holdout` geçen dosyalar) ve evaluator kodu, kullanıcının açık isteği olmadan değiştirilmez.
 - Holdout ortamına ait sır adları (`tests/Architecture.Tests/HoldoutSecretReferenceTests.cs`) evaluator projesi dışında hiçbir kaynak, config ya da script dosyasında kullanılmaz.

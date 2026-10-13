@@ -24,7 +24,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
 
 ### M0 — Temel (S) — ✅ yerelde tamamlandı (2026-10-13)
 - **Kapsam:**
-  - git deposu (yerel; uzak repo olarak private GitHub deposu kullanıcı onaylı, kimlik doğrulama bekleniyor);
+  - git deposu (yerel; uzak repo olarak private GitHub deposu; push her seferinde kullanıcı onayıyla);
   - solution iskeleti: kernel, modüller, iki host;
   - docker-compose ile dev PostgreSQL; migration altyapısı;
   - **tek komutluk yerel doğrulama script'i** (build, test, mimari testler; T16);
@@ -71,7 +71,8 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - DSL ve validator, interpreter.
   - Walk-forward, bootstrap, parametre komşuluğu, Deflated Sharpe.
   - **Aile kimliği** (normalizasyon, yapı hash'i, benzerlik kontrolü) ve deneme sayacı.
-  - **Kohort registry'si:** değiştirilemez manifesto, GitHub zaman damgası, `A_c` hesaplaması.
+  - **Kohort registry'si:** değiştirilemez manifesto; `registered_at` ve `A_c`'nin sunucu tarafından atanması; sınırların yetkili kayıtta uygulanması. GitHub push'u isteğe bağlıdır ve kullanıcı onayına tabidir.
+  - **Ayrı sonuç tabloları** (tanısal ve ileriye dönük); trigger yalnızca ileriye dönük tablolarda.
   - **İki izli yaşam döngüsü** (ADR-0012): operasyonel iz ve türetilmiş doğrulama durumu.
   - **Protokol v1:** zorunlu alanlar; bloke edici değerlerin önerisi ve kullanıcı incelemesi (B5).
   - **Süre protokolü aracı:** güç simülasyonu, rejim etiketleri, "gücü yetersiz" işareti.
@@ -94,7 +95,9 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - **Tekrar üretilebilirlik:** aynı girdiler aynı sonuç hash'ini üretiyor.
   - **Değiştirilemezlik:** kohort silinemiyor, geri çekilemiyor; operasyonel devre dışı bırakma sonucu değiştirmiyor.
   - **H7–H11, H15–H18** sentetik ortamda geçiyor.
-  - **Kohort 0** (baseline'lar) dondurulup push edildi.
+  - **Kohort 0** (baseline'lar), **yalnızca Protokol v1 onaylandıktan sonra** dondurulup yerel commit'le kaydedildi. Onaydan önce dondurulursa "yalnızca operasyonel" olarak etiketlenir.
+  - Tanısal rol ileriye dönük sonuç tablosuna yazamıyor; manifesto kaydı trigger'a takılmıyor; istemcinin gönderdiği `A_c` reddediliyor; sınırlar Registry atlatılsa bile yetkili kayıtta uygulanıyor (V11–V13).
+  - Registry'deki strateji sürümleri değiştirilemiyor; hash uyuşmazlığında Trading stratejiyi çalıştırmıyor (V14).
 - **Not:** Gerçek holdout verisi bu milestone'da hiçbir yere indirilmez.
 
 ### M4 — ModelRouter, yeterlilik altyapısı ve Researcher (M)
@@ -126,7 +129,8 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Korelasyon izleme ve P1 için tarihsel etki analizi.
 - **Kabul kriterleri:**
   - **H-ENV (H5, H6, H6b, H13, H14, H19–H24)** gerçek ortamda geçti; ardından `HoldoutEnvironmentVerified` kullanıcı oturumuyla set edildi ve audit'e yazıldı. Bu bayrak yalnızca `Validated` yazımını kapılar.
-  - Research rolü canlı mumları ve açığa çıkmamış paper sonuçlarını okuyamıyor; `eval_*` rolleri ops DB'sine bağlanamıyor; erken import reddediliyor (gerçek ortamda).
+  - Research rolü canlı mumları ve açığa çıkmamış paper sonuçlarını okuyamıyor; `research.cohort_status`'a yazamıyor; `eval_*` rolleri ops DB'sine bağlanamıyor; erken import reddediliyor (gerçek ortamda; H21, H22, H25).
+  - StatusRelay ayrı bir container olarak çalışıyor; Research.Host'ta `status_relay` kimlik bilgisi yok.
   - Deneysel parite tavanı için risk tablosu testleri geçiyor (tavanın tam sınırı, kırpma, çıkışın serbestliği, yetkisiz değişikliğin reddi).
   - Operasyonel güvenlik eylemleri (devre dışı bırakma, kill switch, pozisyon kapatma) çalışıyor ve audit'e yazılıyor; kohort kayıtlarını değiştirmiyor.
   - Parity replay geçiyor; risk tablosunun her satırı test edildi; bayat veride yalnızca çıkışlar çalışıyor; restart tutarlı.

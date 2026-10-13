@@ -122,16 +122,20 @@ Kesim tarihi `C = 2026-01-01T00:00:00Z`. Mum üyeliği: `S ≤ o` ve `o + Δ ≤
 | H16 | Kohort sınırları: 3. açık kohort, kohortta 4. strateji, ailenin 3. ileriye dönük denemesi | Reddedilir | M3 |
 | H17 | Aile kimliği: parametre, zaman dilimi, parite, model sürümü ya da engine değişikliği aynı aile; kural grafiği değişikliği yeni aile; benzerlik kontrolü bir kopyayı yakalıyor | Doğru | M3 |
 | H18 | İstemcinin beyan ettiği `familyId` | Yok sayılır; sistem kendisi hesaplar | M3 |
-| V1 | `Validated` durumunu `results` dışında bir yoldan set etme (Registry, Ops API, Research, Trading rolleri) | Reddedilir | M3 |
+| V1 | `Validated` durumunu `results.prospective_results` dışında bir yoldan set etme (Registry, Ops API, Research, Trading, `eval_diagnostic`, `eval_registry`) | Reddedilir; `ValidationStatus` yalnızca `prospective_results`'tan türetiliyor | M3 |
 | V2 | Paper ve Testnet PnL'i ne olursa olsun doğrulama durumu | Değişmez | M3 |
 | V3 | Gücü yetersiz kohort, eksik protokol, yetersiz işlem | En iyi ihtimalle `Inconclusive` | M3 |
-| V4 | Enjekte edilmiş saatle `now < A_c + L_c + tampon` iken değerlendirme ya da P import'u (uygulama katmanı **ve** DB trigger'ı ayrı ayrı) | Reddedilir | M3 |
+| V4 | Enjekte edilmiş saatle `now < A_c + L_c + tampon` iken değerlendirme ya da P import'u (uygulama katmanı **ve** DB trigger'ı ayrı ayrı; trigger yalnızca `prospective.*` ve `results.prospective_*` tablolarında) | Reddedilir | M3 |
 | V5 | Dondurulmuş manifestoda değişiklik; kohort silme ya da geri çekme | Reddedilir | M3 |
 | V6 | `Invalid`: kanıtsız istek reddedilir; yeniden değerlendirme yalnızca aynı manifesto, pencere ve digest ile; sınır aşımı reddedilir; tüm koşular audit'te | Doğru | M3 |
 | V7 | Aynı girdilerle iki koşu | Aynı sonuç hash'i | M3 |
-| V8 | `eval_diagnostic` ile `eval_prospective` birbirinin şemasını; Research ve Trading rolleri holdout şemalarını okuma girişimi | Yetki hatası | M3 |
+| V8 | `eval_diagnostic` ile `eval_prospective` birbirinin şemasını okuma ve birbirinin sonuç tablosuna yazma; Research ve Trading rolleriyle holdout şemalarını okuma | Yetki hatası | M3 |
 | V9 | Operasyonel devre dışı bırakma ve kill switch sonrasında kohort sonucu | Hesaplanır ve değişmeden gösterilir | M3 |
 | V10 | `PaperTrading → TestnetActive` kullanıcı oturumu olmadan | Reddedilir | M6 |
+| V11 | `results.diagnostic_results`'a `NotRejected` ve `Rejected` dışında bir değer (ör. `Validated`) yazma | DB `CHECK` reddeder | M3 |
+| V12 | Penceresi henüz açılmamış bir kohort için manifesto kaydı | Trigger'a takılmaz; kayıt başarılı | M3 |
+| V13 | İstemcinin gönderdiği `registered_at` ya da `A_c`; geçmiş tarihli `A_c`; Registry atlanarak doğrudan `eval_registry`'ye sınır aşan kayıt | Reddedilir; sunucu değeri kullanılır; sınır yetkili kayıtta uygulanır | M3 |
+| V14 | Registry'deki strateji sürümünü güncelleme ya da silme; manifesto hash'iyle uyuşmayan tanımın Trading'de çalıştırılması | Yetki hatası; strateji çalıştırılmaz ve alarm üretilir | M3/M5 |
 
 ### 7.2 H-ENV (gerçek ortam, M5)
 | # | Test | Beklenen |
@@ -147,6 +151,7 @@ Kesim tarihi `C = 2026-01-01T00:00:00Z`. Mum üyeliği: `S ≤ o` ve `o + Δ ≤
 | H22 | Gerçek DB trigger'ı ile erken P import'u | Reddedilir |
 | H23 | `ExperimentalPairsMaxExposure` değerini kullanıcı olmayan bir rolle değiştirme | Reddedilir |
 | H24 | Ops API: açık kohortun PnL'i görünüyor; manifesto ya da sonuç değiştirme uç noktası yok | Doğru |
+| H25 | Research rolüyle `research.cohort_status`'a yazma; Research.Host ortamında `status_relay` kimlik bilgisinin aranması | Yetki hatası; kimlik bilgisi yok |
 
 H-ENV testlerinin tamamı geçmeden `HoldoutEnvironmentVerified` set edilemez. Bu bayrak yalnızca `Validated` yazımını kapılar. Sahte ortamda geçen testler gerçek izolasyonun kanıtı sayılmaz.
 

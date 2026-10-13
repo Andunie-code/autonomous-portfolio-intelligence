@@ -25,23 +25,26 @@
 
    | Ağ | Tür | Üyeler |
    |---|---|---|
-   | `ops` | İnternet çıkışı var | Trading.Host, Research.Host, ops DB |
-   | `eval` | internal | Research.Host, Evaluator |
+   | `ops` | İnternet çıkışı var | Trading.Host, Research.Host, StatusRelay, ops DB |
+   | `eval` | internal | Research.Host, StatusRelay, Evaluator |
    | `holdout` | internal | Evaluator, holdout DB (ayrı PostgreSQL instance'ı) |
    | `egress` | İnternet çıkışı var | Yalnızca Evaluator (kaynaktan import) |
 
 3. **Kimlik bilgileri:**
    - Holdout DB parolası yalnızca evaluator secret'ında.
    - Research.Host'ta yalnızca **submit-only** bir evaluator token'ı var.
-   - **(rev. 4)** Ayrı DB rolleri: `research_app`, `trading_app`, `market_import`, `ops_api`, `eval_diagnostic`, `eval_prospective`.
-     - Research yalnızca `research.*` view'larını okur: kesimden önceki `market.candles` ve açığa çıkmış kohortlar.
+   - **(rev. 4.1)** Ayrı DB rolleri: `research_app`, `trading_app`, `market_import`, `ops_api`, `status_relay`, `eval_registry`, `eval_diagnostic`, `eval_prospective`.
+     - Research yalnızca `research.*` tablo ve view'larını okur: kesimden önceki `market.candles` ve `cohort_status`'ta `revealed` olan kohortlar.
+     - **`research.cohort_status`'a yalnızca `status_relay` yazabilir.** `status_relay` ayrı bir container'dır ve Research.Host bu kimliğe sahip değildir.
      - Canlı veri ayrı tabloda (`market.live_candles`) ve yalnızca Trading'in erişiminde.
-     - Evaluator rollerinin ops DB'sine erişimi yok; `eval_diagnostic` ve `eval_prospective` birbirinin şemasını okuyamaz.
+     - Evaluator rollerinin ops DB'sine erişimi yok.
+     - Sonuç tabloları ayrıdır: `results.diagnostic_results` (yalnızca `eval_diagnostic`; sonuç alanı yalnızca `NotRejected` ya da `Rejected`) ve `results.prospective_results` (yalnızca `eval_prospective`). `ValidationStatus` yalnızca ikincisinden türetilir.
+     - `results.cohort_manifests`: `registered_at` ve `A_c` sunucu tarafından atanır; açık kohort sınırı, aile kotası ve K_D burada, `eval_registry` tarafından işlem içinde uygulanır.
      - İzin tablosunun tamamı `architecture.md` §6.2'de.
 4. **Evaluator API'si (rev. 4):** `POST /cohorts` (manifesto), `POST /diagnostic-evaluations` ve `GET /cohorts/{id}/status`. Yanıtlarda yalnızca durum ve açığa çıkmış yuvarlanmış özet bulunur. Ham veri ya da zaman serisi döndüren bir uç nokta **yoktur.** "Şimdi değerlendir" diye bir uç nokta da yoktur; ileriye dönük değerlendirmeyi evaluator'ın zamanlayıcısı pencere kapandıktan sonra başlatır. Politika: ADR-0006.
    - **Erken değerlendirme ve yetkisiz import'a karşı iki katman:**
      1. enjekte edilebilir saatle uygulama kontrolü;
-     2. penceresi kapanmamış kohort için `prospective.*` ve `results.*` tablolarına `INSERT`'i reddeden DB trigger'ı.
+     2. penceresi kapanmamış kohort için **yalnızca** `prospective.*`, `results.prospective_runs` ve `results.prospective_results` tablolarına `INSERT`'i reddeden DB trigger'ı. Manifesto ve tanısal tablolar bu trigger'ın kapsamı dışındadır (manifesto, pencere açılmadan önce kaydedilmek zorundadır).
 
      İmport yalnızca kayıtlı kohort pencereleri için yapılır.
 5. **Yönetim ve deploy (T19):**

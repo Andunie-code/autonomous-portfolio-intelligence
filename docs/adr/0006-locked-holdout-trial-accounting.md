@@ -16,18 +16,25 @@ Kullanıcı, 2026-01-01'de katı bir araştırma kesim tarihi ve iki ayrı holdo
 2. **Tanısal holdout** `D_c = [C, A_c)`:
    - Kör değildir.
    - **Eleyebilir, terfi ettiremez.**
-   - Aile başına 1 değerlendirme, kesim dönemi başına toplam 10 (U3).
-   - Research yalnızca geçti/elendi bilgisini görür.
+   - Aile başına **ömür boyu** 1 değerlendirme, kesim dönemi başına toplam 10 (U3).
+   - Sonuç yalnızca `NotRejected` ya da `Rejected` olabilir (DB `CHECK`) ve ayrı bir tabloya yazılır. Research yalnızca bu değeri görür. `NotRejected` hiçbir geçişi açmaz.
 3. **İleriye dönük birincil holdout** `P_c = [A_c, A_c + L_c)`:
-   - Kohort bazlıdır. `A_c` = kohortun dondurulduğu `F_c` anı + 24 saatten sonraki ilk UTC gece yarısı.
-   - **`Validated` durumunun tek kaynağıdır.**
+   - Kohort bazlıdır. `A_c` = `registered_at` + 24 saatten sonraki ilk UTC gece yarısı. `registered_at` ve `A_c`, yetkili manifesto kaydında **sunucu tarafından** atanır; istemcinin gönderdiği değer reddedilir.
+   - GitHub push'u isteğe bağlı bir ek kanıttır, dondurmanın şartı değildir ve kullanıcı onayına tabidir.
+   - **`Validated` durumunun tek kaynağıdır:** yalnızca `eval_prospective` rolünün yazabildiği `results.prospective_results` tablosundan türetilir.
    - Süre ön kayıtla seçilir: `L_c = max(L_req, 6 ay)`. `L_req > 12 ay` ise kohort gücü yetersizdir ve en iyi ihtimalle `Inconclusive` olabilir.
    - 6 ve 12 ay varsayılandır, yeterlilik garantisi değildir (U2).
 4. **Protokolün tamamlanması:**
    - α, hedef güç, ekonomik δ ve drawdown kuralı **bloke edici TBD**'lerdir (M3'te Protokol v1).
    - Eksik protokolle dondurulan kohort `Validated` olamaz; eksik parametre sonradan eklenemez.
    - İstatistiksel anlamlılık tek başına yeterli değildir: δ ve drawdown kuralı da sağlanmalıdır.
-5. **Sonuçlar** (`Validated`, `Failed`, `Inconclusive`, `Invalid`): Tam kurallar `architecture.md` §6.5'te. `Invalid` yalnızca kanıtlı teknik nedenlerle verilir. Yeniden değerlendirme yalnızca aynı manifesto, pencere, kaynak ve digest ile yapılır. Her koşu raporlanır.
+5. **Sonuçlar** (`Validated`, `Failed`, `Inconclusive`, `Invalid`):
+   - Tek yönlü test; H0: excess ≤ 0.
+   - Aynı block bootstrap'tan, düzeltilmiş α ile tek yönlü `(1 − α)` güven sınırları. Düzeltme sırası: önce aile içi Bonferroni, sonra kohort içi Holm.
+   - Kesin bir karar sırası: Invalid → protokol eksik → drawdown ihlali (Failed) → üst sınır < δ (Failed) → gücü ya da işlem sayısı yetersiz (Inconclusive) → Validated → diğer (Inconclusive).
+   - δ'nın nokta tahmine mi alt sınıra mı uygulanacağı Protokol v1'de kullanıcı tarafından seçilir.
+
+   Tam kurallar `architecture.md` §6.5'te. `Invalid` yalnızca kanıtlı teknik nedenlerle verilir. Yeniden değerlendirme yalnızca aynı manifesto, pencere, kaynak ve digest ile yapılır. Her koşu raporlanır.
 6. **Sınırlar (U4):**
    - en fazla 2 açık kohort, kohort başına 3 strateji;
    - aile başına ömür boyu en fazla 2 ileriye dönük deneme (ikinci denemede α/2);
