@@ -1,0 +1,9 @@
+{
+  "version": "m1-exclusions.v1",
+  "note": "docs/m1-data-policy.md §5 step 1. Seed list written before any archive listing; review it against the classification report. Changing it requires a new policy version.",
+  "stablecoins": ["USDC", "BUSD", "TUSD", "USDP", "PAX", "DAI", "FDUSD", "UST", "USTC", "SUSD", "USDD", "GUSD", "PYUSD", "USDE", "USD1", "EURI", "AEUR", "EURC", "XUSD", "BKRW"],
+  "fiat": ["EUR", "GBP", "AUD", "TRY", "BRL", "RUB", "UAH", "NGN", "ZAR", "JPY", "PLN", "RON", "ARS", "MXN", "COP", "CZK", "IDR", "BIDR", "IDRT", "BVND"],
+  "wrapped": ["WBTC", "WBETH", "BETH", "WETH", "BNSOL", "WSTETH"],
+  "commodities": ["PAXG", "XAUT"],
+  "leveragedSuffixes": ["UP", "DOWN", "BULL", "BEAR"]
+}

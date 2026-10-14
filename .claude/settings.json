@@ -22,6 +22,8 @@
       "PowerShell(docker cp*)",
       "Bash(*--allow-network*)",
       "PowerShell(*--allow-network*)",
+      "Bash(*AllowNetwork*)",
+      "PowerShell(*AllowNetwork*)",
       "WebFetch(domain:data.binance.vision)",
       "Bash(curl *data.binance.vision*)",
       "Bash(wget *data.binance.vision*)",

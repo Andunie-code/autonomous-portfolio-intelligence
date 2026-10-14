@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- MarketData module (M1): archive access behind the request guard, checksum verification, import into
+       market.candles, core pair selection pipeline. Pure rules live in the Kernel. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Kernel\PortfolioIntelligence.Kernel.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Config\m1-exclusions.v1.json" />
+  </ItemGroup>
+</Project>

@@ -27,6 +27,14 @@ public class RepositoryRuleTests
     [InlineData("PowerShell(ssh *)")]
     [InlineData("PowerShell(scp *)")]
     [InlineData("WebFetch(domain:data.binance.vision)")]
+    [InlineData("Bash(docker exec*)")]
+    [InlineData("PowerShell(docker exec*)")]
+    [InlineData("Bash(docker cp*)")]
+    [InlineData("PowerShell(docker cp*)")]
+    [InlineData("Bash(*--allow-network*)")]
+    [InlineData("PowerShell(*--allow-network*)")]
+    [InlineData("Bash(*AllowNetwork*)")]
+    [InlineData("PowerShell(*AllowNetwork*)")]
     public void Claude_project_settings_deny_holdout_and_secret_access(string rule)
     {
         Assert.Contains(rule, ReadPermissionList("deny"));

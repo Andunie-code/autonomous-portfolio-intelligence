@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- M1 command line: plan (no network), check-cutoff (H1), run (real network, Gate 2 only). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Modules\MarketData\PortfolioIntelligence.MarketData.csproj" />
+  </ItemGroup>
+</Project>

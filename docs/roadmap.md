@@ -40,7 +40,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Kanarya secret'ı loglarda maskeli görünüyor.
   - Talimat dosyası ve izin kuralları repoda; içerikleri `architecture.md` §10 ile uyumlu.
 
-### M1 — Veri temeli (M) — Kapı 1 açık (2026-10-14)
+### M1 — Veri temeli (M) — Kapı 1: çevrimdışı kod ve testler tamam (2026-10-14); Kapı 2 onay bekliyor
 - **Politika:** [`m1-data-policy.md`](m1-data-policy.md) v1.0 (kullanıcı onaylı; onay, belgenin eklendiği commit'e bağlı).
 - **Kapılar (U):** Kapı 1 = politika ve tüm çevrimdışı kod/testler, `verify.ps1` yeşil. Kapı 2 = gerçek `data.binance.vision` erişimi (`--dry-run`, ardından gerçek import), kullanıcının tek aşamalı etkileşimli onayıyla. Çekirdek 20 parite, kabul raporunun kullanıcı tarafından onaylanmasıyla kesinleşir.
 - **Kapsam:**

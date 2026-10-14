@@ -8,6 +8,7 @@ public class DependencyRuleTests
     private const string ResearchHost = "PortfolioIntelligence.Research.Host";
     private const string Execution = "PortfolioIntelligence.Execution";
     private const string TradingHost = "PortfolioIntelligence.Trading.Host";
+    private const string MarketData = "PortfolioIntelligence.MarketData";
 
     private static readonly ProjectGraph Graph = ProjectGraph.Load(Path.Combine(RepositoryRoot.Path, "src"));
 
@@ -15,7 +16,7 @@ public class DependencyRuleTests
     public void Graph_contains_the_expected_projects()
     {
         Assert.Superset(
-            new HashSet<string> { Kernel, Research, ResearchHost, Execution, TradingHost },
+            new HashSet<string> { Kernel, Research, ResearchHost, Execution, TradingHost, MarketData },
             Graph.Projects.ToHashSet());
     }
 
@@ -28,6 +29,13 @@ public class DependencyRuleTests
 
         Assert.DoesNotContain(Execution, references);
         Assert.DoesNotContain(TradingHost, references);
+    }
+
+    [Fact]
+    public void MarketData_depends_only_on_the_kernel()
+    {
+        // M1 data access must not pull in execution, research or host code (YAGNI, T23).
+        Assert.Equal(new[] { Kernel }, Graph.TransitiveReferencesOf(MarketData));
     }
 
     [Fact]

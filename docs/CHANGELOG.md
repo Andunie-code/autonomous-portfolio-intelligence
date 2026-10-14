@@ -2,6 +2,22 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-14 — M1 Kapı 1: çevrimdışı kod ve testler
+Politika: `m1-data-policy.md` v1.0 (onay commit'i `025f0e2`). Gerçek ağ erişimi yapılmadı.
+
+**Kullanıcı onayı (U, 2026-10-14):** politika §5'teki üç teknik varsayılan (sıralamada listeleme sonrası ilk 30 günün çıkarılmaması, `n_exp`'in arşivdeki ilk 1h mumdan sayılması, 20 tamamlanana kadar tarama) onaylandı. Politika metni değişmedi; onay bu kayıtla belgelenir.
+
+**Eklenenler:**
+- Kernel (`MarketData`): `C`/`U`/pencere sabitleri, aralık ve mum üyeliği (UTC, 1M takvim ayı), ms/µs zaman damgası, kline CSV ayrıştırıcısı ve bütünlük kuralları, aylık dosya planlayıcı, kapsam/boşluk analizi, 1h/4h tutarlılığı, sıralama, sınıflandırma, çekirdek seçimi.
+- `src/Modules/MarketData`: istek ve yanıt doğrulayan tek çıkış noktası (`ArchiveGuardHandler`), S3 listeleme istemcisi (sayfalama, yıl önekleri), checksum doğrulama, repo ve OneDrive dışındaki önbellek, importçu, olay günlüğü, M1 hattı, kabul raporu.
+- Migration 0002: `market.research_cutoff()`, `market.candle_close_time()` (UTC), `market.source_files`, `market.candles` (kesim `CHECK`'i), `market.dataset_snapshots`.
+- `src/Tools/MarketDataCli` ve `scripts/m1-import.ps1`: `plan` (ağsız), `check-cutoff` (H1), `run --allow-network` (Kapı 2; etkileşimli onay, yönlendirilmiş girdide reddeder; Claude Code için deny).
+- Dışlama listesi `m1-exclusions.v1` (gömülü yapılandırma).
+
+**Doğrulama:** `scripts/verify.ps1` yeşil (build 0 uyarı/0 hata; mimari 37, altyapı 16, MarketData 79 test). Geçen testler H1b, H1c, H1d, H2, H2b, H2c, H3 ve H4'ü kapsar; H1 (dev DB'de kesim sonrası satır yok) CLI'deki `check-cutoff` ile ve konteyner testinde doğrulanır.
+
+**Doğrulanmamış varsayımlar (Kapı 2'nin ilk koşusunda görülecek):** listeleme uç noktası ve S3 XML biçimi, dosya adlandırması, CSV sütun sırası, checksum dosya biçimi, ms/µs geçiş sınırı, 1w/1M dosya içerikleri.
+
 ## 2026-10-14 — rev. 5.1: M1 veri politikası v1.0 ve `A_c` kararı (kullanıcı onaylı)
 **Kullanıcı kararları (U):**
 - **`A_c`:** tek yetkili kaynak `registered_at` (`A_c` = `registered_at` + 24 saatten sonraki ilk UTC gece yarısı). architecture §6.1 ve roadmap M3'teki `F_c` ifadeleri düzeltildi.
