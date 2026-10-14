@@ -11,7 +11,7 @@
 - 12.000 TL Gemini kredisi bir finansman kaynağıdır, harcama onayı değildir (D4).
 
 ## Karar
-1. `IAiProvider` (sağlayıcı başına bir adapter) ve sağlayıcıdan bağımsız `ModelRouter`. İlk ve tek adapter `GeminiProvider` (resmi `Google.GenAI` .NET paketi); başlangıç modeli `gemini-3.5-flash-lite`.
+1. `IAiProvider` (sağlayıcı başına bir adapter) ve sağlayıcıdan bağımsız `ModelRouter`. İlk ve tek adapter `GeminiProvider` (resmi `Google.GenAI` .NET paketi); başlangıç modeli `gemini-3.5-flash-lite`. (2026-10-14, T24: model adı kodda sabit yazılmaz; görev politikası konfigürasyonundan okunur.)
 2. **Sağlayıcılar arası fallback yok** (T14). Bir sağlayıcı kesintide ya da nitelik yokken görev, politikasındaki `onUnavailable` davranışına düşer (D20).
 3. Nötr ve sığ şemalar; zorunlu tool seçimine dayanılmaz; konuşma geçmişi yalnızca eklenerek büyür. Sağlayıcıya özel optimizasyonlar adapter içinde kalır.
 4. Yeni bir sağlayıcı yalnızca **yeni bir adapter ve aynı yeterlilik protokolleriyle** eklenir. Bunun için ayrı onay gerekir (D19, P3).

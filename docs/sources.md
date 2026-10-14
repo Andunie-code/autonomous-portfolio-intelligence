@@ -52,4 +52,5 @@ Bu belgedeki bilgiler, aksi belirtilmedikçe, belirtilen tarihte resmi kaynaktan
 
 ## Henüz doğrulanmayanlar (M7 öncesinde)
 - arXiv API ve Semantic Scholar API: kullanım koşulları, rate limit'ler, ücretsiz erişim.
-- VPS fiyatları (M5 öncesinde).
+- ~~VPS fiyatları~~ — gerekmiyor (2026-10-14, D5 rev.: VPS yok).
+- Binance Spot'ta koruyucu stop emir tipleri ve Testnet desteği (M6 öncesinde; ADR-0014).

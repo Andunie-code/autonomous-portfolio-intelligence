@@ -26,7 +26,7 @@
 - Registry, Ops API ve Research bu durumu set edemez. Paper ve Testnet metrikleri hesaba girmez.
 - `Validated` gerektiren işler: "doğrulanmış" etiketi, LLM Allocator'ın ağırlık vermesi (M8), kapsam dışı her türlü yüksek riskli terfi.
 
-**Operasyonel güvenlik eylemleri her zaman serbesttir** ve audit'e yazılır: devre dışı bırakma, kill switch'ler, yeni emirlerin engellenmesi, pozisyonların kapatılması. Bu eylemler kohort değerlendirmesini etkilemez; evaluator, dondurulmuş tanımı arşiv verisi üzerinde bağımsız olarak simüle eder.
+**Operasyonel güvenlik eylemleri her zaman serbesttir** ve audit'e yazılır: devre dışı bırakma, kill switch'ler, yeni emirlerin engellenmesi, pozisyonların kapatılması. Bu eylemler kohort değerlendirmesini etkilemez; evaluator, dondurulmuş tanımı arşiv verisi üzerinde bağımsız olarak simüle eder. Paper ve Testnet ile evaluator sonuçlarının karşılaştırması mutlak emir büyüklükleriyle değil normalize değerlerle yapılır (ADR-0015).
 
 ### 2. Parite kategorileri
 **Tanımlar:**

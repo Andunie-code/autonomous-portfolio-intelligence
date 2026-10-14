@@ -35,7 +35,7 @@
 | Retry | En fazla 2 (429, 5xx, ağ hatası); üstel bekleme + jitter; `Retry-After`. 4xx'te retry yok. Şema hatasında tek bir onarım isteği |
 | Timeout | 120 sn |
 
-Ledger USD cinsinden liste fiyatlarıyla tutulur. Google faturasıyla aylık mutabakat yapılır; fark %10'u aşarsa fiyat tablosu güncellenir. Geliştirme ve prod için ayrı API anahtarları kullanılır.
+Ledger USD cinsinden liste fiyatlarıyla tutulur. Google faturasıyla aylık mutabakat yapılır; fark %10'u aşarsa fiyat tablosu güncellenir. Geliştirme ve runtime için ayrı API anahtarları kullanılır. (2026-10-14: yerel tek makine topolojisinde ikisi de Claude Code ile aynı makinededir; kabul edilmiş artık risk, ADR-0013.)
 
 ### LLM acil durdurma
 - `AiKillSwitch`: ops DB'sinde kalıcı bir bayrak. Her çağrıdan ve her retry'dan önce kontrol edilir.

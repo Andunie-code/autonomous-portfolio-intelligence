@@ -38,7 +38,7 @@ Kullanıcı, 2026-01-01'de katı bir araştırma kesim tarihi ve iki ayrı holdo
 6. **Sınırlar (U4):**
    - en fazla 2 açık kohort, kohort başına 3 strateji;
    - aile başına ömür boyu en fazla 2 ileriye dönük deneme (ikinci denemede α/2);
-   - aile kimliği sistem tarafından hesaplanır (normalize edilmiş DSL hash'i ve benzerlik kontrolü).
+   - aile kimliği sistem tarafından hesaplanır (normalize edilmiş DSL hash'i ve benzerlik kontrolü; benzerlik yalnızca aile temsilcileriyle karşılaştırılır, ADR-0015).
 
    Bunların hiçbiri tek başına atlatılamazlık garantisi değildir. Global sınırlar ve "n denemeden k Validated" raporlaması asıl güvencedir.
 7. **Değiştirilemezlik:** Manifestolar, koşular, sonuçlar ve audit geçmişi append-only'dir; kohortlar silinemez ve geri çekilemez. Operasyonel güvenlik eylemleri (devre dışı bırakma, kill switch, pozisyon kapatma) her zaman serbesttir ve değerlendirmeyi etkilemez (U7).

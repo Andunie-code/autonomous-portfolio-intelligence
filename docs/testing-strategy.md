@@ -1,8 +1,8 @@
 # Test Stratejisi
 
-Son güncelleme: 2026-10-13 (rev. 4) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-14 (rev. 5) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
-> Durum: Buradaki testler **planlanmıştır, yazılmamıştır.** Bir kontrol, testi uygulanıp geçmeden "uygulandı" olarak raporlanmaz.
+> Durum: M0'ın mimari, repo kuralı, migration ve redaction testleri yazıldı ve geçti (44/44, CHANGELOG). Buradaki diğer testler **planlanmıştır, yazılmamıştır.** Bir kontrol, testi uygulanıp geçmeden "uygulandı" olarak raporlanmaz.
 
 ## 1. Katmanlar
 | Katman | Kapsam | Ne zaman çalışır |
@@ -12,7 +12,7 @@ Son güncelleme: 2026-10-13 (rev. 4) · Değişiklikler: [CHANGELOG.md](CHANGELO
 | Entegrasyon | PostgreSQL (Testcontainers), kuyruk, import, sahte exchange, sahte AI sağlayıcısı | Her koşu |
 | Fault injection | Exchange ve AI hataları | Her koşu |
 | **H-DEV** (holdout, geliştirme tarafı) | §7.1 | Her koşu |
-| **H-ENV** (holdout, gerçek ortam) | §7.2. Gerçek VPS ortamına karşı | Ortam kurulduğunda, evaluator ya da altyapı her değiştiğinde, ayda bir. Sonuç `HoldoutEnvironmentVerified`'ı belirler |
+| **H-ENV** (holdout, gerçek ortam) | §7.2. Gerçek yerel Docker Compose ortamına karşı (ADR-0013) | Ortam kurulduğunda, evaluator ya da altyapı her değiştiğinde, ayda bir. Sonuç `HoldoutEnvironmentVerified`'ı belirler |
 | Testnet | Gerçek Testnet'e küçük emirler | Manuel veya gecelik |
 | Model yeterliliği | §6. Ön kayıtlı, bütçeli | Protokole göre |
 
@@ -32,6 +32,13 @@ Son güncelleme: 2026-10-13 (rev. 4) · Değişiklikler: [CHANGELOG.md](CHANGELO
 - Benchmark'ların analitik değerlerle eşleşmesi.
 - Maliyet modelinin negatif olmaması.
 - **Varsayılan allocation politikası (T11):** ağırlıklar onaylı tavanları hiçbir zaman aşmaz (property testi); volatilite verisi eksikse varlık sıfır ağırlık alır; sonuç deterministik.
+- **Çıkış ve koruyucu stop (T20, ADR-0014):**
+  - Kapanış sinyali `t` kapanışında üretilir ve `t+1` açılışında uygulanır (look-ahead testiyle birlikte).
+  - Golden testler: `Open ≤ S` ise çıkış `Open`'dan (gap); `Low ≤ S < Open` ise çıkış `S`'den; giriş mumunda stop tetiklenmesi.
+  - Aynı mumda stop ve kapanış sinyali birlikteyse stop önceliklidir.
+  - Stop seviyesi mum içinde değişmez; kapanışta yapılan güncelleme yalnızca sonraki mumdan itibaren geçerlidir (property testi).
+  - Efektif stop, strateji stop'u ile `RiskConfig` hard stop'undan (D25) girişe en yakın olanıdır.
+  - Stop dolumuna ayrı slippage parametresi uygulanır; maliyet negatif olmaz.
 
 ## 4. Değerlendirme hattı (M3)
 - **Yanlış pozitif kalibrasyonu:** Random walk verisi üzerinde rastgele N strateji çalıştırılır; kapı eşikleri, ön kayıtlı hedef yanlış pozitif oranı sağlanacak şekilde kalibre edilir (hedef oran TBD, `requirements.md` §8).
@@ -39,9 +46,14 @@ Son güncelleme: 2026-10-13 (rev. 4) · Değişiklikler: [CHANGELOG.md](CHANGELO
 - **DSL ve kodlanmış baseline parity'si.**
 - **`TrialFamily` yapı hash'i:** Yalnızca parametre değişikliği aynı hash'i, yapısal değişiklik farklı hash'i üretir. JSON'da alan sırası ve boşluklar hash'i etkilemez.
 - **Deneme sayacı:** LLM, grid ve insan menşeli denemelerin hepsi sayılır.
+- **Aile temsilcisi benzerliği (T21, ADR-0015):** aday yalnızca temsilcilerle karşılaştırılır; temsilcinin kopyası ve küçük varyantı yakalanır (pozitif kontrol); temsilci her ailenin kayıt sırasına göre ilk üyesidir ve değişmez; artefakt boyutu ve bellek kullanımı aile sayısıyla doğrusal kalır (ör. 1.000 sentetik aile ile ölçülür); veri snapshot'ı değişince artefaktlar yeniden üretilir.
 
 ## 5. Operasyon (M5–M6)
-- Parity: canlı motorla replay, backtest ile aynı sonucu verir.
+- **Parity (T22, ADR-0015):**
+  - L1 sinyal paritesi: aynı mumlarla canlı motor replay'i ve backtest aynı sinyalleri, giriş/çıkış zamanlarını, stop seviyelerini ve tetiklenmelerini, risk öncesi birim hedef ağırlıkları üretir (birebir).
+  - L2 karar paritesi: aynı portföy durumu ve `RiskConfig` ile risk ve sizer kararları aynıdır (birebir).
+  - L3 fark raporu: normalize metrikler hesaplanır ve farklar kategorize edilir; mutlak emir büyüklükleri karşılaştırılmaz. Sentetik bir senaryoda portföy kısıtı nedeniyle açılmayan işlem, parity hatası değil L3 kategorisi olarak raporlanır.
+- **Koruyucu stop (Testnet, M6):** giriş dolumundan sonra stop emri gönderilir; kill switch açıldığında giriş emirleri iptal edilir, stop emirleri kalır; stop emri reddi alarm üretir ve yeni girişleri durdurur.
 - Risk tablosunun her satırı test edilir.
 - Fault injection altında duplicate emir sayısı 0.
 - Kanarya secret testi.
@@ -112,7 +124,7 @@ Kesim tarihi `C = 2026-01-01T00:00:00Z`. Mum üyeliği: `S ≤ o` ve `o + Δ ≤
 | H2b | Dosya planlayıcı (rastgele tarihlerle property testi) | `≥ C` aralığını kapsayan hiçbir dosya listelenmez | M1 |
 | H2c | Host allowlist'i, redirect reddi; testler gerçek ağa çıkmıyor | Doğru | M1 |
 | H3 | `market.candles`'a sınırdaki satırları (haftalık mum dahil) doğrudan ekleme | `CHECK` reddeder | M1 |
-| H4 | Repo ve geliştirme secret/config taraması | Holdout ya da VPS secret'ı bulunmaz | M0/M1 |
+| H4 | Repo ve geliştirme secret/config taraması | Evaluator dışında holdout secret'ı bulunmaz | M0/M1 |
 | H7 | `GetDatasetCatalog` | `≥ C` verisini içermez | M3 |
 | H8 | `C` sonrasına uzanan `SubmitExperiment` ya da tuning isteği | Reddedilir ve audit'e yazılır | M3 |
 | H9 | Tanısal: aynı aile için ikinci değerlendirme; kesim dönemi kotası (10) doluyken istek | Reddedilir ve audit'e yazılır | M3 |
@@ -137,23 +149,28 @@ Kesim tarihi `C = 2026-01-01T00:00:00Z`. Mum üyeliği: `S ≤ o` ve `o + Δ ≤
 | V13 | İstemcinin gönderdiği `registered_at` ya da `A_c`; geçmiş tarihli `A_c`; Registry atlanarak doğrudan `eval_registry`'ye sınır aşan kayıt | Reddedilir; sunucu değeri kullanılır; sınır yetkili kayıtta uygulanır | M3 |
 | V14 | Registry'deki strateji sürümünü güncelleme ya da silme; manifesto hash'iyle uyuşmayan tanımın Trading'de çalıştırılması | Yetki hatası; strateji çalıştırılmaz ve alarm üretilir | M3/M5 |
 
-### 7.2 H-ENV (gerçek ortam, M5)
+### 7.2 H-ENV (gerçek yerel ortam, M5; ADR-0013)
+Ortam tek makinedir; testler ağ ayrımı yerine Docker ağlarını, rol ve `CONNECT` yetkilerini ve `pg_hba` kurallarını sınar.
+
 | # | Test | Beklenen |
 |---|---|---|
-| H5 | Geliştirme makinesinden holdout DB ve evaluator portlarına bağlantı | Ağ düzeyinde başarısız |
-| H6 | Research.Host'tan holdout DB'sine bağlantı | Ağ ya da kimlik doğrulama hatası |
+| H5 (rev.) | Host'tan, yayınlanmış loopback port üzerinden `holdout` veritabanına herhangi bir rolle ve superuser ile bağlantı; host'tan evaluator API'sine erişim | `pg_hba` reddi; evaluator portu host'a yayınlanmamış |
+| H6 | Research.Host'tan `holdout` veritabanına bağlantı | Ağ ya da `pg_hba`/kimlik doğrulama hatası |
 | H6b | Research rolüyle `market.live_candles`, `trading.*` ve açığa çıkmamış kohort view'larını okuma | Yetki hatası ya da 0 satır |
-| H13 | Geliştirme makinesinden `ssh -o BatchMode=yes <vps> true` | Başarısız |
+| ~~H13~~ | ~~Geliştirme makinesinden VPS'e SSH~~ — **Kaldırıldı** (rev. 5, VPS yok) | — |
 | H14 | Trading.Host'tan evaluator'a istek | Ağ düzeyinde başarısız |
 | H19 | Gerçek evaluator'da H9, H10, H15, H16, V4 ve V5'in tekrarı | Aynı sonuçlar |
 | H20 | Evaluator image digest'i ile `EvaluatorRelease` kaydı | Eşleşir |
-| H21 | `eval_*` rolleriyle ops DB'sine bağlantı | Başarısız |
+| H21 (rev.) | `eval_*` rolleriyle `ops` veritabanına bağlantı; `status_relay` rolüyle `research.cohort_status` dışında bir tabloya yazma ya da herhangi bir tabloyu okuma; `status_relay` ile `holdout` ağı dışından bağlantı | Başarısız |
 | H22 | Gerçek DB trigger'ı ile erken P import'u | Reddedilir |
 | H23 | `ExperimentalPairsMaxExposure` değerini kullanıcı olmayan bir rolle değiştirme | Reddedilir |
 | H24 | Ops API: açık kohortun PnL'i görünüyor; manifesto ya da sonuç değiştirme uç noktası yok | Doğru |
-| H25 | Research rolüyle `research.cohort_status`'a yazma; Research.Host ortamında `status_relay` kimlik bilgisinin aranması | Yetki hatası; kimlik bilgisi yok |
+| H25 (rev.) | Research rolüyle `research.cohort_status`'a yazma; Research.Host ortamında `status_relay` kimlik bilgisinin aranması | Yetki hatası; kimlik bilgisi Research.Host'ta yok (yalnızca evaluator'da, D24) |
+| H26 | `holdout` ve `ops` veritabanlarında `CONNECT` yetkisi: `PUBLIC`'te yok; yalnızca ilgili rollerde | Doğru |
+| H27 | Compose'da her servis için `mem_limit` ve `cpus` tanımlı; holdout verisi yalnızca Docker volume'ünde (repo dizininde holdout verisi yok) | Doğru |
+| H28 | `.claude/settings.json`'da `docker exec`, `docker compose exec`, `docker cp` deny kuralları mevcut (T17; teknik sınır değil, yapılandırma kontrolü) | Doğru |
 
-H-ENV testlerinin tamamı geçmeden `HoldoutEnvironmentVerified` set edilemez. Bu bayrak yalnızca `Validated` yazımını kapılar. Sahte ortamda geçen testler gerçek izolasyonun kanıtı sayılmaz.
+H-ENV testlerinin tamamı geçmeden `HoldoutEnvironmentVerified` set edilemez. Bu bayrak yalnızca `Validated` yazımını kapılar. Sahte ortamda geçen testler gerçek izolasyonun kanıtı sayılmaz. Bu testler aynı makinedeki yönetici ya da Docker yetkisine karşı bir güvence vermez (kabul edilmiş artık risk, ADR-0013).
 
 ### 7.3 Risk motoru (deneysel parite tavanı, D22)
 Risk tablosuna eklenecek satırlar:

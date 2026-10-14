@@ -1,6 +1,6 @@
 # Risk Modeli
 
-Son güncelleme: 2026-10-13 (rev. 4) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-14 (rev. 5) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: Buradaki kontroller **planlanmıştır, uygulanmamıştır**. Etiketler (U/T/P/TBD) için bkz. `requirements.md`.
 
@@ -19,16 +19,17 @@ Son güncelleme: 2026-10-13 (rev. 4) · Değişiklikler: [CHANGELOG.md](CHANGELO
 | Günlük kayıp | %3. Aşılırsa 24 saat boyunca yeni giriş yok | U (D7) |
 | Maksimum drawdown | Zirveden %15. Aşılırsa otomatik halt, yeniden başlatma manuel | U (D7) |
 | Veri tazeliği | Son mum, beklenenden 2 mumdan fazla gecikmişse yeni giriş yok | U (D7) |
+| **Koruyucu stop (pozisyon başına hard stop)** | Her pozisyon girişte bir koruyucu stop seviyesi alır. Efektif seviye, strateji stop'u ile `RiskConfig`'teki "pozisyon başına maksimum kayıp" seviyesinden girişe en yakın olanıdır. Hard stop değeri **TBD** (M2'de kullanıcı belirler). Mum içinde tetiklenir; backtest ve paper'da OHLC kuralıyla, Testnet'te borsadaki stop emriyle uygulanır (ADR-0014). Günlük kayıp ve drawdown limitleri mum kapanışında değerlendirilir | U (D25, 2026-10-14) |
 | Minimum emir | Exchange `NOTIONAL`/`MIN_NOTIONAL` değeri ve fee'ye göre anlamsız küçük emirlerin engellenmesi | T (exchange kuralı) |
-| Emir tipleri | Limit ve koruma bantlı market | T |
+| Emir tipleri | Limit ve koruma bantlı market; Testnet'te koruyucu stop emri (uygun tip M6 öncesi doğrulanacak) | T |
 | **Deneysel parite toplam maruziyeti** (`ExperimentalPairsMaxExposure`) | Portföy değerinin **%10'u** (E1 ve E2 paritelerinin toplamı). Mevcut limitlere **ek olarak** uygulanır; en kısıtlayıcı limit geçerlidir. Tavanı aşacak alım kırpılır ya da reddedilir. Fiyat hareketiyle aşılırsa zorunlu satış yapılmaz, yalnızca yeni deneysel girişler durur. Çıkışlar her zaman serbesttir. Yalnızca kullanıcı, kimliği doğrulanmış Ops API üzerinden ve versiyonlu `RiskConfig` ile değiştirebilir; LLM, Research ve evaluator erişemez | U (U5, 2026-10-13) |
 | Korelasyon | **Bağlayıcı değil.** Korelasyon kümeleri ve etkin bağımsız pozisyon sayısı her döngüde hesaplanır, raporlanır ve eşik aşımında uyarı üretilir (uyarı eşiği TBD, M5'teki analizle; yalnızca bilgilendirme amaçlı). Bağlayıcı bir küme tavanı **P1** olarak bekliyor (M5'te tarihsel etki analiziyle önerilecek). Önceki onaysız %40 değeri kaldırıldı | T12 / P1 |
 
 ## 3. Kill switch'ler
-### 3.1 Trading kill switch (D11)
+### 3.1 Trading kill switch (D11, rev. 2026-10-14)
 | Tetik | Davranış |
 |---|---|
-| Manuel | Yeni emir açılmaz, açık emirler iptal edilir, pozisyonlar **tutulur**. "Tümünü kapat" ayrı bir manuel eylemdir |
+| Manuel | Yeni emir açılmaz, açık **giriş** emirleri iptal edilir, pozisyonlar **tutulur**. **Koruyucu stop emirleri iptal edilmez** (çıkışlar her zaman çalışır, ADR-0014). "Tümünü kapat" ayrı bir manuel eylemdir |
 | Drawdown limiti | Manuel ile aynı. Yeniden başlatma manuel |
 | HTTP 418 | Otomatik halt ve alarm |
 | Reconciliation tutarsızlığı | Yeni giriş açılmaz, alarm, manuel inceleme |
@@ -49,7 +50,9 @@ LLM'in durdurulması trading'i durdurmaz. Operasyon varsayılan deterministik po
 ## 4. Hata senaryoları
 | Senaryo | Davranış |
 |---|---|
-| Bayat veya eksik veri | Yeni giriş açılmaz, çıkışlar çalışır. Boşluk doldurulamazsa alarm |
+| Bayat veya eksik veri | Yeni giriş açılmaz, çıkışlar çalışır. Boşluk doldurulamazsa alarm. Paper'da stop kuralı veri geldiğinde kapanan mumlara uygulanır; Testnet'te stop emri borsada bekler |
+| Koruyucu stop emri reddedildi ya da dolmadı (Testnet) | Pozisyon "korumasız" olarak işaretlenir, alarm üretilir, stop emri yeniden denenir; başarısızsa yeni giriş açılmaz. Sapma fark raporuna girer (ADR-0014, ADR-0015) |
+| Makine kapalı, uykuda ya da yeniden başlatıldı (ADR-0013) | Paper döngüsü durur; açılışta önce reconciliation, sonra kaçırılan kapanmış mumlar sırayla işlenir (stop kuralı dahil). Testnet'te stop emirleri borsada kalır. İleriye dönük değerlendirme arşiv verisi kullandığı için etkilenmez |
 | Emirde timeout veya 5xx | Emir `Unknown` durumuna geçer ve `origClientOrderId` ile çözülür. Körü körüne tekrar gönderilmez |
 | 429 | Weight takibi, istemci tarafında limitleme, `Retry-After` |
 | Kısmi dolum | Ledger dolan miktarla güncellenir. Kalan kısım config'teki süre sonunda iptal edilir |
@@ -65,17 +68,19 @@ LLM'in durdurulması trading'i durdurmaz. Operasyon varsayılan deterministik po
 | Risk | Önlem | Kalan risk |
 |---|---|---|
 | Overfitting ve data snooping | Walk-forward, Deflated Sharpe, yapı hash'iyle hesaplanan `TrialFamily`, holdout kotası ve Holm düzeltmesi | Sınırlı veri; paper ile doğrulama gerekir |
-| Holdout kontaminasyonu | `architecture.md` §6.2'deki katmanlı kontroller (veri, yetki, ağ, yönetim erişimi, süreç, audit) | Kamuya açık veri, internetten doğrudan indirilebilir. Süreç kuralı ve audit ile ele alınır |
+| Holdout kontaminasyonu | `architecture.md` §6.2'deki katmanlı kontroller (rol ve `CONNECT` yetkileri, `pg_hba`, Docker ağları, süreç, audit) ve T17 | Kamuya açık veri, internetten doğrudan indirilebilir. **Holdout aynı makinede ve aynı PostgreSQL instance'ında (D17 rev., ADR-0013):** geliştirici ve Claude Code Docker yetkisiyle kontrolleri aşabilir. Kabul edilmiş artık risk; süreç kuralı, deny kuralları ve audit ile ele alınır |
 | Tekrarlı değerlendirmeyle holdout'a uydurma | Tanısal: aile başına ömür boyu 1, kesim dönemi başına 10, yalnızca eleme (`NotRejected` / `Rejected`). İleriye dönük: her kohort yalnızca kendi penceresinde ve bir kez değerlendirilir; açığa çıkmış pencere tekrar kullanılamaz; aile başına 2 deneme; yeniden değerlendirme yalnızca aynı manifesto ve digest ile | Kota içindeki yapısal varyantlar. Global sınırlar ve tam raporlama bunu sınırlar |
 | Kötü niyetli ya da hatalı bir evaluator sürümü | Sürümler (`EvaluatorRelease`) kaydedilir; deploy etkileşimli yapılır; evaluator kodunda değişiklik kontrol listesinde vurgulanır; her değişiklik `HoldoutEnvironmentVerified`'ı sıfırlar | İnsan incelemesine bağlı |
 | Bilgi kontaminasyonu (tanısal holdout insanlar ve LLM'ler tarafından biliniyor olabilir) | Tanısal holdout yalnızca eler, terfi ettirmez. Model bilgi kesim tarihi her hipotezde kaydedilir ve işaretlenir | Claude'un eğitim kesim tarihi Haziran 2026; Gemini'ninki doğrulanmadı |
 | İleriye dönük güç ve bekleme süresi | Ön kayıtlı güç analizi. Gücü yetersizse sonuç `Inconclusive`, asla `Validated` | İlk `Validated` en erken 6 ay sonra. Düşük frekanslı stratejiler büyük olasılıkla `Inconclusive` |
-| Seçim yanlılığı (paralel kohortlar, varyantlar) | 2 × 3 açık kohort sınırı, aile kotası, kohort içinde Holm, "n denemeden k Validated" raporlaması | Aile kimliği atlatılabilir (hash ve benzerlik sınırları); global sınırlar asıl güvence |
+| Seçim yanlılığı (paralel kohortlar, varyantlar) | 2 × 3 açık kohort sınırı, aile kotası, kohort içinde Holm, "n denemeden k Validated" raporlaması | Aile kimliği atlatılabilir (hash ve benzerlik sınırları). Benzerlik yalnızca aile temsilcileriyle karşılaştırıldığı için temsilciden adım adım uzaklaşan varyantlar yakalanmayabilir (ADR-0015); global sınırlar asıl güvence |
 | Deneysel pariteler (kısa geçmiş) | E1 ve E2 kategorileri, %10 maruziyet tavanı, kanıt düzeyi etiketleri, doğrulamanın kategoriler arasında taşınmaması | Hayatta kalma yanlılığı çekirdekte tasarım gereği var; raporlanır |
-| Root ya da saat manipülasyonu | Etkileşimli yönetim erişimi, audit, kaynak dosyaların tarih başlıkları | Kabul edilmiş artık risk |
+| Makine yöneticisi ya da saat manipülasyonu | Audit, kaynak dosyaların tarih başlıkları | Kabul edilmiş artık risk (yerel tek makine, ADR-0013) |
+| Runtime anahtarlarının Claude Code ile aynı makinede olması | Process ayrımı (D9), Docker secret dosyaları, `Read(**/secrets/**)` deny kuralı, trade-only ve withdrawal'sız Testnet anahtarı | Kabul edilmiş artık risk (ADR-0013). Exchange anahtarının IP kısıtı açık engel B6 |
+| Bellek baskısı (16 GB, IDE ve Claude Code ile ortak) | Servis başına `mem_limit`/`cpus`, iş bazlı Research.Host ve Evaluator, ağır işlerin sırayla çalışması (ADR-0013) | Ağır iş sırasında Trading.Host'un gecikmesi; döngü süreleri metrik olarak izlenir |
 | Prompt injection (M7) | Tool'suz Extractor, şema, alıntı doğrulaması | — |
 | Nitelikli olmayan modelin kullanılması | Görev politikası; downgrade yasağı test edilir | — |
-| AI maliyetinin kontrolden çıkması | Rezervasyon, çok katmanlı tavanlar, LLM acil durdurma, aylık mutabakat | Geliştirme makinesindeki API anahtarının kodu atlayarak kullanılması. Google tarafındaki limitler ve mutabakat ile yakalanır |
+| AI maliyetinin kontrolden çıkması | Rezervasyon, çok katmanlı tavanlar, LLM acil durdurma, aylık mutabakat | Aynı makinedeki API anahtarlarının kodu atlayarak kullanılması. Google tarafındaki limitler ve mutabakat ile yakalanır |
 
 ## 6. Finansal ve operasyonel uyarılar
 - Gerçek para kullanılmaz; kullanılması ayrı bir karar ve ayrı bir risk değerlendirmesi gerektirir.

@@ -1,5 +1,6 @@
-# Local development only. Production topology (VPS, four networks, holdout DB) is described in
-# docs/adr/0009 and is NOT part of this file. There is deliberately no holdout service here.
+# M0-M2 local development only. The target single-machine topology (one PostgreSQL instance with
+# separate ops and holdout databases, four networks, resource limits) is described in docs/adr/0013
+# and arrives with M3/M5. There is deliberately no holdout service here yet.
 name: portfolio-intelligence
 
 services:

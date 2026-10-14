@@ -1,13 +1,13 @@
 # Yol Haritası
 
-Son güncelleme: 2026-10-13 (rev. 4) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-14 (rev. 5) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: **M0 yerelde tamamlandı** (2026-10-13; doğrulama `716a1bd` commit'inde, temiz klonda). Uzak depo: private GitHub deposu `Andunie-code/autonomous-portfolio-intelligence`. M1 ve sonrası başlamadı; her milestone ayrı kullanıcı onayı gerektirir. Bir milestone, kabul kriterlerindeki testler **gerçekten uygulanıp geçtiğinde** tamamlanmış sayılır.
 
 ## Sıralamanın mantığı
 1. Önce kanıt altyapısı (veri, backtest, değerlendirme), sonra para hareketi.
 2. Sistem LLM olmadan tam işlevli olmalı. LLM görev sınıfları ancak nitelik kazanınca devreye girer.
-3. Gerçek holdout ortamı, D5'teki VPS ile birlikte M5'te kurulur. O zamana kadar gerçek holdout değerlendirmesi yapılmaz (T3). Testnet doğrulamaya bağlı değildir. İlk `Validated` sonucu en erken, kohortun dondurulmasından 6 ay sonra gelir.
+3. Gerçek holdout ortamı M5'te aynı yerel makinede kurulur (D5 rev., ADR-0013; VPS yok). O zamana kadar gerçek holdout değerlendirmesi yapılmaz (T3). Testnet doğrulamaya bağlı değildir. İlk `Validated` sonucu en erken, kohortun dondurulmasından 6 ay sonra gelir.
 4. M4 (AI hattı) ile M5–M6 (operasyon hattı) M3'ten sonra paralel ilerleyebilir.
 
 ```
@@ -19,6 +19,8 @@ Göreli büyüklük: S/M/L. Süre tahmini verilmez.
 
 ## İlk dikey dilim (D15): M0 + M1 + M2
 Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik backtest testleri. LLM, emir, Testnet ve dashboard yok.
+
+**Uygulama ilkesi (T23, T24):** M1 ve M2 kodlanırken M3+ bileşenleri (DSL, kohort, evaluator, LLM, `ops`/`holdout` veritabanları) koda erken eklenmez (YAGNI). Model adları kodda sabit yazılmaz, konfigürasyondan okunur.
 
 ---
 
@@ -58,19 +60,22 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
 - **Kapsam:**
   - EMA, ATR, Supertrend ve RSI indikatörleri.
   - `IStrategy` ve iki kodlanmış baseline (EMA 50/100 trend, Supertrend).
-  - Versiyonlu maliyet modeli.
+  - Versiyonlu maliyet modeli (stop dolumları için ayrı slippage parametresi dahil).
   - **Versiyonlu varsayılan allocation politikası (T11):** onaylı tavanlar içinde ters volatilite.
+  - **Çıkış modeli (T20, ADR-0014):** kapanış sinyalleri `t+1` açılışında uygulanır; mum içi koruyucu stop OHLC kuralıyla simüle edilir; efektif stop = strateji stop'u ile `RiskConfig` hard stop'undan (D25) girişe en yakın olanı.
   - Tek ve çoklu varlık backtest; benchmark'lar; deney kaydı ve rapor.
+- **Ön koşul:** D25 hard stop değeri, baseline backtest'lerinden önce kullanıcı tarafından belirlenir.
 - **Kabul kriterleri:**
   - Golden testler, look-ahead property testi, muhasebe invariant'ı, bit bit determinizm ve benchmark analitik eşleşmesi geçiyor.
   - Allocation politikası property testleri (tavan aşımı yok) geçiyor.
+  - Stop kuralı testleri geçiyor (gap, `Low ≤ S`, aynı mumda stop önceliği, mum içinde seviye değişmezliği; `testing-strategy.md` §3).
   - İki baseline için maliyetler düşülmüş, benchmark karşılaştırmalı rapor üretiliyor.
 
 ### M3 — DSL, değerlendirme hattı ve evaluator (yerel) (M)
 - **Kapsam:**
   - DSL ve validator, interpreter.
   - Walk-forward, bootstrap, parametre komşuluğu, Deflated Sharpe.
-  - **Aile kimliği** (normalizasyon, yapı hash'i, benzerlik kontrolü) ve deneme sayacı.
+  - **Aile kimliği** (normalizasyon, yapı hash'i, aile temsilcileriyle benzerlik kontrolü; ADR-0015) ve deneme sayacı.
   - **Kohort registry'si:** değiştirilemez manifesto; `registered_at` ve `A_c`'nin sunucu tarafından atanması; sınırların yetkili kayıtta uygulanması. GitHub push'u isteğe bağlıdır ve kullanıcı onayına tabidir.
   - **Ayrı sonuç tabloları** (tanısal ve ileriye dönük); trigger yalnızca ileriye dönük tablolarda.
   - **İki izli yaşam döngüsü** (ADR-0012): operasyonel iz ve türetilmiş doğrulama durumu.
@@ -86,7 +91,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
     - şema doğrulaması; eksik protokol "doğrulamaya uygun değil" olarak işaretleniyor;
     - `A_c ≥` F_c + 24 saatten sonraki ilk UTC gece yarısı;
     - dondurulmuş kohortta değişiklik reddediliyor; değiştirilmiş strateji yeni kohort ve `A > now` alıyor.
-  - **Aile kotası:** Parametre değişikliği ve sonucu etkileyen engine değişikliği aynı aile sayılıyor; 3. deneme reddediliyor; benzerlik kontrolü bir kopyayı yakalıyor (pozitif kontrol).
+  - **Aile kotası:** Parametre değişikliği ve sonucu etkileyen engine değişikliği aynı aile sayılıyor; 3. deneme reddediliyor; benzerlik kontrolü bir kopyayı yakalıyor (pozitif kontrol); karşılaştırma yalnızca aile temsilcileriyle yapılıyor ve bellek kullanımı aile sayısıyla doğrusal kalıyor.
   - **Sınırlar:** K_D, 2 × 3 açık kohort ve aile kotası aşılınca istek reddediliyor.
   - **`Validated` yazımı:** `Validated` durumunu sonuç kaydı dışında set etmenin her yolu reddediliyor; paper ve Testnet verisi doğrulama hesabına girmiyor; gücü yetersiz ya da protokolü eksik kohort `Validated` olamıyor; işlem sayısı yetersizse sonuç `Inconclusive`.
   - **Erken değerlendirme ve import:** enjekte edilmiş saatle reddediliyor (uygulama katmanı ve DB trigger'ı ayrı ayrı test edilir).
@@ -116,29 +121,32 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - LLM'siz modda en az 10 hipotez uçtan uca işlendi (boru hattı kriteri, istatistiksel değil).
   - Toplam harcama 10 USD'lik başlangıç tavanının altında kaldı; mutabakat raporu üretildi.
 
-### M5 — Prod VPS, holdout ortamı ve deterministik paper trading (L)
-- **Ön koşul:** **B2** (VPS satın alma onayı).
-- **Kapsam:**
-  - VPS sertleştirme (yalnızca SSH, parolalı anahtar, ssh-agent'a yüklenmeyen anahtar).
-  - Dört ağlı docker-compose; etkileşimli deploy (T19).
+### M5 — Yerel holdout ortamı ve deterministik paper trading (L)
+- **Ön koşul:** yok (B2 kaldırıldı; D5 rev., VPS yok).
+- **Kapsam (ADR-0013):**
+  - Tek PostgreSQL instance'ında `ops` ve `holdout` veritabanları; `REVOKE CONNECT FROM PUBLIC`, rol bazlı `CONNECT`, `pg_hba` kuralları.
+  - Dört Docker ağlı Compose; her servis için `mem_limit` ve `cpus`; Research.Host ve evaluator iş bazlı; etkileşimli yerel deploy (T19).
+  - `.claude/settings.json` ve `CLAUDE.md` holdout korkulukları (T17) gözden geçirilir.
   - ops DB: `market.live_candles` (yalnızca Trading), `research.*` view'ları (`candles`, `revealed_cohorts`, `revealed_paper_summary`) ve tüm DB rolleri (architecture §6.2).
-  - Holdout DB ve evaluator: kohort penceresine bağlı import ve erken import'u reddeden DB trigger'ı. Holdout verisini **yalnızca evaluator**, kaynaktan import eder.
-  - Trading.Host: canlı veri, ledger, risk (`ExperimentalPairsMaxExposure` dahil), simüle execution, reconciliation, kill switch, audit, Ops API (açık kohortların PnL'i görünür; manifesto ve sonuç değiştirilemez).
-  - Research.Host'un VPS'e taşınması.
-  - Yedek ve geri yükleme.
+  - Holdout DB ve evaluator: kohort penceresine bağlı import ve erken import'u reddeden DB trigger'ı. Holdout verisini **yalnızca evaluator**, kaynaktan import eder. Evaluator `status_relay` rolüyle `research.cohort_status`'a yazar (D24).
+  - Trading.Host: canlı veri, ledger, risk (`ExperimentalPairsMaxExposure` ve koruyucu stop dahil), simüle execution, reconciliation, kill switch, audit, Ops API (yalnızca loopback; açık kohortların PnL'i görünür; manifesto ve sonuç değiştirilemez).
+  - Yedek ve geri yükleme (makine dışı kopya).
   - Korelasyon izleme ve P1 için tarihsel etki analizi.
 - **Kabul kriterleri:**
-  - **H-ENV (H5, H6, H6b, H13, H14, H19–H24)** gerçek ortamda geçti; ardından `HoldoutEnvironmentVerified` kullanıcı oturumuyla set edildi ve audit'e yazıldı. Bu bayrak yalnızca `Validated` yazımını kapılar.
-  - Research rolü canlı mumları ve açığa çıkmamış paper sonuçlarını okuyamıyor; `research.cohort_status`'a yazamıyor; `eval_*` rolleri ops DB'sine bağlanamıyor; erken import reddediliyor (gerçek ortamda; H21, H22, H25).
-  - StatusRelay ayrı bir container olarak çalışıyor; Research.Host'ta `status_relay` kimlik bilgisi yok.
+  - **H-ENV (H5, H6, H6b, H14, H19–H28)** gerçek yerel ortamda geçti; ardından `HoldoutEnvironmentVerified` kullanıcı oturumuyla set edildi ve audit'e yazıldı. Bu bayrak yalnızca `Validated` yazımını kapılar.
+  - Research rolü canlı mumları ve açığa çıkmamış paper sonuçlarını okuyamıyor; `research.cohort_status`'a yazamıyor; `eval_*` rolleri `ops` veritabanına bağlanamıyor; erken import reddediliyor (gerçek ortamda; H21, H22, H25).
+  - `status_relay` kimlik bilgisi yalnızca evaluator'da; Research.Host'ta yok; rol yalnızca `research.cohort_status`'a ekleme yapabiliyor.
+  - Tüm servisler bellek sınırları içinde çalışıyor; ağır bir araştırma işi sırasında Trading.Host döngüsü kaçırılmıyor (döngü süresi metriğiyle ölçülür).
   - Deneysel parite tavanı için risk tablosu testleri geçiyor (tavanın tam sınırı, kırpma, çıkışın serbestliği, yetkisiz değişikliğin reddi).
   - Operasyonel güvenlik eylemleri (devre dışı bırakma, kill switch, pozisyon kapatma) çalışıyor ve audit'e yazılıyor; kohort kayıtlarını değiştirmiyor.
-  - Parity replay geçiyor; risk tablosunun her satırı test edildi; bayat veride yalnızca çıkışlar çalışıyor; restart tutarlı.
-  - 7 gün kesintisiz paper çalışması; yedekten geri yükleme denendi.
+  - Parity replay (L1 sinyal ve L2 karar paritesi, ADR-0015) geçiyor; fark raporu (L3) normalize metriklerle üretiliyor; risk tablosunun her satırı test edildi; paper'da stop kuralı backtest ile birebir; bayat veride yalnızca çıkışlar çalışıyor; restart tutarlı (kaçırılan mumlar sırayla işleniyor).
+  - 7 gün paper çalışması; makinenin kapalı kaldığı süreler raporlanıyor ve sonrasında reconciliation ile tutarlı devam ediliyor (yerel çalışmada kesintisizlik garanti edilmez, ADR-0013); yedekten geri yükleme denendi.
   - P1 analiz raporu kullanıcıya sunuldu.
 
 ### M6 — Binance Testnet execution (M)
+- **Ön koşul:** B6 (exchange anahtarının IP kısıtı); Binance Spot'ta koruyucu stop emir tipi ve Testnet desteği doğrulanıp `sources.md`'ye işlendi.
 - **Kabul kriterleri:**
+  - Giriş dolumundan sonra koruyucu stop emri borsaya gönderiliyor; kill switch açıldığında giriş emirleri iptal ediliyor, stop emirleri kalıyor (D11 rev.); stop emri reddi alarm üretiyor ve yeni girişleri durduruyor; Testnet stop sapmaları fark raporunda kategorize ediliyor.
   - Fault injection altında duplicate emir sayısı 0 ve ledger reconcile ediliyor.
   - Testnet'te ≥ 20 emrin tam yaşam döngüsü tamamlandı.
   - Filtre ihlali yapan emir borsaya gitmeden reddediliyor.
@@ -175,7 +183,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
 ### M10 — Sağlamlaştırma (S)
 - **Kabul kriterleri:**
   - Alarmlar test edildi (trading kill switch, LLM acil durdurma, H-ENV aylık koşusu, bütçe).
-  - Runbook'ta bant dışı API anahtarı iptali dahil.
+  - Runbook'ta bant dışı API anahtarı iptali, makine kapanması ya da yeniden başlatma sonrası devam ve Docker Desktop bellek ayarı dahil.
   - 30 günlük Testnet provası tamamlandı.
 
 ## Global "tamamlandı" tanımı

@@ -17,15 +17,16 @@ Kullanıcıyla Türkçe iletişim kurulur; teknik terimler İngilizce kalabilir.
 ## Onay gerektiren işlemler
 Kullanıcıdan açık onay alınmadan yapılmaz:
 - Runtime AI API çağrısı (Gemini dahil) ya da herhangi bir Anthropic runtime API kullanımı.
-- Ücretli servis kullanımı, altyapı (VPS vb.) oluşturma veya satın alma, D4 bütçesini aşan harcama.
+- Ücretli servis kullanımı, altyapı oluşturma veya satın alma, D4 bütçesini aşan harcama. (VPS kullanılmaz; sistem yerel tek makinede çalışır, ADR-0013.)
 - Gerçek ya da simüle edilmiş alım satım, borsa hesabına bağlanma, risk limitlerini gevşetme.
 - Uzak depoya **her push** (her seferinde ayrı onay) ve herhangi bir yayın, paylaşım ya da erişim yetkisi değişikliği. Force-push yapılmaz.
 
-## Holdout kuralları (ADR-0006, ADR-0009)
-- Araştırma kesim tarihi `2026-01-01T00:00:00Z`. Bu tarih ve sonrasına ait piyasa verisi bu makineye araştırma amacıyla **indirilmez, okunmaz ve incelenmez**; WebFetch, curl, script ya da başka yolla da (tanısal ve ileriye dönük holdout, ADR-0006).
+## Holdout kuralları (ADR-0006, ADR-0009, ADR-0013)
+- Araştırma kesim tarihi `2026-01-01T00:00:00Z`. Bu tarih ve sonrasına ait piyasa verisi Claude Code tarafından **indirilmez, okunmaz ve incelenmez**; WebFetch, curl, script ya da başka yolla da (tanısal ve ileriye dönük holdout, ADR-0006). Bu veriyi yalnızca HoldoutEvaluator (holdout) ve Trading.Host (canlı veri) kendi Docker volume'lerine alır.
+- Holdout aynı yerel makinede, aynı PostgreSQL instance'ında ayrı bir `holdout` veritabanındadır (kabul edilmiş artık risk, ADR-0013). Holdout veritabanına ve HoldoutEvaluator container'ına bağlanılmaz; `docker exec`, `docker cp`, volume bağlama ya da superuser ile holdout verisi okunmaz. Holdout verisi repo dizinine yazılmaz.
 - Kohort manifestoları (`docs/cohorts/` ve yetkili kayıt) ile değerlendirme sonuçları değiştirilmez ve silinmez; yalnızca yeni kayıt eklenir. `Validated` durumu yalnızca ileriye dönük evaluator'dan gelir.
 - Açığa çıkmamış kohortların paper ve Testnet sonuçları ile tanısal metrikler, kullanıcı paylaşsa bile **araştırma ya da hipotez girdisi olarak kullanılmaz.**
-- Holdout veritabanına, evaluator'a ya da VPS'e erişim denenmez. VPS'e SSH bağlantısı kurulmaz.
+- Holdout veritabanına ve evaluator'a erişim denenmez. SSH bağlantısı kurulmaz.
 - Holdout koruma kodu (adında `Holdout` geçen dosyalar) ve evaluator kodu, kullanıcının açık isteği olmadan değiştirilmez.
 - Holdout ortamına ait sır adları (`tests/Architecture.Tests/HoldoutSecretReferenceTests.cs`) evaluator projesi dışında hiçbir kaynak, config ya da script dosyasında kullanılmaz.
 

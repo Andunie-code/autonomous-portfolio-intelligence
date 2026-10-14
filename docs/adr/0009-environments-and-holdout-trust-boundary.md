@@ -1,8 +1,10 @@
 # ADR-0009: Ortam topolojisi ve holdout güven sınırı
 
-- Durum: Kabul edildi (teknik lider kararı T1–T3, T17, T19) · Tarih: 2026-10-13
-- Uygulama durumu: **Planlandı, uygulanmadı**
-- İlgili: ADR-0001, ADR-0006, `architecture.md` §1 ve §6.2, `testing-strategy.md` §7
+- Durum: **Kısmen ADR-0013 ile değiştirildi** (2026-10-14, kullanıcı kararı D5 rev.: VPS yok) · İlk kabul: 2026-10-13 (teknik lider kararı T1–T3, T17, T19)
+- Uygulama durumu: Madde 7'deki Claude Code korkulukları M0'da repoya eklendi (`CLAUDE.md`, `.claude/settings.json`; canlı denenen deny kuralları CHANGELOG'da). Geri kalanı **planlandı, uygulanmadı**.
+- İlgili: ADR-0001, ADR-0006, ADR-0013, `architecture.md` §1 ve §6.2, `testing-strategy.md` §7
+
+> **rev. 5 notu (2026-10-14):** Bu ADR'deki VPS'e dayanan kararlar (Karar madde 1, 2 ve 5'teki SSH/`docker save | ssh` kısmı; madde 6'daki H-ENV listesi; "Gerekçe"deki SSH ve H13 argümanı; StatusRelay container'ı) **ADR-0013 ile geçersizdir.** Holdout artık aynı yerel makinede, aynı PostgreSQL instance'ında ayrı bir veritabanındadır (kabul edilmiş artık risk). **Geçerli kalanlar:** madde 3'teki DB rolleri ve sonuç tablolarının ayrımı (StatusRelay container'ı hariç; `status_relay` rolünü artık evaluator tutar, D24), madde 4'teki evaluator API'si ve erken değerlendirmeye karşı iki katman, `HoldoutEnvironmentVerified`'ın yalnızca `Validated` yazımını kapılaması. Aşağıdaki metin tarihsel kayıt olarak korunmuştur.
 
 ## Problem ve kısıtlar
 - Holdout verisi geliştirme kimlik bilgileriyle okunamamalı; tercihen geliştirme makinesinde hiç bulunmamalı; yalnızca ayrı bir evaluator rolüyle erişilmeli (D17).

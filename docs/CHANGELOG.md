@@ -2,6 +2,33 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-14 — rev. 5: yerel tek-makine topolojisi, mum içi stop, aile temsilcisi, normalize parity
+Yalnızca belgeler, `CLAUDE.md`, `.claude/settings.json` ve `docker-compose.yml`'deki yorum satırları değişti. Uygulama kodu yok, M1 başlamadı.
+
+**Kullanıcı kararları (U):**
+- **D5 (rev.):** VPS yok; tüm sistem kullanıcının yerel bilgisayarında (Windows + Docker Desktop, 16 GB RAM). Hafif mimari: tek PostgreSQL container'ı, servis başına `mem_limit`/`cpus`, iş bazlı Research.Host ve evaluator.
+- **D17 (rev.):** Holdout aynı makinede ve aynı PostgreSQL instance'ında ayrı bir `holdout` veritabanında; **kabul edilmiş artık risk.** İzolasyon: roller, `CONNECT`, `pg_hba`, Docker ağları, uygulama katmanı, T17.
+- **D24 (yeni):** Ayrı StatusRelay container'ı yok; evaluator `status_relay` rolüyle `research.cohort_status`'a yazar.
+- **D11 (rev.):** Kill switch koruyucu stop emirlerini iptal etmez.
+- **D25 (yeni):** `RiskConfig`'te bağlayıcı "pozisyon başına maksimum kayıp" hard stop'u; değer TBD (M2).
+
+**Teknik kararlar (T):**
+- T1, T2, T3, T17, T19 yerel topolojiye göre yeniden yazıldı (ADR-0013).
+- T20: kapanış sinyalleri `t+1` açılışında; mum içi koruyucu stop için tek OHLC kuralı (backtest = paper); Testnet'te borsada stop emri (ADR-0014).
+- T21: aile benzerliği yalnızca aile temsilcileriyle (ADR-0015).
+- T22: parity replay L1 (sinyal) + L2 (karar) birebir; fark raporu (L3) normalize değerlerle, mutlak emir büyüklükleri karşılaştırılmaz (ADR-0015).
+- T23: YAGNI, D15 odağı. T24: model adları konfigürasyondan.
+
+**Yeni ADR'ler:** ADR-0013 (yerel tek-makine topolojisi), ADR-0014 (kapanış sinyali ve mum içi koruyucu stop), ADR-0015 (aile temsilcisi ve normalize parity).
+**Değişen ADR'ler:** ADR-0009 "kısmen ADR-0013 ile değiştirildi" (rol, trigger, API ve `Validated` kapısı geçerli); ADR-0001, ADR-0006, ADR-0007, ADR-0010, ADR-0012'ye kısa revizyon notları.
+
+**Kaldırılanlar:** B2 (VPS satın alımı), P4 (VPS SSH için FIDO2), H13 (SSH testi), StatusRelay container'ı, T19'un SSH ve `docker save | ssh` kısmı, VPS sertleştirme (M5).
+**Değişen testler:** H5, H21, H25 yerel ortama uyarlandı; yeni H26 (`CONNECT` yetkileri), H27 (kaynak sınırları ve holdout verisinin konumu), H28 (deny kuralları); `testing-strategy.md` §3, §4, §5'e stop, temsilci benzerliği ve L1/L2/L3 parity testleri.
+**Yeni engel:** B6 — Testnet anahtarının IP kısıtı yerel ev bağlantısında nasıl uygulanacak (M6).
+**Kabul edilmiş artık riskler (ADR-0013):** geliştirici ve Claude Code holdout ile aynı makinede; holdout verisi geliştirme diskinde (Docker volume); runtime anahtarları aynı makinede; uptime kesintileri; tek makine yedek riski.
+**Korkuluklar (T17):** `CLAUDE.md` holdout kuralları yerelleştirildi; `.claude/settings.json`'a `docker exec`, `docker compose exec`, `docker cp` deny kuralları eklendi (henüz canlı denenmedi).
+**Kapsam dışı bırakılanlar:** `A_c` tanımındaki çelişki (architecture §6.1 ve roadmap M3 ile ADR-0006 arasında) ve M1 veri politikası taslakları bu revizyonda ele alınmadı; açık kalıyor.
+
 ## 2026-10-13 — rev. 4.1: `2b0278b` denetiminin düzeltmeleri (kullanıcı onaylı)
 Yalnızca belgeler, `CLAUDE.md` ve `.claude/settings.json` değişti. Kod yok, M1 başlamadı.
 

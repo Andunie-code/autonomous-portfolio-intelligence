@@ -1,40 +1,36 @@
 # Mimari
 
-Son güncelleme: 2026-10-13 (rev. 4) · ADR'ler: [adr/](adr/) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-14 (rev. 5) · ADR'ler: [adr/](adr/) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
-> Durum: Bu belgede anlatılan her şey **planlanmıştır, uygulanmamıştır**. Karar etiketleri (U/T/P/TBD) için bkz. `requirements.md`.
+> Durum: M0'da çözüm iskeleti, migration altyapısı, redaction'lı JSON loglama, mimari testler ve Claude Code korkulukları uygulandı (sonuçları CHANGELOG'da). Bu belgede anlatılan geri kalan her şey **planlanmıştır, uygulanmamıştır**. Karar etiketleri (U/T/P/TBD) için bkz. `requirements.md`.
 
-## 1. Ortamlar ve topoloji (T1, ADR-0009)
+## 1. Ortam ve topoloji (T1, ADR-0013)
 
-Kod tarafında modüler bir monolit (tek solution, ADR-0001). Çalışma zamanında iki ortam var:
+Kod tarafında modüler bir monolit (tek solution, ADR-0001). Çalışma zamanında **tek bir yerel makine** var (D5 rev.: VPS yok). Kullanıcının Windows + Docker Desktop bilgisayarı, 16 GB RAM; Claude Code da aynı makinede çalışır.
 
 ```
-GELİŞTİRME MAKİNESİ (Windows, Claude Code burada çalışır)
-  - Kaynak kod, testler, Testcontainers
-  - dev PostgreSQL: yalnızca araştırma kesim tarihinden ÖNCEKİ veri (< 2026-01-01T00:00Z; DB CHECK + importçu koruması)
-  - M4: Research.Host yerelde (holdout dışı veriyle yeterlilik ve araştırma)
-  - YOK: holdout verisi, holdout ya da VPS kimlik bilgisi, VPS'e etkileşimsiz erişim
-        │
-        │ yalnızca insan tarafından, etkileşimli başlatılan deploy (T19)
-        ▼
-PROD VPS (M5'ten itibaren, D5). Host'a hiçbir container portu yayınlanmaz.
-  net "ops"     (internet çıkışı var) : Trading.Host, Research.Host, StatusRelay, ops PostgreSQL
-  net "eval"    (internal)            : Research.Host, StatusRelay, HoldoutEvaluator   ← dar API, submit-only ve read-status token'ları
-  StatusRelay: ayrı ve küçük bir container (`status_relay` kimliği). Yalnızca evaluator'ın durum uç noktasını okur
-               ve `research.cohort_status`'a ekleme yapar. Research.Host bu kimliğe sahip değildir.
-  net "holdout" (internal)            : HoldoutEvaluator, holdout PostgreSQL (ayrı instance)
-  net "egress"  (internet çıkışı var) : yalnızca HoldoutEvaluator (data.binance.vision'dan import)
-  Trading.Host "eval" ağında değil → evaluator'a erişemez. Research.Host "holdout" ağında değil → holdout DB'sine erişemez.
-  Dışa açık tek port: SSH (parolalı anahtar). Ops API ve dashboard'a SSH tüneliyle erişilir.
+YEREL MAKİNE (Windows + Docker Desktop, 16 GB RAM)
+  Geliştirme: kaynak kod, testler, Testcontainers
+  Docker Compose (her servis için mem_limit ve cpus; ADR-0013 §3):
+    net "ops"     (internet çıkışı var) : Trading.Host (sürekli), Research.Host (iş bazlı), PostgreSQL
+    net "eval"    (internal)            : Research.Host, HoldoutEvaluator   ← dar API, submit-only ve read-status token'ları
+    net "holdout" (internal)            : HoldoutEvaluator (iş bazlı), PostgreSQL
+    net "egress"  (internet çıkışı var) : yalnızca HoldoutEvaluator (data.binance.vision'dan import)
+  PostgreSQL: TEK instance; ayrı veritabanları "ops" ve "holdout" (M0–M2'de yalnızca geliştirme veritabanı)
+    "holdout" veritabanına yalnızca eval_* rolleriyle ve yalnızca "holdout" ağından bağlanılır (pg_hba)
+  StatusRelay ayrı container DEĞİL (D24): HoldoutEvaluator, status_relay rolüyle research.cohort_status'a ekleme yapar.
+  Trading.Host "eval" ağında değil → evaluator'a erişemez. Research.Host "holdout" ağında değil → holdout veritabanına erişemez.
+  Host'a yalnızca 127.0.0.1 (loopback) yayınlanır: geliştirme veritabanı portu, Ops API ve dashboard. SSH yok.
+  Kabul edilmiş artık risk: geliştirici ve Claude Code holdout ile aynı makinede (D17 rev., ADR-0013).
 ```
 
 | Veri deposu | Konum | İçerik | Erişim |
 |---|---|---|---|
-| dev DB | Geliştirme makinesi | `market.candles` (yalnızca kesim tarihinden önce), deneyler (geliştirme amaçlı) | Geliştirici, testler, Claude Code |
-| ops DB | VPS | `market.candles` (araştırma verisi, kesimden önce), `market.live_candles` (canlı veri; yalnızca Trading), deneyler, kayıt, emirler, ledger, audit, trace | Modül başına DB rolleri (§6.2). Research yalnızca `research.*` view'larını okur |
-| holdout DB | VPS, **ayrı bir PostgreSQL instance'ı** | Tanısal ve ileriye dönük pencere verisi (evaluator'ın kendi import'u), manifestolar ve sonuçlar | Yalnızca evaluator rolleri (`eval_diagnostic`, `eval_prospective`) |
+| Geliştirme veritabanı (`portfolio_dev`) | Yerel PostgreSQL instance'ı | `market.candles` (yalnızca kesim tarihinden önce), deneyler (geliştirme amaçlı) | Geliştirici, testler, Claude Code |
+| `ops` veritabanı (M5) | Aynı instance | `market.candles` (araştırma verisi, kesimden önce), `market.live_candles` (canlı veri; yalnızca Trading), deneyler, kayıt, emirler, ledger, audit, trace | Modül başına DB rolleri (§6.2). Research yalnızca `research.*` view'larını okur |
+| `holdout` veritabanı (M5; M3'te sentetik) | **Aynı instance, ayrı veritabanı**; veri yalnızca Docker volume'ünde | Tanısal ve ileriye dönük pencere verisi (evaluator'ın kendi import'u), manifestolar ve sonuçlar | Yalnızca evaluator rolleri; `CONNECT` yalnızca `eval_*` rollerine; `pg_hba` ile yalnızca `holdout` ağından |
 
-ADR-0001'deki "iki process yalnızca PostgreSQL üzerinden haberleşir" kuralı **ops DB için** geçerlidir. Holdout DB'si bu kuralın dışındadır ve ona yalnızca evaluator API'si üzerinden ulaşılır.
+ADR-0001'deki "iki process yalnızca PostgreSQL üzerinden haberleşir" kuralı **`ops` veritabanı için** geçerlidir. `holdout` veritabanı bu kuralın dışındadır ve ona yalnızca evaluator API'si üzerinden ulaşılır.
 
 ### Modüller
 | Modül | Sorumluluk | Nerede |
@@ -124,7 +120,7 @@ Danışma amaçlı çıktılar hiçbir kapıyı, geçişi ya da emri etkilemez v
 | Sağlayıcı tarafı limitler | Tier 1'in 250 $ fatura tavanı ve 10 dakikada 10 $ sınırı (S-G4) | Hesabınıza uygulanışı **doğrulanmadı.** İkinci katman, birincil kontrol değil |
 
 - Ledger USD cinsinden, `sources.md`'deki liste fiyatlarıyla tutar. Google faturasıyla (TL) **aylık manuel mutabakat** yapılır. Fark %10'u aşarsa fiyat tablosu güncellenir ve olay audit'e yazılır.
-- **Ayrı API anahtarları:** geliştirme makinesi ile prod VPS için ayrı anahtarlar (tercihen ayrı Google projeleri). Geliştirme makinesindeki anahtar, Claude Code tarafından kodumuzu atlayarak kullanılabilir. Bu harcamayı yalnızca Google tarafındaki limitler ve aylık mutabakat yakalar. Kabul edilmiş artık risk.
+- **Ayrı API anahtarları:** geliştirme ve runtime için ayrı anahtarlar (tercihen ayrı Google projeleri). Yerel topolojide (ADR-0013) ikisi de Claude Code ile aynı makinededir; anahtarlar kodumuzu atlayarak kullanılabilir. Bu harcamayı yalnızca Google tarafındaki limitler ve aylık mutabakat yakalar. Kabul edilmiş artık risk.
 - **Ücretli katman (T10):** Yeterlilik ve runtime kullanımı ücretli katmanda yapılır. Ücretsiz katman yalnızca sentetik içerikli spike içindir.
 
 ### 3.5 Maliyet tahmini (varsayıma dayalı)
@@ -145,11 +141,12 @@ Hiçbir LLM rolü dondurma, holdout değerlendirmesi ya da doğrulama durumu üz
 ## 5. Operasyonel döngü (her saat)
 1. MarketData kapanan mumu çeker ve doğrular. Veri bayatsa yalnızca çıkışlar çalışır.
 2. Reconciliation çalışır. Tutarsızlık varsa yeni giriş açılmaz.
-3. StrategyEngine sinyalleri üretir.
-4. **Varsayılan allocation politikası (T11)** hedef ağırlıkları hesaplar. M8'den sonra, nitelikli bir model varsa Allocator bu ağırlıkları bant içinde ayarlayabilir; **ama yalnızca `Validated` stratejiler için.** Her durumda sonucu deterministik Sizer kullanır.
-5. Risk her intent için onay, kırpma ya da ret kararı verir. Deneysel paritelerin (E1/E2) toplam maruziyeti `ExperimentalPairsMaxExposure` (%10) tavanına tabidir (`risk-model.md` §2). Risk motoru doğrulama durumundan ve holdout yaşam döngüsünden **bağımsızdır.**
-6. Execution önce `clientOrderId`'yi kaydeder (outbox), sonra emri gönderir.
-7. Dolumlar işlenir, ledger ve audit güncellenir.
+3. **Koruyucu stop kontrolü (ADR-0014):** paper'da kapanan muma OHLC stop kuralı uygulanır (`Open ≤ S` ise `Open`'dan, değilse `Low ≤ S` ise `S`'den çıkış). Testnet'te stop borsada emir olarak bekler; bu adımda yalnızca dolumlar mutabakata alınır.
+4. StrategyEngine kapanış sinyallerini üretir. Giriş ve çıkış sinyalleri bir sonraki mumun açılışında uygulanır.
+5. **Varsayılan allocation politikası (T11)** hedef ağırlıkları hesaplar. M8'den sonra, nitelikli bir model varsa Allocator bu ağırlıkları bant içinde ayarlayabilir; **ama yalnızca `Validated` stratejiler için.** Her durumda sonucu deterministik Sizer kullanır.
+6. Risk her intent için onay, kırpma ya da ret kararı verir. Yeni pozisyonların efektif stop seviyesi (strateji stop'u ve `RiskConfig` hard stop'undan girişe en yakın olanı, D25) burada belirlenir. Deneysel paritelerin (E1/E2) toplam maruziyeti `ExperimentalPairsMaxExposure` (%10) tavanına tabidir (`risk-model.md` §2). Risk motoru doğrulama durumundan ve holdout yaşam döngüsünden **bağımsızdır.**
+7. Execution önce `clientOrderId`'yi kaydeder (outbox), sonra emri gönderir. Testnet'te giriş dolumundan sonra koruyucu stop emri de aynı yoldan gönderilir. Emirler strateji ve kohort kimliğiyle etiketlenir (ADR-0015).
+8. Dolumlar işlenir, ledger ve audit güncellenir.
 
 ```
 Intent → RiskApproved | RiskRejected
@@ -157,7 +154,7 @@ RiskApproved → Submitting → Accepted → PartiallyFilled → Filled | Cancel
 Submitting --timeout/5xx--> Unknown --(origClientOrderId ile sorgu)--> gerçek durum
 ```
 
-## 6. Araştırma, değerlendirme ve holdout (ADR-0006, ADR-0009, ADR-0012)
+## 6. Araştırma, değerlendirme ve holdout (ADR-0006, ADR-0009, ADR-0012, ADR-0013)
 
 ### 6.1 Zaman semantiği ve veri dönemleri
 - **Zaman:** Tüm zaman damgaları UTC anlarıdır (DB'de `timestamptz`, kodda offset 0 olan `DateTimeOffset`). DB oturum saat dilimi `UTC`'dir ve yerel saat dönüşümü yapılmaz. Aralıklar yarı açıktır: `[başlangıç, bitiş)`.
@@ -187,20 +184,20 @@ Submitting --timeout/5xx--> Unknown --(origClientOrderId ile sorgu)--> gerçek d
 | holdout DB `results.prospective_runs` ve `results.prospective_results` | İleriye dönük koşular ve sonuçlar; append-only | Yalnızca `eval_prospective` |
 | ops DB `research.cohort_status` | Kohort durumu (`sealed` / `revealed`) ve açığa çıkmış yuvarlanmış özet; append-only | Yalnızca `status_relay` |
 
-**Evaluator'ın veri edinimi.** Evaluator ops DB'sine erişemez ve canlı veriyi kullanmaz. Pencere verisini, araştırma verisiyle aynı kanonik kaynaktan (Binance açık veri arşivi, checksum doğrulamalı) kendisi import eder. Bunu `A_c + L_c` artı 3 günlük yayın tamponundan (başlangıç değeri) sonra yapar. Isınma verisi de aynı yoldan gelir.
+**Evaluator'ın veri edinimi.** Evaluator'ın `eval_*` rolleri ops DB'sine erişemez ve evaluator canlı veriyi kullanmaz; ops DB'ye tek bağlantısı, `status_relay` rolüyle `research.cohort_status`'a yaptığı eklemedir (D24). Pencere verisini, araştırma verisiyle aynı kanonik kaynaktan (Binance açık veri arşivi, checksum doğrulamalı) kendisi import eder. Bunu `A_c + L_c` artı 3 günlük yayın tamponundan (başlangıç değeri) sonra yapar. Isınma verisi de aynı yoldan gelir.
 
 **Kimlikler ve izinler:**
 
 | Kimlik | Okuyabilir | Okuyamaz |
 |---|---|---|
 | `research_app` | `research.candles`, deneyler, `research.cohort_status` (**yalnızca okuma**), `research.revealed_cohorts` ve `research.revealed_paper_summary` (bu view'lar, `cohort_status`'ta `revealed` olan kohortları gösterir) | `market.live_candles`, `trading.*`, holdout DB'si. `cohort_status`'a **yazamaz** |
-| `status_relay` | Evaluator API'si `GET /cohorts/{id}/status` (`eval` ağı) | Başka hiçbir tablo. Yalnızca `research.cohort_status`'a ekleme yapabilir |
+| `status_relay` (rev. 5: kimliği HoldoutEvaluator tutar, D24) | Hiçbir tablo | Başka hiçbir tablo. Yalnızca `ops` veritabanındaki `research.cohort_status`'a ekleme yapabilir; `pg_hba` ile yalnızca `holdout` ağından bağlanır |
 | `trading_app` | `market.live_candles`, `trading.*`, aktif strateji tanımları (yalnızca okuma) | holdout DB'si, araştırma tabloları |
 | `ops_api` (kullanıcı) | Paper ve Testnet izlemesi (açık kohortlar dahil), kohort durumları, açığa çıkmış tam raporlar | holdout DB'sinin ham verisi |
 | `eval_registry` | Manifesto kaydı ve sınırların (açık kohort, aile kotası, K_D) uygulanması | Pencere verisi |
 | `eval_diagnostic` | `diagnostic.*`; `results.diagnostic_results`'a yalnızca ekleme | `prospective.*`, `results.prospective_*`, ops DB'si |
 | `eval_prospective` | `prospective.*`; `results.prospective_*`'a yalnızca ekleme | `diagnostic.*`, `results.diagnostic_results`'a yazma, ops DB'si |
-| VPS root (insan) | Teknik olarak her şey | Kabul edilmiş artık risk; süreç kuralı ve audit |
+| Yerel makine yöneticisi ve Docker yetkisi (insan ve Claude Code) | Teknik olarak her şey (`docker exec`, volume, superuser) | Kabul edilmiş artık risk (ADR-0013); `CLAUDE.md`, deny kuralları, süreç kuralı ve audit |
 
 **Tehditler ve engeller (en az iki katman):**
 
@@ -213,9 +210,9 @@ Submitting --timeout/5xx--> Unknown --(origClientOrderId ile sorgu)--> gerçek d
 | Erken açıklama | Sonuç pencere bitmeden hesaplanamaz. Research view'ları yalnızca `research.cohort_status`'ta `revealed` olan kohortları gösterir. Bu tabloya **yalnızca `status_relay`** yazabilir; Research kendi kapısını açamaz |
 | Research'ün dolaylı erişimi | Canlı mumlar, `trading.*` ve açığa çıkmamış kohortlar Research'e kapalı. Research yalnızca `< C` verisini okur |
 | Kullanıcının seçici davranması | Kullanıcı PnL'i görür, ama manifestoyu ve sonucu değiştiremez, kohortu silemez ya da geri çekemez. Her varyant yeni kohort ve yeni penceredir. Tüm kohortlar raporlanır |
-| Saat manipülasyonu | Yalnızca root yapabilir. Kabul edilmiş risk; kaynak dosyaların tarih başlıkları loglanır |
+| Saat manipülasyonu | Yalnızca makine yöneticisi yapabilir. Kabul edilmiş risk; kaynak dosyaların tarih başlıkları loglanır |
 
-**Ağ ve yönetim katmanları:** §1'deki dört ağ; hiçbir port yayınlanmaz; geliştirme makinesinin VPS'e etkileşimsiz erişimi yoktur (T19). İzolasyon gizlilik sağlamaz; amaç iş akışı kaynaklı kontaminasyonu önlemektir.
+**Ağ ve yönetim katmanları (ADR-0013):** §1'deki dört Docker ağı; `holdout` veritabanına `CONNECT` yalnızca `eval_*` rollerinde; `pg_hba` ile yalnızca `holdout` ağından; host'a yalnızca loopback yayın ve bu port üzerinden `holdout` veritabanına ve superuser'a giriş yok. Aynı makinedeki yönetici erişimi bu katmanları aşabilir (kabul edilmiş artık risk). İzolasyon gizlilik sağlamaz; amaç iş akışı kaynaklı kontaminasyonu önlemektir.
 
 ### 6.3 Kohortlar ve manifesto
 Kohort, birlikte dondurulan en fazla 3 strateji ve ortak protokoldür. Manifesto **değiştirilemez.**
@@ -252,6 +249,7 @@ Hepsi `eval_registry` tarafından holdout DB'sinde uygulanır.
 - DSL normalize edilir: kanonik JSON, değişme özelliği olan operandların sıralanması, totolojilerin sadeleştirilmesi, tekrarların kaldırılması.
 - Parametreler, zaman dilimi, parite kümesi, model sürümleri, benchmark, metrikler ve engine çıkarıldıktan sonra kalan yapının hash'i aile kimliğidir. Bu alanlarda yapılan değişiklikler **aynı aile** sayılır ve kotadan düşer.
 - Kural grafiğindeki değişiklik yeni aile oluşturur. **İstisna:** araştırma verisinde pozisyon korelasyonu ≥ 0,9 ya da işlem girişlerinin Jaccard örtüşmesi ≥ 0,8 ise aday mevcut aileye atanır (mühendislik başlangıç değerleri).
+- **Benzerlik kontrolünün ölçeklenmesi (T21, ADR-0015):** aday tüm geçmiş deneylerle değil, yalnızca **aile temsilcileriyle** (her ailenin kayıt sırasına göre ilk üyesi) karşılaştırılır. Temsilci için yalnızca sıkıştırılmış artefaktlar saklanır: parite başına 1h ızgarada giriş olayı bitseti ve 1d ızgarada `int8` pozisyon vektörü. Artefaktlar parti halinde okunur; veri snapshot'ı değişince yeniden üretilir.
 - Kullanıcı bir adayı elle mevcut bir aileye atayabilir, bir aileyi bölemez.
 - **Sınırlama:** Ne hash ne de korelasyon tek başına atlatılamazlık garantisi verir. Asıl güvence global sınırlar ve tam raporlamadır ("n ileriye dönük denemeden k Validated"; yeni aile oluşturma sıklığı).
 
@@ -265,7 +263,7 @@ Hepsi `eval_registry` tarafından holdout DB'sinde uygulanır.
 | Geçiş | Kapı | Yetki |
 |---|---|---|
 | `Candidate → Frozen` | Kapılar geçildi; tanısal sonuç (varsa) `Rejected` değil; manifesto yetkili kayda yazıldı (GitHub push şart değil); `eval_registry` sınırları kabul etti | Otomatik |
-| `Frozen → PaperTrading` | Parity replay başarılı | **Otomatik (D3)** |
+| `Frozen → PaperTrading` | Parity replay başarılı: L1 sinyal paritesi ve L2 karar paritesi birebir (ADR-0015). Mutlak emir büyüklükleri karşılaştırılmaz | **Otomatik (D3)** |
 | `PaperTrading → TestnetActive` | Asgari paper süresi (TBD) ve sıfır kritik hata | **Kullanıcı onayı (D3)** |
 | `* → Disabled / Retired` | Operasyonel güvenlik | Kullanıcı ya da risk motoru; her zaman serbest; audit'e yazılır |
 
@@ -347,7 +345,7 @@ Yeniden değerlendirme yalnızca **aynı manifesto, aynı pencere, aynı kaynak 
 
 **Tanısal holdout kullanımı:** Aile başına ömür boyu 1 değerlendirme, kesim dönemi başına toplam 10. Sonuç yalnızca `NotRejected` ya da `Rejected` olabilir. Research yalnızca bu değeri görür, metrikleri yalnızca kullanıcı görür. **Eleyebilir, terfi ettiremez.** `NotRejected` hiçbir geçişi açmaz. Sonuç kayıtlarında, hipotezi üreten modelin bilgi kesim tarihinin pencereyle çakışması işaretlenir (bilgi kontaminasyonu).
 
-**Fark raporu:** Sonuç açığa çıktıktan sonra, evaluator simülasyonu ile paper ve Testnet sonuçları karşılaştırılır (getiri farkı, işlem eşleşmesi, slippage). Rapor yalnızca bilgilendiricidir ve doğrulamaya girmez. Model düzeltmeleri yalnızca gelecek kohortlara uygulanır.
+**Fark raporu (L3, ADR-0015):** Sonuç açığa çıktıktan sonra, evaluator simülasyonu ile paper ve Testnet sonuçları **normalize değerlerle** karşılaştırılır: birim sinyaller, işlem zamanlaması eşleşme oranı, işlem başına yüzde getiri, maruziyete göre normalize getiri, slippage (bps). Evaluator sabit başlangıç sermayesiyle izole simüle ederken paper ortak ve değişen sermaye kullandığı için **mutlak emir büyüklükleri karşılaştırılmaz.** Farklar kategorize edilir: portföy kısıtları (ortak sermaye, risk kırpması, maksimum pozisyon), `MIN_NOTIONAL` atlamaları, dolum ve slippage, canlı ve arşiv mum farkları. Rapor yalnızca bilgilendiricidir ve doğrulamaya girmez. Model düzeltmeleri yalnızca gelecek kohortlara uygulanır.
 
 ### 6.6 Araştırma kapıları
 Eşikler TBD; M3'te kalibre edilir. Kapılar:
@@ -380,18 +378,19 @@ Deneme sayacı, menşeinden bağımsız olarak (LLM, grid, insan, `dev-assisted`
 Bkz. `risk-model.md` §4.
 
 ## 10. Güvenlik
-- Exchange anahtarı: trade izni, withdrawal yok, IP kısıtı (VPS IP'si). Yalnızca Trading.Host'ta bulunur.
+- Exchange anahtarı: trade izni, withdrawal yok, IP kısıtı (yerel çalışmada uygulanabilirliği açık engel B6). Yalnızca Trading.Host'ta bulunur.
 - **Secret'lar:**
-  - Geliştirmede `dotnet user-secrets` (yalnızca geliştirme anahtarları; holdout ve VPS secret'ı yok).
-  - VPS'te Docker secret dosyaları (root'a ait, 0400).
-  - Holdout DB parolası yalnızca evaluator secret'ında.
+  - Geliştirmede `dotnet user-secrets` (yalnızca geliştirme anahtarları; holdout secret'ı yok).
+  - Runtime'da Docker secret dosyaları (yerel diskte; Claude Code için `Read(**/secrets/**)` deny kuralı).
+  - Holdout veritabanı parolası yalnızca evaluator secret'ında; `status_relay` kimliği de yalnızca evaluator'da (D24).
   - Research.Host'ta yalnızca submit-only evaluator token'ı.
-- **Ağ:** VPS'te dışa açık tek port SSH (parola girişi kapalı, anahtarlı). Ops API ve dashboard'a SSH tüneliyle erişilir. `eval` ve `holdout` ağları `internal` (§1).
-- **Claude Code korkulukları (T17):**
-  - Proje talimat dosyası: 2026-01-01 ve sonrasına ait piyasa verisi araştırma amacıyla indirilmez ve incelenmez; holdout korumaları ve evaluator kodu, açık kullanıcı isteği olmadan değiştirilmez.
-  - Proje izin kuralları: VPS'e SSH ve arşiv host'una doğrudan erişim için deny kuralları.
+  - Tüm runtime anahtarları Claude Code ile aynı makinededir: kabul edilmiş artık risk (ADR-0013).
+- **Ağ:** Host'a yalnızca `127.0.0.1` üzerinden port yayınlanır (geliştirme veritabanı, Ops API, dashboard). `eval` ve `holdout` ağları `internal` (§1). SSH yok.
+- **Claude Code korkulukları (T17, ADR-0013 §6):**
+  - Proje talimat dosyası: 2026-01-01 ve sonrasına ait piyasa verisi Claude Code tarafından indirilmez, okunmaz ve incelenmez; holdout veritabanına ve evaluator container'ına bağlanılmaz; holdout korumaları ve evaluator kodu, açık kullanıcı isteği olmadan değiştirilmez.
+  - Proje izin kuralları: `docker exec`, `docker compose exec`, `docker cp`, SSH ve arşiv host'una doğrudan erişim için deny kuralları.
 
-  Bunlar ek bir savunma katmanıdır; güven sınırı §6.2'deki kontrollerdir.
+  Yerel topolojide önemleri artar, ama bunlar teknik bir güven sınırı değildir; teknik katmanlar §6.2'deki rol, `CONNECT`, `pg_hba` ve ağ kontrolleridir.
 - Log redaction ve kanarya testleri.
 - Audit tablosunda uygulama rolleri yalnızca `INSERT` yetkisine sahiptir (`UPDATE`/`DELETE` yok).
 
@@ -401,23 +400,33 @@ Bkz. `risk-model.md` §4.
 - Metrikler ops DB'de sorgulanabilir tablolar olarak tutulur (döngü süreleri, gecikme, maliyet). Prometheus/Grafana/ELK yok; ihtiyaç doğarsa M10'da yeniden değerlendirilir.
 - Alarmlar M10'da.
 
-## 12. Dağıtım
-- **Geliştirme:** docker-compose (dev PostgreSQL ve host'lar). Testcontainers.
-- **Prod (M5, D5):** tek küçük VPS (2 vCPU / 4 GB sınıfı, fiyat doğrulanmadı), docker-compose ile iki ağ.
-  - Deploy: geliştirme makinesinde image derlenir ve image digest'i kaydedilir; ardından `docker save | ssh vps docker load` **etkileşimli** olarak çalıştırılır (T19). Registry yok.
-  - Yedek: ops DB için günlük, şifreli `pg_dump` ve harici bir kopya. Holdout DB'si yeniden üretilebilir olduğu için (kaynaktan ve checksum'la) yedeklenmez; yalnızca değerlendirme kayıtları ayrıca yedeklenir.
+## 12. Dağıtım (ADR-0013)
+- **Tek yerel makine** (D5 rev.): Docker Compose ve Testcontainers. VPS yok.
+- **Kaynak sınırları:** her servis için `mem_limit` ve `cpus`. Başlangıç değerleri: PostgreSQL 1 GB / 1.0, Trading.Host 384 MB / 0.5, Research.Host 1.5 GB / 2.0, HoldoutEvaluator 1.5 GB / 2.0 (M3 ve M5'te ölçülüp ayarlanır). Docker Desktop (WSL2) toplam bellek tavanı kullanıcı makine ayarıdır.
+- **Çalışma biçimi:** Trading.Host ve PostgreSQL sürekli; Research.Host ve HoldoutEvaluator iş bazlı (boşta bellek tutmaz). Ağır işler aynı anda çalıştırılmaz.
+- **Deploy (T19):** kullanıcı yerelde etkileşimli olarak `docker compose build` / `up` başlatır; evaluator image digest'i `EvaluatorRelease` olarak kaydedilir. Registry ve SSH yok.
+- **Yedek:** `ops` veritabanı için günlük, şifreli `pg_dump` ve makine dışında bir kopya. `holdout` veritabanı yeniden üretilebilir olduğu için (kaynaktan ve checksum'la) yedeklenmez; yalnızca değerlendirme kayıtları ayrıca yedeklenir.
+- **Uptime:** uyku, yeniden başlatma ve güncellemeler paper/Testnet sürekliliğini keser (kabul edilmiş artık risk, `risk-model.md` §4).
 
 ## 13. Reddedilen alternatifler
 | Alternatif | Neden |
 |---|---|
 | Mikroservisler, broker, Redis, TimescaleDB | Gereksiz (ADR-0002) |
-| M3'te ayrı bir holdout VPS'i | M3'te gerçek bir aday yok. Maliyeti öne çeker. Evaluator sentetik veriyle geliştirilebilir (ADR-0009) |
-| Holdout'u geliştirme makinesinde ayrı bir OS kullanıcısında tutmak | Windows'ta yönetici veya Docker erişimi olan biri ya da bir araç sınırı aşabilir (ADR-0009) |
+| VPS (holdout ve sürekli çalışma için) | Kullanıcı kararıyla iptal (D5 rev., ADR-0013). Önceki tasarım: ADR-0009 |
+| İki ayrı PostgreSQL instance'ı | 16 GB RAM'de ek bellek; ayrı veritabanı, `CONNECT` ve `pg_hba` aynı makinede benzer pratik ayrımı sağlar (ADR-0013) |
+| Ayrı StatusRelay container'ı | Ek bellek ve işletim yükü (D24) |
+| Holdout'u ayrı bir OS kullanıcısında tutmak | Windows'ta yönetici veya Docker erişimi olan biri ya da bir araç sınırı aşabilir (ADR-0009) |
 | Holdout değerlendirmesini CI'da yapmak | Workflow geliştirme ortamından değiştirilebilir; uzak repo gerektirir (ADR-0009) |
-| Harici image registry | Ek hesap ve kimlik bilgisi; tek VPS için gereksiz |
+| Harici image registry | Ek hesap ve kimlik bilgisi; tek makine için gereksiz |
+| Paper'da tick ya da 1 dakikalık veriyle mum içi stop izleme | Backtest ile parity bozulur; ek veri ve bellek (ADR-0014) |
+| Benzerlik kontrolünde tüm geçmiş deneylerle karşılaştırma | Bellek ve işlem darboğazı (ADR-0015) |
 | Tarihsel holdout'u birincil doğrulama kanıtı saymak | Sonuçlar insanlar ve LLM'ler tarafından biliniyor olabilir. Yalnızca eleme amaçlı kullanılır (ADR-0006) |
 | Testnet'i doğrulamaya bağlamak (6–12 ay bekleme) | Güvenli deneme gereksiz yere gecikirdi. Bunun yerine iki izli yaşam döngüsü (ADR-0012) |
 | Sağlayıcılar arası LLM fallback'i | Kalite eşdeğerliği varsayımı (D20) |
 | LLM'in kod üretmesi, mum başına LLM kararı | ADR-0003, ADR-0005 |
 | Grounding ve URL context ile otonom araştırma | §8 |
 | Prometheus/Grafana/ELK | Tek kullanıcı için gereksiz işletim yükü |
+
+## 14. Uygulama ilkeleri (T23, T24)
+- **YAGNI ve D15 odağı:** İlk dikey dilim M0–M2'dir. M1 ve M2 kodlanırken M3+ bileşenleri (DSL, kohort, evaluator, LLM, `ops`/`holdout` veritabanları) koda erken eklenmez; arayüz, tablo ya da yapılandırma "ileride lazım olur" diye açılmaz. Gerekli olduğu milestone'da eklenir.
+- **Model adları konfigürasyondan:** `gemini-3.5-flash-lite` gibi model adları kodda sabit yazılmaz. Sağlayıcı, model, prompt sürümü ve `qualificationId` görev politikası konfigürasyonundan okunur (§3.1). Testler sahte sağlayıcıyla ve konfigürasyondan verilen adlarla çalışır.
