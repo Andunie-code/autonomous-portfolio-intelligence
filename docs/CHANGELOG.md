@@ -2,6 +2,10 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-14 — M2 başlangıcı ve ön kayıt (protokol v1)
+- **Kullanıcı kararları (U):** M2 başlatıldı. D25 = %10 (TBD kaydından çıkarıldı). Isınma/boşluk kuralı: boşlukta indikatör sıfırlanır, `L` kesintisiz mumdan önce sinyal yok. Baseline'lar yalnızca 4h'te. Drawdown halt'ı için iki koşu (birincil `policy`, tanısal `no-halt`). Volatilite 4h serisinden (gün sonu kapanışları).
+- **Teknik ön kayıt (T):** `docs/m2-protocol.md` v1 — indikatör tanımları, iki baseline (EMA 50/100, Supertrend 10/3), koruyucu stop, olay sırası, maliyet modeli v1 (10 bps ücret, 5 bps açılış ve 20 bps stop slippage), allocation v1 (ters volatilite, 30 gün), portföy riski, benchmark'lar, metrikler, deneme muhasebesi. Ön kayıt kanıtı bu belgenin eklendiği commit'tir; hiçbir backtest bu commit'ten önce çalıştırılmadı.
+
 ## 2026-10-14 — M1 veri politikası v1.2 (kullanıcı onaylı)
 - **Karar (U, Seçenek A):** Aralık 2021 1h ısınma dosyaları (SOLUSDT, TRXUSDT, SANDUSDT) için M1 verisi ve snapshot `a6c4e89b…` olduğu gibi kalır. M2'den önce tüm paritelere aynı uygulanacak bir ısınma kuralı ön kayıt edilir.
 - **Belge:** koddaki `close_time` tutarlılık kuralı politika §6'daki bütünlük hatası listesine yazıldı (kod davranışı değişmedi). Kapanış kaydındaki tutarsızlık böylece giderildi.

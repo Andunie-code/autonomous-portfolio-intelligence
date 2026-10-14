@@ -67,7 +67,8 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - **Versiyonlu varsayılan allocation politikası (T11):** onaylı tavanlar içinde ters volatilite.
   - **Çıkış modeli (T20, ADR-0014):** kapanış sinyalleri `t+1` açılışında uygulanır; mum içi koruyucu stop OHLC kuralıyla simüle edilir; efektif stop = strateji stop'u ile `RiskConfig` hard stop'undan (D25) girişe en yakın olanı.
   - Tek ve çoklu varlık backtest; benchmark'lar; deney kaydı ve rapor.
-- **Ön koşul:** D25 hard stop değeri, baseline backtest'lerinden önce kullanıcı tarafından belirlenir.
+- **Ön koşul:** D25 hard stop değeri (%10, karara bağlandı) ve ön kayıt [`m2-protocol.md`](m2-protocol.md) v1.
+- **Durum:** başladı (2026-10-14, kullanıcı onayı).
 - **Kabul kriterleri:**
   - Golden testler, look-ahead property testi, muhasebe invariant'ı, bit bit determinizm ve benchmark analitik eşleşmesi geçiyor.
   - Allocation politikası property testleri (tavan aşımı yok) geçiyor.

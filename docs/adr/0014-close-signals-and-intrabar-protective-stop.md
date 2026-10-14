@@ -21,7 +21,7 @@
 - Girişler de kapanış sinyalidir: `t` kapanışında üretilir, `t+1` açılışında uygulanır.
 - **Stop seviyesi:** girişte, giriş anında bilinen veriden deterministik olarak hesaplanır. İki kaynağı vardır:
   - strateji stop'u: strateji tanımının sürümlü bir parçasıdır (örneğin ATR katı);
-  - risk hard stop'u: `RiskConfig`'teki "pozisyon başına maksimum kayıp" (D25; değer TBD).
+  - risk hard stop'u: `RiskConfig`'teki "pozisyon başına maksimum kayıp" (D25; değer %10, 2026-10-14).
   - **Efektif stop**, ikisinden giriş fiyatına en yakın olanıdır.
 - Stop seviyesi yalnızca mum kapanışında güncellenebilir (örneğin iz süren stop); yeni seviye bir sonraki mumdan itibaren geçerlidir. Mum içinde seviye değişmez.
 

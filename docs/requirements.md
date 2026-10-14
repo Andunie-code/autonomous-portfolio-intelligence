@@ -46,7 +46,7 @@ Kârlılık varsayılmaz. Sistemin amacı, bir stratejinin avantajı olup olmad�
 | D22 | Deneysel pariteler (U5, U6) | Çekirdek: 4 yıl; E1: kesim öncesi ≥ 1 yıl kullanılabilir geçmiş; E2: geri kalanlar (yalnızca transfer); listeleme sonrası 30 gün karantina. E1 ve E2'nin toplam maruziyetine `ExperimentalPairsMaxExposure` = **%10** tavan (yapılandırılabilir; yalnızca kullanıcı tarafından `RiskConfig` üzerinden) (ADR-0012) |
 | D23 | Operasyonel güvenlik ve değiştirilemezlik (U7) | Kullanıcı açık kohortların PnL'ini görebilir. Manifestolar, sonuçlar ve audit geçmişi değiştirilemez; devre dışı bırakma, kill switch ve pozisyon kapatma her zaman serbesttir ve değerlendirmeyi etkilemez |
 | D24 | StatusRelay (2026-10-14) | Ayrı bir StatusRelay container'ı/process'i çalıştırılmaz. HoldoutEvaluator, kısıtlı `status_relay` DB rolüyle `research.cohort_status`'a doğrudan ekleme yapar. Research.Host bu tabloya yazamaz (ADR-0013) |
-| D25 | Pozisyon başına hard stop (2026-10-14) | `RiskConfig`'te bağlayıcı bir "pozisyon başına maksimum kayıp" koruyucu stop'u bulunur. **Değer TBD** (M2'de kullanıcı belirler). Strateji stop'u ile birlikte, girişe en yakın olan geçerlidir (ADR-0014) |
+| D25 | Pozisyon başına hard stop (2026-10-14) | `RiskConfig`'te bağlayıcı bir "pozisyon başına maksimum kayıp" koruyucu stop'u bulunur: giriş fiyatından **%10** (`MaxPositionLossPct = 0.10`, 2026-10-14). Gerekçe: varlık başına %20 tavanla tek bir tam pozisyon portföyde en fazla %2 kaybettirir ve %3 günlük limiti tek başına tüketemez. Strateji stop'u ile birlikte, girişe en yakın olan geçerlidir (ADR-0014) |
 | D11 | Kill switch (rev. 2026-10-14) | Pozisyonları tut, yeni emir açma; açık giriş emirleri iptal edilir. **Koruyucu stop emirleri iptal edilmez** (çıkışlar her zaman çalışır, ADR-0014). "Tümünü kapat" ayrı bir manuel eylem |
 | D12 | AI sağlayıcısı | **Geçici.** Runtime'da yetkili tek sağlayıcı Gemini (başlangıç modeli `gemini-3.5-flash-lite`). Uygulama şimdilik Anthropic API kullanmaz |
 | D13 | Maliyet ayrımı | **Geçici.** Ayrı bir Anthropic faturası yok. Claude Code aboneliğinin uygulamaya runtime API erişimi sağladığı varsayılmaz |
@@ -121,8 +121,7 @@ Gerçek para ile işlem, futures/margin, birden fazla borsa, haber ve sentiment,
 | Kapı eşikleri (min. işlem sayısı, Deflated Sharpe olasılığı, walk-forward tutarlılığı) | M3'te sentetik kalibrasyon: random walk üzerinde hedef yanlış pozitif oranını sağlayan eşikler. **Hedef yanlış pozitif oranının kendisi de TBD**; protokolle birlikte kaydedilir | M3 | Teknik lider, protokolle |
 | **BLOKE EDİCİ:** kohort içi α, hedef güç, ekonomik δ (taban değer ve küçültme oranı), δ'nın uygulanma biçimi (nokta tahmin mi, alt sınır mı), maksimum drawdown kuralı | M3'te Protokol v1 ve gerekçeleri; kullanıcı incelemesi. Belirlenmeden hiçbir kohort `Validated` olamaz | M3 | Teknik lider önerir, kullanıcı onaylar |
 | Birincil metriğin kesin formülü, bootstrap blok uzunluğu kuralı | Protokol v1 | M3 | Teknik lider |
-| Maliyet ve slippage modeli değerleri (stop dolumu için ayrı slippage parametresi dahil) | Ön kayıtla | M2 | Teknik lider |
-| Pozisyon başına hard stop değeri (D25) | Kullanıcı kararı; baseline'ların backtest'inden önce ön kayıtla sabitlenir | M2 | Kullanıcı |
+| ~~Maliyet ve slippage modeli değerleri~~ — **ön kayıtlı:** `m2-protocol.md` v1 §8 | — | — | — |
 | Docker `mem_limit` ve `cpus` değerleri | Başlangıç değerleri ADR-0013'te; gerçek kullanımla ölçülüp ayarlanır | M3, M5 | Teknik lider |
 | Aile benzerlik eşikleri (korelasyon 0,9, Jaccard 0,8) | Mühendislik başlangıç değerleri; veriyle gözden geçirilir | M3 | Teknik lider |
 | `PaperTrading → TestnetActive` için asgari paper süresi | Operasyonel ölçüm | M5 | Teknik lider, kullanıcı onayıyla |
