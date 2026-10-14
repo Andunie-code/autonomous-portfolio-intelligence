@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- M2 command line: runs the pre-registered baselines and benchmarks on the local database (no network). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Modules\MarketData\PortfolioIntelligence.MarketData.csproj" />
+    <ProjectReference Include="..\..\Modules\Research\PortfolioIntelligence.Research.csproj" />
+  </ItemGroup>
+</Project>

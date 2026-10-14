@@ -1,0 +1,28 @@
+{
+  "version": "core-universe.v1",
+  "note": "Accepted M1 core universe (docs/m1-core-universe.md). core-4y-S: survivor-conditioned.",
+  "policy": "m1-data-policy v1.1",
+  "snapshotHash": "a6c4e89b98364a2e2b3479e81a9e7188ffb27e08a4d444723523e413f7509e82",
+  "pairs": [
+    { "symbol": "BTCUSDT", "rank": 1 },
+    { "symbol": "ETHUSDT", "rank": 2 },
+    { "symbol": "BNBUSDT", "rank": 3 },
+    { "symbol": "SOLUSDT", "rank": 4 },
+    { "symbol": "XRPUSDT", "rank": 5 },
+    { "symbol": "DOTUSDT", "rank": 6 },
+    { "symbol": "ADAUSDT", "rank": 7 },
+    { "symbol": "DOGEUSDT", "rank": 8 },
+    { "symbol": "AVAXUSDT", "rank": 9 },
+    { "symbol": "SHIBUSDT", "rank": 11 },
+    { "symbol": "FILUSDT", "rank": 13 },
+    { "symbol": "GALAUSDT", "rank": 15 },
+    { "symbol": "AXSUSDT", "rank": 16 },
+    { "symbol": "LINKUSDT", "rank": 17 },
+    { "symbol": "TRXUSDT", "rank": 18 },
+    { "symbol": "LTCUSDT", "rank": 19 },
+    { "symbol": "VETUSDT", "rank": 20 },
+    { "symbol": "SANDUSDT", "rank": 22 },
+    { "symbol": "THETAUSDT", "rank": 23 },
+    { "symbol": "DYDXUSDT", "rank": 24 }
+  ]
+}

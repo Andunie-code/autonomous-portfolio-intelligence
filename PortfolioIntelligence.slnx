@@ -27,12 +27,18 @@
   <Folder Name="/src/Tools/DbMigrator/">
     <Project Path="src/Tools/DbMigrator/PortfolioIntelligence.DbMigrator.csproj" />
   </Folder>
+  <Folder Name="/src/Tools/BacktestCli/">
+    <Project Path="src/Tools/BacktestCli/PortfolioIntelligence.BacktestCli.csproj" />
+  </Folder>
   <Folder Name="/src/Tools/MarketDataCli/">
     <Project Path="src/Tools/MarketDataCli/PortfolioIntelligence.MarketDataCli.csproj" />
   </Folder>
   <Folder Name="/tests/" />
   <Folder Name="/tests/Architecture.Tests/">
     <Project Path="tests/Architecture.Tests/PortfolioIntelligence.Architecture.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Backtest.Tests/">
+    <Project Path="tests/Backtest.Tests/PortfolioIntelligence.Backtest.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/MarketData.Tests/">
     <Project Path="tests/MarketData.Tests/PortfolioIntelligence.MarketData.Tests.csproj" />

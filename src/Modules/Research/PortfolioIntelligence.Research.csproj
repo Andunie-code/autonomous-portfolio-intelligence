@@ -1,7 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Research module: hypotheses, experiments, Researcher agent (M3+).
+  <!-- Research module: experiments registry (M2), hypotheses and Researcher agent (M3+).
        Must never reference Execution or Trading.Host (ADR-0001, enforced by architecture tests). -->
   <ItemGroup>
     <ProjectReference Include="..\..\Kernel\PortfolioIntelligence.Kernel.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Config\core-universe.v1.json" />
   </ItemGroup>
 </Project>
