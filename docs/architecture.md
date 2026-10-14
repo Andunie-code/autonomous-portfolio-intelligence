@@ -167,7 +167,7 @@ Submitting --timeout/5xx--> Unknown --(origClientOrderId ile sorgu)--> gerçek d
 | Tanısal holdout (D_c) | `[C, A_c)` | Yalnızca `eval_diagnostic` | **Kör değil** (bilgi kontaminasyonu). Yalnızca **eler**, terfi ettirmez |
 | İleriye dönük birincil holdout (P_c) | `[A_c, A_c + L_c)` | Yalnızca `eval_prospective`, pencere kapandıktan sonra | Veri dondurmadan sonra oluşur. **Doğrulamanın tek kaynağıdır** |
 
-`A_c` = kohortun dondurulduğu `F_c` anı + 24 saatten sonraki ilk UTC gece yarısı. `L_c` §6.5'e göre belirlenir.
+`A_c` = `registered_at` + 24 saatten sonraki ilk UTC gece yarısı. Tek yetkili kaynak, manifestonun yetkili kayda eklendiği an olan `registered_at`'tir (U, 2026-10-14); dondurma anı `F_c` pencere hesabında kullanılmaz. Kohort 0 istisnası §6.3'te. `L_c` §6.5'e göre belirlenir.
 
 ### 6.2 Saklama, erişim, değerlendirme ve açıklama
 **Saklama.** İleriye dönük pencerenin verisi, pencere bitmeden de **ops DB'sinde canlı veri olarak bulunur.** Koruma verinin yokluğuna değil, erişim kontrolüne dayanır.
@@ -217,7 +217,7 @@ Submitting --timeout/5xx--> Unknown --(origClientOrderId ile sorgu)--> gerçek d
 ### 6.3 Kohortlar ve manifesto
 Kohort, birlikte dondurulan en fazla 3 strateji ve ortak protokoldür. Manifesto **değiştirilemez.**
 
-**Yetkili kayıt ve zaman damgası:** Holdout DB'sindeki `results.cohort_manifests` tablosudur (append-only, sunucu saati). M5'ten önce, yani gerçek evaluator yokken (Kohort 0), yerel git commit'i manifestoyu sabitler; `A_c` bu commit'in zamanından aynı kuralla hesaplanır ve M5'te evaluator'a aynı değerlerle aktarılır.
+**Yetkili kayıt ve zaman damgası:** Holdout DB'sindeki `results.cohort_manifests` tablosudur (append-only, sunucu saati). M5'ten önce, yani gerçek evaluator yokken (Kohort 0), yerel git commit'i manifestoyu sabitler. **Kohort 0 istisnası (U, 2026-10-14):** bu commit'in zaman damgası Kohort 0'ın `registered_at` değeri kabul edilir; `A_0` bundan aynı kuralla hesaplanır. M5'te evaluator veritabanına aktarılırken orijinal `registered_at` ve `A_0` korunur. Bu aktarım, istemci değerlerini reddeden normal kayıt yolu değil, audit'e yazılan bir migration/seed istisnasıdır; `CHECK (A_c > registered_at)` kuralını sağlar. Yerel commit zamanının yazar tarafından belirlendiği ve bağımsız bir zaman kanıtı olmadığı kabul edilmiş bir sınırlamadır.
 
 **GitHub push'u isteğe bağlı ek kanıttır:** Her zaman kullanıcı onayına tabidir ve dondurmanın şartı değildir. Böylece otomatik dondurma, GitHub token'ı gerektirmez.
 

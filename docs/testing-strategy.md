@@ -146,7 +146,7 @@ Kesim tarihi `C = 2026-01-01T00:00:00Z`. Mum üyeliği: `S ≤ o` ve `o + Δ ≤
 | V10 | `PaperTrading → TestnetActive` kullanıcı oturumu olmadan | Reddedilir | M6 |
 | V11 | `results.diagnostic_results`'a `NotRejected` ve `Rejected` dışında bir değer (ör. `Validated`) yazma | DB `CHECK` reddeder | M3 |
 | V12 | Penceresi henüz açılmamış bir kohort için manifesto kaydı | Trigger'a takılmaz; kayıt başarılı | M3 |
-| V13 | İstemcinin gönderdiği `registered_at` ya da `A_c`; geçmiş tarihli `A_c`; Registry atlanarak doğrudan `eval_registry`'ye sınır aşan kayıt | Reddedilir; sunucu değeri kullanılır; sınır yetkili kayıtta uygulanır | M3 |
+| V13 | İstemcinin gönderdiği `registered_at` ya da `A_c`; geçmiş tarihli `A_c`; Registry atlanarak doğrudan `eval_registry`'ye sınır aşan kayıt | Reddedilir; sunucu değeri kullanılır; sınır yetkili kayıtta uygulanır. Tek istisna: Kohort 0'ın M5'teki seed aktarımı (architecture §6.3); orijinal `registered_at` ve `A_0` korunur, `A_c > registered_at` sağlanır ve audit'e yazılır | M3/M5 |
 | V14 | Registry'deki strateji sürümünü güncelleme ya da silme; manifesto hash'iyle uyuşmayan tanımın Trading'de çalıştırılması | Yetki hatası; strateji çalıştırılmaz ve alarm üretilir | M3/M5 |
 
 ### 7.2 H-ENV (gerçek yerel ortam, M5; ADR-0013)

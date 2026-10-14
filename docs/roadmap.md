@@ -40,7 +40,9 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Kanarya secret'ı loglarda maskeli görünüyor.
   - Talimat dosyası ve izin kuralları repoda; içerikleri `architecture.md` §10 ile uyumlu.
 
-### M1 — Veri temeli (M) — başlamadı (B4)
+### M1 — Veri temeli (M) — Kapı 1 açık (2026-10-14)
+- **Politika:** [`m1-data-policy.md`](m1-data-policy.md) v1.0 (kullanıcı onaylı; onay, belgenin eklendiği commit'e bağlı).
+- **Kapılar (U):** Kapı 1 = politika ve tüm çevrimdışı kod/testler, `verify.ps1` yeşil. Kapı 2 = gerçek `data.binance.vision` erişimi (`--dry-run`, ardından gerçek import), kullanıcının tek aşamalı etkileşimli onayıyla. Çekirdek 20 parite, kabul raporunun kullanıcı tarafından onaylanmasıyla kesinleşir.
 - **Kapsam:**
   - Binance public data import (1h, 4h); checksum; ms/µs normalizasyonu; OHLC kontrolleri; boşluk raporu; `DatasetSnapshot`.
   - **Araştırma kesim tarihi** `C = 2026-01-01T00:00:00Z`: tek doğruluk kaynağı (migration ve kod), "tam aralık" mum üyeliği, `market.candles` üzerinde `CHECK`, dosya planlayıcı ve HTTP koruması (T4, T6).
@@ -53,8 +55,8 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   4. **H1, H2, H2b, H3, H4** geçiyor. Kesimden sonraki satır sayısı 0; önbellekte kesimden sonrasını kapsayan dosya yok.
   5. HTTP: kesim tarihine uzanan aralıklar ağa gitmeden reddediliyor; host allowlist'i ve redirect reddi uygulanıyor; testlerin ağa çıkmadığını doğrulayan bir test var.
   6. 20 çekirdek parite için `[2022-01-01, C)` aralığında kalite şartlarını sağlayan 1h ve 4h veri. 20'ye ulaşılamazsa **sessizce gevşetilmez;** rapor hazırlanır ve durulur.
-  7. Bozuk checksum reddediliyor; import idempotent; hash kararlı; 1h ve 4h verisi birbiriyle tutarlı; boşluk raporu üretiliyor.
-  8. Gerçek veri kabul raporu (kapsam, boşluklar, hash, H1) üretildi.
+  7. Bozuk ya da eksik checksum reddediliyor; import idempotent; hash kararlı; 1h ve 4h tutarlılığı kontrol ediliyor ve anomaliler raporlanıyor (sessizce düzeltilmez); boşluk raporu üretiliyor.
+  8. Gerçek veri kabul raporu (kapsam, boşluklar, hash, H1, hayatta kalma yanlılığı, anomaliler, önerilen çekirdek liste) üretildi ve kullanıcı tarafından onaylandı.
 
 ### M2 — Baseline backtest (L) ← ilk dilimin sonu
 - **Kapsam:**
@@ -89,7 +91,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - DSL ve baseline parity'si sağlanıyor; kalibrasyon protokolü kaydedildi; yanlış pozitif ve doğru pozitif testleri geçiyor.
   - **Manifesto:**
     - şema doğrulaması; eksik protokol "doğrulamaya uygun değil" olarak işaretleniyor;
-    - `A_c ≥` F_c + 24 saatten sonraki ilk UTC gece yarısı;
+    - `A_c` = `registered_at` + 24 saatten sonraki ilk UTC gece yarısı (sunucu tarafından atanır; Kohort 0 istisnası architecture §6.3);
     - dondurulmuş kohortta değişiklik reddediliyor; değiştirilmiş strateji yeni kohort ve `A > now` alıyor.
   - **Aile kotası:** Parametre değişikliği ve sonucu etkileyen engine değişikliği aynı aile sayılıyor; 3. deneme reddediliyor; benzerlik kontrolü bir kopyayı yakalıyor (pozitif kontrol); karşılaştırma yalnızca aile temsilcileriyle yapılıyor ve bellek kullanımı aile sayısıyla doğrusal kalıyor.
   - **Sınırlar:** K_D, 2 × 3 açık kohort ve aile kotası aşılınca istek reddediliyor.

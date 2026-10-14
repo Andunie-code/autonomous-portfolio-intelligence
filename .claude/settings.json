@@ -20,6 +20,8 @@
       "PowerShell(docker exec*)",
       "PowerShell(docker compose exec*)",
       "PowerShell(docker cp*)",
+      "Bash(*--allow-network*)",
+      "PowerShell(*--allow-network*)",
       "WebFetch(domain:data.binance.vision)",
       "Bash(curl *data.binance.vision*)",
       "Bash(wget *data.binance.vision*)",

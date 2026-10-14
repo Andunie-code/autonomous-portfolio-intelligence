@@ -11,6 +11,7 @@ M0'da çözüm iskeleti, migration altyapısı, loglama ve mimari testler uygula
 | [risk-model.md](risk-model.md) | Risk limitleri, trading kill switch'i ve LLM acil durdurma, hata senaryoları |
 | [testing-strategy.md](testing-strategy.md) | Test katmanları, yeterlilik protokolü, H-DEV ve H-ENV holdout testleri |
 | [roadmap.md](roadmap.md) | M0–M10 ve kabul kriterleri |
+| [m1-data-policy.md](m1-data-policy.md) | M1 veri politikası (çekirdek parite seçimi, veri kalitesi, kesim koruması, kapılar) |
 | [sources.md](sources.md) | Doğrulanmış harici bilgiler ve tarihleri |
 | [CHANGELOG.md](CHANGELOG.md) | Belge değişikliklerinin geçmişi ve gerekçeleri |
 | [adr/](adr/) | 0001–0015 Architecture Decision Record'lar |

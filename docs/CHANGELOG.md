@@ -2,6 +2,20 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-14 — rev. 5.1: M1 veri politikası v1.0 ve `A_c` kararı (kullanıcı onaylı)
+**Kullanıcı kararları (U):**
+- **`A_c`:** tek yetkili kaynak `registered_at` (`A_c` = `registered_at` + 24 saatten sonraki ilk UTC gece yarısı). architecture §6.1 ve roadmap M3'teki `F_c` ifadeleri düzeltildi.
+- **Kohort 0 istisnası:** yerel commit zamanı `registered_at` kabul edilir; M5'te orijinal `registered_at` ve `A_0` korunarak seed istisnasıyla aktarılır (architecture §6.3, V13).
+- **M1 veri politikası:** `docs/m1-data-policy.md` v1.0. Onay, bu belgenin eklendiği commit'in SHA'sına bağlıdır.
+- **Kapı modeli (iki aşama):** Kapı 1 = politika ve tüm çevrimdışı kod/testler (açık); Kapı 2 = gerçek ağ erişimi, tek aşamalı etkileşimli onayla.
+- **Güvenlik:** ham arşiv dosyaları repo ve OneDrive dışında; ham mum verisi Claude Code bağlamına girmez; host allowlist yalnızca `data.binance.vision`; 3xx reddedilir; veri erişim matrisi (`< U` sıralama ve ısınma, `[U, C)` araştırma, `≥ C` yasak).
+- **Seçim:** arşivden deterministik aday keşfi; `n_obs ≥ 90` ve UNKNOWN oranı ≤ %10; quote hacim medyanı; stablecoin, fiat, kaldıraçlı, sarmalanmış ve emtia tokenları dışlanır; elenen adayın yerine sıradaki geçer; 20'ye ulaşılamazsa durulur; hayatta kalma yanlılığı raporu.
+- **Kalite:** checksum zorunlu (eksik ya da bozuk checksum reddedilir); 1h ve 4h aynı eşiklere tabi; 1h/4h anomalileri raporlanır, sessizce düzeltilmez.
+
+**Teknik kararlar (T):** politika §5'teki varsayılanlar (karantina günleri sıralamadan çıkarılmaz, `n_exp` çapası 1h, tarama sınırı yok), §6'daki bütünlük hatası tanımları, §7 planlayıcı kuralları, §10 tekrar üretilebilirlik. `.claude/settings.json`'a gerçek ağ bayrağı (`--allow-network`) için deny kuralı.
+
+**B4:** seçim prosedürü ve Kapı 1 onaylandı; Kapı 2 (ağ erişimi) bekliyor.
+
 ## 2026-10-14 — rev. 5: yerel tek-makine topolojisi, mum içi stop, aile temsilcisi, normalize parity
 Yalnızca belgeler, `CLAUDE.md`, `.claude/settings.json` ve `docker-compose.yml`'deki yorum satırları değişti. Uygulama kodu yok, M1 başlamadı.
 
