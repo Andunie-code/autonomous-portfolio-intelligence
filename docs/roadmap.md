@@ -68,7 +68,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - **Çıkış modeli (T20, ADR-0014):** kapanış sinyalleri `t+1` açılışında uygulanır; mum içi koruyucu stop OHLC kuralıyla simüle edilir; efektif stop = strateji stop'u ile `RiskConfig` hard stop'undan (D25) girişe en yakın olanı.
   - Tek ve çoklu varlık backtest; benchmark'lar; deney kaydı ve rapor.
 - **Ön koşul:** D25 hard stop değeri (%10, karara bağlandı) ve ön kayıt [`m2-protocol.md`](m2-protocol.md) v1.
-- **Durum:** başladı (2026-10-14, kullanıcı onayı).
+- **Durum:** kod, testler ve baseline raporu tamam; kullanıcı kabulü bekliyor ([`m2-baseline-results.md`](m2-baseline-results.md)).
 - **Kabul kriterleri:**
   - Golden testler, look-ahead property testi, muhasebe invariant'ı, bit bit determinizm ve benchmark analitik eşleşmesi geçiyor.
   - Allocation politikası property testleri (tavan aşımı yok) geçiyor.

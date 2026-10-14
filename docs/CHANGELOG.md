@@ -2,6 +2,11 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-14 — M2 uygulaması ve baseline raporu
+- **Kod:** `73a6b60` (indikatörler, baseline'lar, maliyet modeli, allocation, backtest motoru, benchmark'lar, deney kaydı, testler). `verify.ps1` yeşil (166 test).
+- **Düzeltme:** `452fabd` — benchmark'ın son satış bacağı devirde iki kez sayılıyordu (yalnızca benchmark devir metriği; strateji sonuçları ve hash'leri değişmedi).
+- **Sonuçlar:** `docs/m2-baseline-results.md`. Dört koşu `research.experiments`'e kayıtlı (yeniden koşu nedeniyle ikişer kez, aynı hash'lerle). Kabul kriterleri: golden, look-ahead, muhasebe, determinizm (gerçek veride de aynı hash), benchmark analitik eşleşmesi ve allocation tavanı testleri geçti; maliyetler düşülmüş, benchmark karşılaştırmalı rapor üretildi. M2 kullanıcı kabulü bekliyor.
+
 ## 2026-10-14 — M2 başlangıcı ve ön kayıt (protokol v1)
 - **Kullanıcı kararları (U):** M2 başlatıldı. D25 = %10 (TBD kaydından çıkarıldı). Isınma/boşluk kuralı: boşlukta indikatör sıfırlanır, `L` kesintisiz mumdan önce sinyal yok. Baseline'lar yalnızca 4h'te. Drawdown halt'ı için iki koşu (birincil `policy`, tanısal `no-halt`). Volatilite 4h serisinden (gün sonu kapanışları).
 - **Teknik ön kayıt (T):** `docs/m2-protocol.md` v1 — indikatör tanımları, iki baseline (EMA 50/100, Supertrend 10/3), koruyucu stop, olay sırası, maliyet modeli v1 (10 bps ücret, 5 bps açılış ve 20 bps stop slippage), allocation v1 (ters volatilite, 30 gün), portföy riski, benchmark'lar, metrikler, deneme muhasebesi. Ön kayıt kanıtı bu belgenin eklendiği commit'tir; hiçbir backtest bu commit'ten önce çalıştırılmadı.
