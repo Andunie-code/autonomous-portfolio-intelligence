@@ -59,7 +59,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   7. Bozuk ya da eksik checksum reddediliyor; import idempotent; hash kararlı; 1h ve 4h tutarlılığı kontrol ediliyor ve anomaliler raporlanıyor (sessizce düzeltilmez); boşluk raporu üretiliyor.
   8. Gerçek veri kabul raporu (kapsam, boşluklar, hash, H1, hayatta kalma yanlılığı, anomaliler, önerilen çekirdek liste) üretildi ve kullanıcı tarafından onaylandı.
 
-### M2 — Baseline backtest (L) ← ilk dilimin sonu
+### M2 — Baseline backtest (L) ← ilk dilimin sonu — ✅ tamamlandı (2026-10-14; kullanıcı kabulü)
 - **Kapsam:**
   - EMA, ATR, Supertrend ve RSI indikatörleri.
   - `IStrategy` ve iki kodlanmış baseline (EMA 50/100 trend, Supertrend).
@@ -68,7 +68,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - **Çıkış modeli (T20, ADR-0014):** kapanış sinyalleri `t+1` açılışında uygulanır; mum içi koruyucu stop OHLC kuralıyla simüle edilir; efektif stop = strateji stop'u ile `RiskConfig` hard stop'undan (D25) girişe en yakın olanı.
   - Tek ve çoklu varlık backtest; benchmark'lar; deney kaydı ve rapor.
 - **Ön koşul:** D25 hard stop değeri (%10, karara bağlandı) ve ön kayıt [`m2-protocol.md`](m2-protocol.md) v1.
-- **Durum:** kod, testler ve baseline raporu tamam; kullanıcı kabulü bekliyor ([`m2-baseline-results.md`](m2-baseline-results.md)).
+- **Durum:** tamamlandı; sonuçlar [`m2-baseline-results.md`](m2-baseline-results.md). İlk dikey dilim (D15: M0–M2) tamamlandı.
 - **Kabul kriterleri:**
   - Golden testler, look-ahead property testi, muhasebe invariant'ı, bit bit determinizm ve benchmark analitik eşleşmesi geçiyor.
   - Allocation politikası property testleri (tavan aşımı yok) geçiyor.

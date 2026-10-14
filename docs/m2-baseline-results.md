@@ -1,6 +1,6 @@
 # M2 Baseline Sonuçları (m2-protocol v1)
 
-- Durum: **Kullanıcı kabulü bekliyor.** Ön kayıt `296757f`; sonuçlar engine `452fabd` (rapor) ve `73a6b60` ile üretildi; dört strateji koşusunun sonuç hash'leri iki engine commit'inde aynıdır (determinizm).
+- Durum: **Kullanıcı tarafından kabul edildi (2026-10-14).** Ön kayıt `296757f`; sonuçlar engine `452fabd` (rapor) ve `73a6b60` ile üretildi; dört strateji koşusunun sonuç hash'leri iki engine commit'inde aynıdır (determinizm).
 - Veri: `core-4y-S` (20 çekirdek parite, survivor-conditioned), 4h, R = [2022-01-01, 2026-01-01). Maliyetler (cost-model v1) düşülmüştür.
 - Bu tablo yalnızca betimleyicidir: kapı eşikleri ve istatistiksel değerlendirme M3'e aittir. Evren hayatta kalma koşuluyla seçildiği için mutlak getiriler iyimser yönde sapmış olabilir.
 - Benchmark'larda "İşlem" ve "Kazanma" sütunları anlamlı değildir (alım-satım bacakları kapalı işlem olarak sayılmaz).

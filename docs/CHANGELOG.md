@@ -2,6 +2,9 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-14 — M2 kapanışı (kullanıcı kabulü)
+- M2 baseline raporu (`docs/m2-baseline-results.md`) ve M2'nin tamamlanması kullanıcı tarafından onaylandı. İlk dikey dilim (D15: M0–M2) tamamlandı. M3 ayrı onayla başlar.
+
 ## 2026-10-14 — M2 uygulaması ve baseline raporu
 - **Kod:** `73a6b60` (indikatörler, baseline'lar, maliyet modeli, allocation, backtest motoru, benchmark'lar, deney kaydı, testler). `verify.ps1` yeşil (166 test).
 - **Düzeltme:** `452fabd` — benchmark'ın son satış bacağı devirde iki kez sayılıyordu (yalnızca benchmark devir metriği; strateji sonuçları ve hash'leri değişmedi).
