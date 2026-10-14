@@ -2,6 +2,11 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-14 — M1 veri politikası v1.2 (kullanıcı onaylı)
+- **Karar (U, Seçenek A):** Aralık 2021 1h ısınma dosyaları (SOLUSDT, TRXUSDT, SANDUSDT) için M1 verisi ve snapshot `a6c4e89b…` olduğu gibi kalır. M2'den önce tüm paritelere aynı uygulanacak bir ısınma kuralı ön kayıt edilir.
+- **Belge:** koddaki `close_time` tutarlılık kuralı politika §6'daki bütünlük hatası listesine yazıldı (kod davranışı değişmedi). Kapanış kaydındaki tutarsızlık böylece giderildi.
+- **Kod:** yalnızca snapshot etiketi `m1-data-policy v1.2` (sonraki koşular için); M1 snapshot'ı v1.1 etiketiyle kayıtlı kalır.
+
 ## 2026-10-14 — M1 kapanışı (kullanıcı kabulü)
 - **Kapı 2 koşusu:** `complete: true`, 20/20. Snapshot `a6c4e89b98364a2e2b3479e81a9e7188ffb27e08a4d444723523e413f7509e82`. Dev DB'de H1 (kesim sonrası mum) = 0 (`m1-import.ps1 -CheckCutoff`, 2026-10-14).
 - **Kullanıcı kararları (U):** 20 çekirdek parite, hayatta kalma yanlılığı raporu (LUNA, MATIC, FTM, EOS elendi) ve `REVIEW-PENDING` durumu onaylandı. Her çekirdek paritedeki 1 eksik 1h mum ve 1 doğrulanamaz 4h blok eşikler içinde kabul edildi. Liste: `docs/m1-core-universe.md`.

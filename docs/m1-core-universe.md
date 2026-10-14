@@ -42,5 +42,5 @@
 - Araştırma penceresinde her çekirdek paritede 1 eksik 1h mum ve buna bağlı 1 doğrulanamaz 4h blok; 1h/4h anomali sayısı 0 ya da 1. Hepsi politika eşikleri içinde (≥ %99, tek boşluk ≤ 72 saat). Kullanıcı bunu piyasa genelindeki bir bakım saati olarak değerlendirdi; neden bağımsız olarak doğrulanmadı.
 - `REVIEW-PENDING`: JUPUSDT, SYRUPUSDT (çekirdeğe girmedi).
 
-## Açık konu (M2 öncesi)
-SOLUSDT, TRXUSDT ve SANDUSDT'nin **Aralık 2021 1h** dosyaları `close_time` tutarlılık kontrolü nedeniyle reddedildi. Bu dosyalar ısınma (warm-up) aralığındadır; araştırma penceresi ve seçim etkilenmedi. 4h ve 1d ısınma verisi etkilenmedi. Isınmanın nasıl ele alınacağı M2 başlamadan karara bağlanmalıdır (CHANGELOG 2026-10-14 "M1 kapanışı").
+## Aralık 2021 ısınma dosyaları
+SOLUSDT, TRXUSDT ve SANDUSDT'nin **Aralık 2021 1h** dosyaları `close_time` tutarlılık kontrolü nedeniyle reddedildi. Bu dosyalar ısınma (warm-up) aralığındadır; araştırma penceresi ve seçim etkilenmedi. 4h ve 1d ısınma verisi etkilenmedi. **Karar (U, 2026-10-14, Seçenek A):** M1 verisi ve snapshot olduğu gibi kalır; M2'den önce tüm paritelere aynı uygulanacak bir ısınma kuralı ön kayıt edilir (politika v1.2 §6).
