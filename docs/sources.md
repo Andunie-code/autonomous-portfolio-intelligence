@@ -15,6 +15,8 @@ Bu belgedeki bilgiler, aksi belirtilmedikçe, belirtilen tarihte resmi kaynaktan
 | S-B6 | Tarihsel kline verisi: günlük ve aylık zip dosyaları, her biri için `.CHECKSUM` (SHA-256). Aralıklar 1s'den 1mo'ya kadar | https://github.com/binance/binance-public-data |
 | S-B7 | Spot verisinde 2025-01-01'den itibaren zaman damgaları **mikrosaniye** cinsinden | aynı |
 
+| S-B8 | Arşiv listelemesi: `https://data.binance.vision/?prefix=...` HTML web sayfası döndürür (2026-10-14 M1 Kapı 2 denemesinde gözlendi). Path-style S3 listeleme uç noktası `https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?prefix=...&delimiter=/`; dosyalar `https://data.binance.vision/data/...` üzerinden. **Kaynak: kullanıcı beyanı; S3 uç noktasının yanıtı henüz gözlenmedi** (ilk başarılı listelemede doğrulanır) | Kullanıcı, 2026-10-14 |
+
 **Doğrulanamayanlar (varsayım):** Testnet'in sıfırlanma sıklığı; Testnet emir defterinin ve likiditesinin gerçek piyasayı temsil etmediği (yaygın bilgi, resmi dokümanda bulunamadı).
 
 ## Google Gemini (doğrulama tarihi: 2026-10-12)

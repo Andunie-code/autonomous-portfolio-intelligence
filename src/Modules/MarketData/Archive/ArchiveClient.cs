@@ -8,9 +8,10 @@ namespace PortfolioIntelligence.MarketData.Archive;
 public sealed record ArchiveFile(ArchiveFileKey Key, byte[] Zip, string Sha256);
 
 /// <summary>
-/// Reads the archive through <see cref="ArchiveGuardHandler"/> only. Listing uses the S3 ListObjects (v1) XML
-/// format with marker pagination (assumed; to be confirmed on the first Gate 2 run). Raw listing responses are
-/// never written to disk or logs; only the filtered entries are returned.
+/// Reads the archive through <see cref="ArchiveGuardHandler"/> only. Files come from the file host; listings
+/// come from the S3 listing host (path-style bucket, ListObjects v1 XML with marker pagination, policy v1.1).
+/// A response that is not an S3 ListBucketResult stops the run. Raw listing responses are never written to disk
+/// or logs; only the filtered entries are returned.
 /// </summary>
 public sealed class ArchiveClient
 {
@@ -18,13 +19,14 @@ public sealed class ArchiveClient
 
     private readonly HttpClient _http;
     private readonly ArchiveRequestPolicy _policy;
-    private readonly Uri _baseUri;
+    private static readonly XNamespace S3 = "http://s3.amazonaws.com/doc/2006-03-01/";
+    private static readonly Uri FileBase = new($"https://{ArchiveRequestPolicy.FileHost}/");
+    private static readonly string ListingBase = $"https://{ArchiveRequestPolicy.ListingHost}/{ArchiveRequestPolicy.ListingBucket}";
 
-    public ArchiveClient(ArchiveGuardHandler guard, string host = ArchiveRequestPolicy.DefaultHost)
+    public ArchiveClient(ArchiveGuardHandler guard)
     {
         _http = new HttpClient(guard, disposeHandler: false) { Timeout = TimeSpan.FromSeconds(60) };
         _policy = guard.Policy;
-        _baseUri = new Uri($"https://{host}/");
     }
 
     /// <summary>Downloads a monthly file and its checksum. Returns null when the zip does not exist (HTTP 404).</summary>
@@ -82,11 +84,10 @@ public sealed class ArchiveClient
             var query = $"?prefix={Uri.EscapeDataString(prefix)}&max-keys={maxKeys}"
                 + (delimiter is null ? string.Empty : $"&delimiter={Uri.EscapeDataString(delimiter)}")
                 + (marker is null ? string.Empty : $"&marker={Uri.EscapeDataString(marker)}");
-            using var response = await _http.GetAsync(new Uri(_baseUri, query), cancellationToken);
+            using var response = await _http.GetAsync(new Uri(ListingBase + query), cancellationToken);
             EnsureSuccess(response, prefix);
-            var xml = XDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-            var root = xml.Root ?? throw new ArchivePolicyViolationException("Listing response is empty.");
-            var ns = root.Name.Namespace;
+            var root = ParseListing(await response.Content.ReadAsStringAsync(cancellationToken));
+            var ns = S3;
 
             var pageKeys = root.Elements(ns + "Contents").Select(c => (string?)c.Element(ns + "Key")).OfType<string>().ToList();
             var pagePrefixes = root.Elements(ns + "CommonPrefixes").Select(c => (string?)c.Element(ns + "Prefix")).OfType<string>().ToList();
@@ -123,7 +124,7 @@ public sealed class ArchiveClient
 
     private async Task<byte[]?> GetBytesAsync(string path, CancellationToken cancellationToken)
     {
-        using var response = await _http.GetAsync(new Uri(_baseUri, path), cancellationToken);
+        using var response = await _http.GetAsync(new Uri(FileBase, path), cancellationToken);
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
             return null;
@@ -131,6 +132,27 @@ public sealed class ArchiveClient
 
         EnsureSuccess(response, path);
         return await response.Content.ReadAsByteArrayAsync(cancellationToken);
+    }
+
+    /// <summary>Accepts only an S3 ListBucketResult document; anything else (e.g. an HTML page) stops the run.</summary>
+    private static XElement ParseListing(string body)
+    {
+        XElement? root;
+        try
+        {
+            root = XDocument.Parse(body).Root;
+        }
+        catch (System.Xml.XmlException)
+        {
+            throw new ArchivePolicyViolationException("Listing response is not XML (possibly an HTML page); stopping. The response was not stored.");
+        }
+
+        if (root is null || root.Name != S3 + "ListBucketResult")
+        {
+            throw new ArchivePolicyViolationException("Listing response is not an S3 ListBucketResult; stopping. The response was not stored.");
+        }
+
+        return root;
     }
 
     private static void EnsureSuccess(HttpResponseMessage response, string what)

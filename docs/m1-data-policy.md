@@ -1,6 +1,6 @@
-# M1 Veri Politikası (v1.0)
+# M1 Veri Politikası (v1.1)
 
-- Durum: **Kullanıcı onaylı (2026-10-14).** Onay, bu dosyanın ilk kez yer aldığı git commit'ine bağlıdır (bağlama yöntemi: commit SHA). Değişiklik yeni sürüm ve yeni onay gerektirir; eski sürüm git geçmişinde kalır.
+- Durum: **Kullanıcı onaylı.** v1.0 (2026-10-14) onayı commit `025f0e2`'ye bağlıdır. **v1.1 (2026-10-14, U):** S3 listeleme host'unun eklenmesi (§3 madde 2); onayı bu sürümün eklendiği commit'e bağlıdır. Bağlama yöntemi: commit SHA. Değişiklik yeni sürüm ve yeni onay gerektirir; eski sürüm git geçmişinde kalır.
 - Kaynak: konuşmadaki v0.4/v0.5 taslakları, Opus denetimleri ve kullanıcının 2026-10-14 kararları.
 - İlgili: ADR-0006, ADR-0012, ADR-0013, `requirements.md` (D10, D22, T4, T6, B4), `roadmap.md` M1, `testing-strategy.md` §2 ve §7.1.
 - Etiketler: **U** = kullanıcı kararı; **T** = teknik karar (gerekçesiyle; teknik gerekçeyle revize edilebilir, seçim sonucunu değiştiriyorsa kullanıcıya sorulur).
@@ -26,7 +26,10 @@
 
 ## 3. Ağ ve sızıntı korumaları (U, T)
 1. **Kapı 2 olmadan ağ yok (U):** Tüm M1 kodu ve testleri çevrimdışıdır (sahte zip ve sahte HTTP handler). Gerçek ağ erişimi yalnızca Kapı 2 onayından sonra, kullanıcının kendi terminalinde çalıştırdığı komutla yapılır. Gerçek mod; açık bir komut satırı bayrağı ve etkileşimli bir onay gerektirir (girdi yönlendirilmişse reddeder). Bayrak, `.claude/settings.json`'da Claude Code için deny kuralıyla engellenir (T).
-2. **Host allowlist (U):** yalnızca `data.binance.vision`. Listeleme için resmi bir S3/CDN alt alan adı gerekirse, kullanılmadan önce bu belgeye ve `sources.md`'ye işlenir (yeni sürüm).
+2. **Host allowlist (U, v1.1):** her host'un tek bir rolü vardır.
+   - `data.binance.vision`: yalnızca aylık kline dosyaları (zip ve `.CHECKSUM`). Bu host listeleme sorgularına S3 XML değil HTML web sayfası döndürür (2026-10-14 Kapı 2 denemesinde gözlendi; hiçbir veri yazılmadan koşu durdu).
+   - `s3-ap-northeast-1.amazonaws.com`: yalnızca `data.binance.vision` kovasının path-style S3 listeleme sorguları (`GET /data.binance.vision?prefix=...`); yanıt S3 `ListBucketResult` olmalıdır (namespace `http://s3.amazonaws.com/doc/2006-03-01/`), değilse koşu durur.
+   - Başka bir host eklenmesi yeni sürüm ve kullanıcı onayı gerektirir.
 3. **Yönlendirme (U):** beklenmeyen her HTTP 3xx yanıtı reddedilir; otomatik yönlendirme kapalıdır.
 4. **İstek doğrulama (T):** her istek, planlayıcıdan bağımsız bir doğrulayıcıdan geçer: host, yol öneki, izinli sorgu parametreleri ve tarih. Tarih içeren bir dosya ya da önek, `C`'yi aşan bir döneme dokunuyorsa ağ çağrısından önce reddedilir (H2).
 5. **Yanıt doğrulama (T):** listeleme yanıtında dönen her anahtar, istenen önek ve izinli yıl aralığıyla uyuşmalıdır; uyuşmazlıkta işlem durur.
@@ -96,7 +99,7 @@ M1'de E1 adayları yalnızca **listelenir**, verileri import edilmez (roadmap M1
 | Kapı | Kapsam | Koşul |
 |---|---|---|
 | **Kapı 1** (açık) | Bu politika; M1'in tüm çevrimdışı kodu, migration'ları, birim, entegrasyon ve H-DEV (H1–H4) testleri | `scripts/verify.ps1` yeşil |
-| **Kapı 2** | Gerçek `data.binance.vision` erişimi: önce `--dry-run` (ağsız plan), ardından gerçek listeleme ve import | Kapı 1 tamam; kullanıcının tek aşamalı etkileşimli onayı |
+| **Kapı 2** | Gerçek arşiv erişimi (§3 madde 2'deki iki host): önce plan (ağsız), ardından gerçek listeleme ve import. Kullanıcı kendi terminalinde çalıştırır: `powershell -ExecutionPolicy Bypass -File scripts/m1-import.ps1` ve `… -AllowNetwork` | Kapı 1 tamam; kullanıcının tek aşamalı etkileşimli onayı |
 | M1 kabulü | Kabul raporu (kapsam, boşluklar, hash, H1, hayatta kalma yanlılığı, anomaliler, önerilen çekirdek liste) | Kullanıcı onayı; çekirdek 20 parite bu onayla kesinleşir |
 
 ## 10. Tekrar üretilebilirlik (T)

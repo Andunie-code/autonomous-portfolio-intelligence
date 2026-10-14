@@ -43,7 +43,7 @@ switch (command)
         }
 
         PrintPlan(cache);
-        Console.Write($"Gate 2: data.binance.vision will be contacted. Type {ConfirmationWord} to continue: ");
+        Console.Write($"Gate 2: {ArchiveRequestPolicy.FileHost} and {ArchiveRequestPolicy.ListingHost} will be contacted. Type {ConfirmationWord} to continue: ");
         if (!string.Equals(Console.ReadLine()?.Trim(), ConfirmationWord, StringComparison.Ordinal))
         {
             Console.Error.WriteLine("Not confirmed; nothing was requested.");
@@ -77,7 +77,7 @@ switch (command)
 static void PrintPlan(ArchiveCacheDirectory cache)
 {
     Console.WriteLine($"Policy: {M1PipelineOptions.PolicyVersion}");
-    Console.WriteLine($"Host: {ArchiveRequestPolicy.DefaultHost} (HTTPS only, redirects rejected)");
+    Console.WriteLine($"Files: {ArchiveRequestPolicy.FileHost}; listing: {ArchiveRequestPolicy.ListingHost}/{ArchiveRequestPolicy.ListingBucket} (HTTPS only, redirects rejected)");
     Console.WriteLine($"Cache: {cache.Root}");
     Console.WriteLine($"Research cutoff C: {ResearchCutoff.C:O}; universe date U: {ResearchCutoff.U:O}");
     Console.WriteLine($"Ranking window W: {ResearchCutoff.RankingWindow}; research window R: {ResearchCutoff.ResearchWindow}");

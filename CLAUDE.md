@@ -12,7 +12,7 @@ Kullanıcıyla Türkçe iletişim kurulur; teknik terimler İngilizce kalabilir.
 - Her milestone ayrı kullanıcı onayıyla başlar. Onaylanmamış bir milestone'a kendiliğinden geçilmez.
 - Teknik kararlar alınabilir; gerekçe ilgili ADR'ye ve CHANGELOG'a yazılır.
 - "Uygulandı" ya da "geçti" ifadesi yalnızca gerçekten çalıştırılmış ve geçmiş testler için kullanılır.
-- Doğrulama: `powershell -File scripts/verify.ps1`. Yerel ortam: `powershell -File scripts/dev-up.ps1`.
+- Doğrulama: `powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`. Yerel ortam: `powershell -ExecutionPolicy Bypass -File scripts/dev-up.ps1`. (Windows ExecutionPolicy script çalıştırmayı engelliyorsa `-ExecutionPolicy Bypass` gerekir; alt script çağrıları da bu bayrakla yapılır.)
 
 ## Onay gerektiren işlemler
 Kullanıcıdan açık onay alınmadan yapılmaz:

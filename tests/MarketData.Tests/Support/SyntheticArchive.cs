@@ -96,7 +96,12 @@ public sealed class FakeArchive : HttpMessageHandler
 
     public List<Uri> Requests { get; } = [];
 
+    public const string HtmlPage = "<html>\n<head>\n<title>x</title>\n<link rel=\"stylesheet\" href=\"a.css\">\n</head>\n<body></body>\n</html>";
+
     public int ListingPageSize { get; init; } = 1000;
+
+    /// <summary>When set, the listing endpoint answers with HTML instead of S3 XML.</summary>
+    public bool ListingReturnsHtml { get; init; }
 
     public void Add(ArchiveFileKey key, IEnumerable<string> lines, bool withChecksum = true, string? checksumOverride = null)
     {
@@ -113,18 +118,32 @@ public sealed class FakeArchive : HttpMessageHandler
         var uri = request.RequestUri!;
         Requests.Add(uri);
         var path = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/'));
-        if (!string.IsNullOrEmpty(uri.Query))
+        if (uri.Host == ArchiveRequestPolicy.ListingHost && path == ArchiveRequestPolicy.ListingBucket)
         {
             return Task.FromResult(Listing(HttpUtility.ParseQueryString(uri.Query)));
         }
 
-        return Task.FromResult(_files.TryGetValue(path, out var bytes)
+        if (uri.Host == ArchiveRequestPolicy.FileHost && !string.IsNullOrEmpty(uri.Query))
+        {
+            // Like the real site: the file host answers listing-style queries with its HTML browser page.
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(HtmlPage, Encoding.UTF8, "text/html"),
+            });
+        }
+
+        return Task.FromResult(uri.Host == ArchiveRequestPolicy.FileHost && _files.TryGetValue(path, out var bytes)
             ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) }
             : new HttpResponseMessage(HttpStatusCode.NotFound));
     }
 
     private HttpResponseMessage Listing(System.Collections.Specialized.NameValueCollection query)
     {
+        if (ListingReturnsHtml)
+        {
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(HtmlPage, Encoding.UTF8, "text/html") };
+        }
+
         var prefix = query["prefix"] ?? string.Empty;
         var delimiter = query["delimiter"];
         var marker = query["marker"];

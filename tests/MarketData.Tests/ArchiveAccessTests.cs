@@ -13,8 +13,8 @@ public class ArchiveAccessTests
     [Theory]
     [InlineData("https://data.binance.vision/data/spot/monthly/klines/BTCUSDT/1h/BTCUSDT-1h-2025-12.zip")]
     [InlineData("https://data.binance.vision/data/spot/monthly/klines/BTCUSDT/4h/BTCUSDT-4h-2022-01.zip.CHECKSUM")]
-    [InlineData("https://data.binance.vision/?prefix=data%2Fspot%2Fmonthly%2Fklines%2F&max-keys=1000&delimiter=%2F")]
-    [InlineData("https://data.binance.vision/?prefix=data%2Fspot%2Fmonthly%2Fklines%2FBTCUSDT%2F1h%2FBTCUSDT-1h-2021-&max-keys=1")]
+    [InlineData("https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?prefix=data%2Fspot%2Fmonthly%2Fklines%2F&max-keys=1000&delimiter=%2F")]
+    [InlineData("https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?prefix=data%2Fspot%2Fmonthly%2Fklines%2FBTCUSDT%2F1h%2FBTCUSDT-1h-2021-&max-keys=1")]
     public void Allowed_requests_pass(string url)
     {
         Core.Validate(new Uri(url));
@@ -28,10 +28,14 @@ public class ArchiveAccessTests
     [InlineData("http://data.binance.vision/data/spot/monthly/klines/BTCUSDT/1h/BTCUSDT-1h-2023-01.zip")]
     [InlineData("https://api.binance.com/api/v3/exchangeInfo")]
     [InlineData("https://evil.example/data/spot/monthly/klines/BTCUSDT/1h/BTCUSDT-1h-2023-01.zip")]
-    [InlineData("https://data.binance.vision/?prefix=data%2Fspot%2Fmonthly%2Fklines%2FBTCUSDT%2F1h%2FBTCUSDT-1h-2022-&max-keys=1")]
-    [InlineData("https://data.binance.vision/?prefix=data%2Fspot%2Fmonthly%2Fklines%2FBTCUSDT%2F1h%2F&max-keys=1")]
-    [InlineData("https://data.binance.vision/?prefix=data%2Fspot%2Fmonthly%2Fklines%2F&max-keys=1000")]
-    [InlineData("https://data.binance.vision/?prefix=data%2Fspot%2Fmonthly%2Fklines%2F&delimiter=%2F&start-after=x")]
+    [InlineData("https://data.binance.vision/?prefix=data%2Fspot%2Fmonthly%2Fklines%2F&max-keys=1000&delimiter=%2F")]
+    [InlineData("https://s3-ap-northeast-1.amazonaws.com/data.binance.vision/data/spot/monthly/klines/BTCUSDT/1h/BTCUSDT-1h-2023-01.zip")]
+    [InlineData("https://s3-ap-northeast-1.amazonaws.com/other-bucket?prefix=data%2Fspot%2Fmonthly%2Fklines%2F&delimiter=%2F")]
+    [InlineData("https://s3.amazonaws.com/data.binance.vision?prefix=data%2Fspot%2Fmonthly%2Fklines%2F&delimiter=%2F")]
+    [InlineData("https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?prefix=data%2Fspot%2Fmonthly%2Fklines%2FBTCUSDT%2F1h%2FBTCUSDT-1h-2022-&max-keys=1")]
+    [InlineData("https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?prefix=data%2Fspot%2Fmonthly%2Fklines%2FBTCUSDT%2F1h%2F&max-keys=1")]
+    [InlineData("https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?prefix=data%2Fspot%2Fmonthly%2Fklines%2F&max-keys=1000")]
+    [InlineData("https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?prefix=data%2Fspot%2Fmonthly%2Fklines%2F&delimiter=%2F&start-after=x")]
     public void Forbidden_requests_are_rejected(string url)
     {
         Assert.Throws<ArchivePolicyViolationException>(() => Core.Validate(new Uri(url)));
@@ -41,10 +45,10 @@ public class ArchiveAccessTests
     public void E1_phase_allows_2024_prefixes_but_never_2025()
     {
         var e1 = ArchiveRequestPolicy.E1Phase();
-        e1.Validate(new Uri("https://data.binance.vision/?prefix=data%2Fspot%2Fmonthly%2Fklines%2FXUSDT%2F1h%2FXUSDT-1h-2024-&max-keys=1"));
+        e1.Validate(new Uri("https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?prefix=data%2Fspot%2Fmonthly%2Fklines%2FXUSDT%2F1h%2FXUSDT-1h-2024-&max-keys=1"));
         Assert.Throws<ArchivePolicyViolationException>(() =>
-            e1.Validate(new Uri("https://data.binance.vision/?prefix=data%2Fspot%2Fmonthly%2Fklines%2FXUSDT%2F1h%2FXUSDT-1h-2025-&max-keys=1")));
-        Assert.Throws<ArgumentOutOfRangeException>(() => new ArchiveRequestPolicy(new HashSet<string> { "data.binance.vision" }, 2026));
+            e1.Validate(new Uri("https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?prefix=data%2Fspot%2Fmonthly%2Fklines%2FXUSDT%2F1h%2FXUSDT-1h-2025-&max-keys=1")));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ArchiveRequestPolicy(2026));
     }
 
     [Fact]
@@ -111,6 +115,31 @@ public class ArchiveAccessTests
         Assert.Equal((2020, 3), (first!.Year, first.Month));
         Assert.All(fake.Requests, r => Assert.Contains("max-keys=1", r.Query, StringComparison.Ordinal));
         Assert.Equal(4, fake.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Html_listing_response_stops_the_run_with_a_policy_violation()
+    {
+        var client = new ArchiveClient(new ArchiveGuardHandler(Core, new FakeArchive { ListingReturnsHtml = true }));
+
+        var error = await Assert.ThrowsAsync<ArchivePolicyViolationException>(() => client.ListSymbolsAsync(CancellationToken.None));
+        Assert.Contains("not XML", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Listing_goes_to_the_s3_host_and_files_to_the_file_host()
+    {
+        var fake = new FakeArchive();
+        var key = new ArchiveFileKey("AAAUSDT", CandleInterval.OneDay, 2021, 1);
+        fake.Add(key, SyntheticKlines.Lines(key));
+        var client = new ArchiveClient(new ArchiveGuardHandler(Core, fake));
+
+        await client.ListSymbolsAsync(CancellationToken.None);
+        await client.DownloadAsync(key, CancellationToken.None);
+
+        Assert.Equal(ArchiveRequestPolicy.ListingHost, fake.Requests[0].Host);
+        Assert.Equal("/data.binance.vision", fake.Requests[0].AbsolutePath);
+        Assert.All(fake.Requests.Skip(1), r => Assert.Equal(ArchiveRequestPolicy.FileHost, r.Host));
     }
 
     [Fact]

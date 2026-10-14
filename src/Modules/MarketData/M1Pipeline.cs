@@ -9,7 +9,7 @@ namespace PortfolioIntelligence.MarketData;
 
 public sealed record M1PipelineOptions
 {
-    public const string PolicyVersion = "m1-data-policy v1.0";
+    public const string PolicyVersion = "m1-data-policy v1.1";
 
     public int CoreSize { get; init; } = CoreSelector.CoreSize;
 

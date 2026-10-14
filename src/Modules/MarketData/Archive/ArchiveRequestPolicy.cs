@@ -8,40 +8,37 @@ namespace PortfolioIntelligence.MarketData.Archive;
 public sealed class ArchivePolicyViolationException(string message) : Exception(message);
 
 /// <summary>
-/// Validates every archive request independently of the file planner (docs/m1-data-policy.md §3):
-/// HTTPS to an allow-listed host only; either a monthly kline file (zip or checksum) whose candles all close at or
-/// before C, or a listing query whose prefix is the kline root or a year prefix not later than
-/// <see cref="MaxListingYear"/>. Anything else is rejected before it reaches the network.
+/// Validates every archive request independently of the file planner (docs/m1-data-policy.md §3). Two hosts,
+/// each with one role (policy v1.1): monthly kline files (zip or checksum) only from <see cref="FileHost"/>,
+/// and S3 listing queries only from <see cref="ListingHost"/> on the path-style bucket <see cref="ListingBucket"/>.
+/// Files must contain only candles closing at or before C; listing prefixes must be the kline root or a year
+/// prefix not later than <see cref="MaxListingYear"/>. Anything else is rejected before it reaches the network.
 /// </summary>
 public sealed partial class ArchiveRequestPolicy
 {
-    public const string DefaultHost = "data.binance.vision";
+    public const string FileHost = "data.binance.vision";
+
+    public const string ListingHost = "s3-ap-northeast-1.amazonaws.com";
+
+    public const string ListingBucket = "data.binance.vision";
 
     private static readonly HashSet<string> ListingParameters = new(StringComparer.Ordinal) { "delimiter", "prefix", "marker", "max-keys" };
 
-    public ArchiveRequestPolicy(IReadOnlySet<string> allowedHosts, int maxListingYear)
+    public ArchiveRequestPolicy(int maxListingYear)
     {
-        if (allowedHosts.Count == 0)
-        {
-            throw new ArgumentException("At least one host must be allowed.", nameof(allowedHosts));
-        }
-
         if (maxListingYear >= ResearchCutoff.C.Year)
         {
             throw new ArgumentOutOfRangeException(nameof(maxListingYear), "Listing years must end before the research cutoff year.");
         }
 
-        AllowedHosts = allowedHosts;
         MaxListingYear = maxListingYear;
     }
 
-    public IReadOnlySet<string> AllowedHosts { get; }
-
     public int MaxListingYear { get; }
 
-    public static ArchiveRequestPolicy CorePhase() => new(new HashSet<string> { DefaultHost }, 2021);
+    public static ArchiveRequestPolicy CorePhase() => new(2021);
 
-    public static ArchiveRequestPolicy E1Phase() => new(new HashSet<string> { DefaultHost }, 2024);
+    public static ArchiveRequestPolicy E1Phase() => new(2024);
 
     public void Validate(Uri uri)
     {
@@ -50,19 +47,22 @@ public sealed partial class ArchiveRequestPolicy
             throw Violation(uri, "only plain HTTPS requests on the default port are allowed");
         }
 
-        if (!AllowedHosts.Contains(uri.Host))
-        {
-            throw Violation(uri, $"host '{uri.Host}' is not allow-listed");
-        }
-
         var path = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/'));
-        if (string.IsNullOrEmpty(uri.Query) && path.Length > 0)
+        switch (uri.Host)
         {
-            ValidateFile(uri, path);
-            return;
+            case FileHost when string.IsNullOrEmpty(uri.Query):
+                ValidateFile(uri, path);
+                return;
+            case FileHost:
+                throw Violation(uri, "the file host only serves files; listing goes to the S3 listing host");
+            case ListingHost when path == ListingBucket && !string.IsNullOrEmpty(uri.Query):
+                ValidateListing(uri);
+                return;
+            case ListingHost:
+                throw Violation(uri, "the listing host only serves bucket listing queries");
+            default:
+                throw Violation(uri, $"host '{uri.Host}' is not allow-listed");
         }
-
-        ValidateListing(uri, path);
     }
 
     /// <summary>Checks a key or prefix returned by a listing response against the requested prefix.</summary>
@@ -90,13 +90,8 @@ public sealed partial class ArchiveRequestPolicy
         }
     }
 
-    private void ValidateListing(Uri uri, string path)
+    private void ValidateListing(Uri uri)
     {
-        if (path.Length > 0)
-        {
-            throw Violation(uri, "listing requests must target the archive root");
-        }
-
         var parameters = ParseQuery(uri.Query);
         if (parameters.Keys.Any(k => !ListingParameters.Contains(k)) || !parameters.TryGetValue("prefix", out var prefix))
         {

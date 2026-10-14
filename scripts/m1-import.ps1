@@ -7,6 +7,8 @@
   -AllowNetwork: Gate 2 only. Contacts data.binance.vision after an interactive confirmation. Run it yourself in
   an interactive terminal; it refuses to run with redirected input. Claude Code is denied this switch.
   Raw archive files go to %LOCALAPPDATA%\PortfolioIntelligence\archive-cache (outside the repository and OneDrive).
+  Hosts (policy v1.1): files from data.binance.vision, listings from s3-ap-northeast-1.amazonaws.com.
+  If the execution policy blocks scripts: powershell -ExecutionPolicy Bypass -File scripts/m1-import.ps1
 #>
 param(
     [switch]$AllowNetwork,

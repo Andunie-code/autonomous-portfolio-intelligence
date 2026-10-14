@@ -2,6 +2,12 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-14 — M1 veri politikası v1.1: S3 listeleme host'u (kullanıcı onaylı)
+- **Gözlem:** ilk Kapı 2 denemesinde `data.binance.vision/?prefix=...` S3 XML yerine HTML sayfa döndürdü; listeleme XML ayrıştırmasında durdu. Hiçbir dosya indirilmedi, veritabanına yazılmadı.
+- **Karar (U):** `s3-ap-northeast-1.amazonaws.com` yalnızca `data.binance.vision` kovasının S3 listeleme sorguları için allowlist'e eklendi; dosyalar yine `data.binance.vision`'dan alınır. Politika v1.1, `sources.md` S-B8.
+- **Kod (T):** istek doğrulayıcı host başına tek rol uygular; listeleme yanıtı S3 `ListBucketResult` değilse (ör. HTML) koşu temiz bir politika hatasıyla durur ve yanıt saklanmaz. Yeni testler: HTML yanıtı, host rolleri.
+- **Belge:** `CLAUDE.md`, politika ve `scripts/m1-import.ps1`'e `-ExecutionPolicy Bypass` notu.
+
 ## 2026-10-14 — M1 Kapı 1: çevrimdışı kod ve testler
 Politika: `m1-data-policy.md` v1.0 (onay commit'i `025f0e2`). Gerçek ağ erişimi yapılmadı.
 
