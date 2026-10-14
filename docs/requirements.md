@@ -140,7 +140,7 @@ Gerçek para ile işlem, futures/margin, birden fazla borsa, haber ve sentiment,
 |---|---|---|
 | B1 | 12.000 TL kredinin Gemini API **ücretli katmanına** uygulanıp uygulanmadığı (hesap konsolundan) | M4 yeterlilik testleri (T10) |
 | ~~B2~~ | ~~M5'te VPS satın alımı~~ — **Kaldırıldı** (rev. 5, D5: VPS yok) | — |
-| B4 | M1 başlatma onayı; Binance'in açık uç noktalarına (anahtarsız) erişim izni; çekirdek parite seçim prosedürünün onayı. **Durum (2026-10-14):** seçim prosedürü ve M1 Kapı 1 (çevrimdışı geliştirme) onaylandı (`m1-data-policy.md` v1.0). Ağ erişimi (Kapı 2) henüz onaylanmadı | M1 Kapı 2 |
+| B4 | M1 başlatma onayı; Binance'in açık uç noktalarına (anahtarsız) erişim izni; çekirdek parite seçim prosedürünün onayı. **Durum (2026-10-14): kapandı.** Seçim prosedürü, Kapı 1 ve Kapı 2 onaylandı; M1 kullanıcı kabulüyle tamamlandı (`m1-core-universe.md`) | — |
 | B5 | Protokol v1'in bloke edici istatistiksel değerleri | İlk `Validated` sonucu (M3 sonrası). Testnet'i engellemez |
 | B6 | Exchange (Testnet) anahtarının IP kısıtı (§4, U): yerel çalışmada ev bağlantısının IP'si değişebilir. Kısıt nasıl uygulanacak ya da gevşetilecek mi? | M6 |
 

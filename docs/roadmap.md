@@ -40,8 +40,9 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Kanarya secret'ı loglarda maskeli görünüyor.
   - Talimat dosyası ve izin kuralları repoda; içerikleri `architecture.md` §10 ile uyumlu.
 
-### M1 — Veri temeli (M) — Kapı 1: çevrimdışı kod ve testler tamam (2026-10-14); Kapı 2 onay bekliyor
-- **Politika:** [`m1-data-policy.md`](m1-data-policy.md) v1.0 (kullanıcı onaylı; onay, belgenin eklendiği commit'e bağlı).
+### M1 — Veri temeli (M) — ✅ tamamlandı (2026-10-14; kullanıcı kabulü)
+- **Politika:** [`m1-data-policy.md`](m1-data-policy.md) v1.1 (kullanıcı onaylı; onay, belgenin eklendiği commit'e bağlı).
+- **Sonuç:** çekirdek evren [`m1-core-universe.md`](m1-core-universe.md) (`core-4y-S`, snapshot `a6c4e89b…`). Kabul kriterleri: 1–5 ve 7 testlerle (`verify.ps1`, 140 test) ve gerçek veride H1 = 0 ile; 6 ve 8 gerçek veri kabul raporu ve kullanıcı onayıyla. Açık konu: üç paritenin Aralık 2021 1h ısınma dosyası (M2 öncesi karar).
 - **Kapılar (U):** Kapı 1 = politika ve tüm çevrimdışı kod/testler, `verify.ps1` yeşil. Kapı 2 = gerçek `data.binance.vision` erişimi (`--dry-run`, ardından gerçek import), kullanıcının tek aşamalı etkileşimli onayıyla. Çekirdek 20 parite, kabul raporunun kullanıcı tarafından onaylanmasıyla kesinleşir.
 - **Kapsam:**
   - Binance public data import (1h, 4h); checksum; ms/µs normalizasyonu; OHLC kontrolleri; boşluk raporu; `DatasetSnapshot`.

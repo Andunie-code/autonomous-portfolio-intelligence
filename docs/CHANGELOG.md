@@ -2,6 +2,12 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-14 — M1 kapanışı (kullanıcı kabulü)
+- **Kapı 2 koşusu:** `complete: true`, 20/20. Snapshot `a6c4e89b98364a2e2b3479e81a9e7188ffb27e08a4d444723523e413f7509e82`. Dev DB'de H1 (kesim sonrası mum) = 0 (`m1-import.ps1 -CheckCutoff`, 2026-10-14).
+- **Kullanıcı kararları (U):** 20 çekirdek parite, hayatta kalma yanlılığı raporu (LUNA, MATIC, FTM, EOS elendi) ve `REVIEW-PENDING` durumu onaylandı. Her çekirdek paritedeki 1 eksik 1h mum ve 1 doğrulanamaz 4h blok eşikler içinde kabul edildi. Liste: `docs/m1-core-universe.md`.
+- **Açık konu (M2 öncesi karar):** SOLUSDT, TRXUSDT ve SANDUSDT'nin Aralık 2021 1h dosyaları (ısınma aralığı) `close_time` kontrolü nedeniyle tümüyle reddedildi; seçim ve araştırma penceresi etkilenmedi.
+- **Belge tutarsızlığı (kayıt):** `close_time` tutarlılık kontrolü kodda bütünlük hatası olarak uygulanıyor, ama politika v1.1 §6'daki bütünlük hatası listesinde yazmıyor. Kod politikadan daha sıkı. M2 öncesi ya politikaya eklenmeli (v1.2) ya da ele alınışı değiştirilmeli; ikisi de kullanıcı onayı gerektirir.
+
 ## 2026-10-14 — M1 Kapı 2 ikinci deneme düzeltmeleri (teknik)
 - **Gözlem:** sembol listeleme çalıştı; ilk ay keşfi, büyük harfli ASCII olmayan bir sembol dizin adında (ad incelenmedi) istek doğrulayıcının yıl öneki kuralına takılıp durdu.
 - **Düzeltme (T):** yalnızca `^[A-Z0-9]{2,30}$` biçimindeki sembol dizinleri işlenir; diğerleri atlanır ve raporda yalnızca sayıları verilir (adlar yazdırılmaz).
