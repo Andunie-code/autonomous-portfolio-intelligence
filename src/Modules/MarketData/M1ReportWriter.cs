@@ -29,7 +29,7 @@ public static class M1ReportWriter
         s.AppendLine();
         s.AppendLine($"- Snapshot hash: `{result.SnapshotHash}`");
         s.AppendLine($"- Durum: {(selection.Complete ? $"{selection.Selected.Count} çekirdek parite **önerildi** (kullanıcı onayı bekliyor)" : $"**Eksik:** yalnızca {selection.Selected.Count} parite kalite şartlarını sağladı; eşikler gevşetilmedi, durulmalı")}");
-        s.AppendLine($"- Arşivde listelenen sembol dizini: {result.ListedSymbols}; USDT sembolü: {result.Classification.Count}");
+        s.AppendLine($"- Arşivde listelenen sembol dizini: {result.ListedSymbols} (desteklenmeyen ad, atlandı: {result.UnsupportedSymbolNames}); USDT sembolü: {result.Classification.Count}");
         s.AppendLine($"- Çekirdek havuzu: {result.Pool.Count}; sıralanan: {result.Ranking.Count(r => r.Status == RankingStatus.Ranked)}");
         s.AppendLine();
 
@@ -95,6 +95,8 @@ public static class M1ReportWriter
     {
         policy = M1PipelineOptions.PolicyVersion,
         snapshotHash = result.SnapshotHash,
+        listedSymbols = result.ListedSymbols,
+        unsupportedSymbolNames = result.UnsupportedSymbolNames,
         complete = result.Selection.Complete,
         selected = result.Selection.Selected.Select(s => new { s.Symbol, s.Rank, median = s.Stats.MedianQuoteVolume }),
         eliminated = result.Selection.Eliminated.Select(e => new { e.Symbol, e.Rank, reason = e.Reason.ToString() }),

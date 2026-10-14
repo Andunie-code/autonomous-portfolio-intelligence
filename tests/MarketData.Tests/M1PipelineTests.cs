@@ -13,6 +13,7 @@ namespace PortfolioIntelligence.MarketData.Tests;
 public class M1PipelineTests(MigratedDatabase database) : IClassFixture<MigratedDatabase>, IDisposable
 {
     private readonly string _cacheRoot = Path.Combine(Path.GetTempPath(), "pi-m1-" + Guid.NewGuid().ToString("N"));
+    private readonly List<string> _progress = [];
 
     public void Dispose()
     {
@@ -39,6 +40,8 @@ public class M1PipelineTests(MigratedDatabase database) : IClassFixture<Migrated
         Assert.Equal(83, ddd.Stats.Expected);
 
         Assert.Contains(result.Classification, c => c.Symbol == "USDCUSDT" && c.Category == ExclusionCategory.Stablecoin);
+        Assert.Equal(1, result.UnsupportedSymbolNames);
+        Assert.Contains(_progress, l => l.StartsWith("[Step 4/5] Importing candidate #1 AAAUSDT", StringComparison.Ordinal));
         var e1 = Assert.Single(result.E1);
         Assert.Equal(("EEEUSDT", 2023, 2), (e1.Symbol, e1.FirstYear, e1.FirstMonth));
 
@@ -55,9 +58,15 @@ public class M1PipelineTests(MigratedDatabase database) : IClassFixture<Migrated
         Assert.Contains("core-4y-S", markdown, StringComparison.Ordinal);
         Assert.Contains("FFFUSDT", markdown, StringComparison.Ordinal);
 
-        // Same archive, same rules: same snapshot hash (files now come from the cache).
+        // Same archive, same rules: same snapshot hash; cached files are not downloaded again.
+        var before = archive.Requests.Count;
         var second = await RunAsync(archive);
         Assert.Equal(result.SnapshotHash, second.SnapshotHash);
+        // Only the rejected file (deleted from the cache) is fetched again; imported and missing files are not.
+        var refetched = archive.Requests.Skip(before).Where(r => r.Host == ArchiveRequestPolicy.FileHost)
+            .Select(r => r.AbsolutePath.Replace(".CHECKSUM", string.Empty, StringComparison.Ordinal)).Distinct().ToList();
+        var rejected = result.Files.Where(f => f.Status == FileStatus.Rejected).Select(f => "/" + f.Key.Path).ToList();
+        Assert.Equal(rejected, refetched);
     }
 
     private async Task<M1Result> RunAsync(FakeArchive archive)
@@ -70,7 +79,7 @@ public class M1PipelineTests(MigratedDatabase database) : IClassFixture<Migrated
             client => new ArchiveImporter(client, cache, store, incidents),
             store,
             ExclusionListLoader.LoadDefault(),
-            new M1PipelineOptions { CoreSize = 2 });
+            new M1PipelineOptions { CoreSize = 2, Progress = line => { lock (_progress) { _progress.Add(line); } } });
         return await pipeline.RunAsync(CancellationToken.None);
     }
 
@@ -92,6 +101,7 @@ public class M1PipelineTests(MigratedDatabase database) : IClassFixture<Migrated
         }
 
         archive.Add(new ArchiveFileKey("USDCUSDT", CandleInterval.OneHour, 2020, 1), []);
+        archive.AddRawKey("data/spot/monthly/klines/币安USDT/1h/x.zip");
         archive.Add(new ArchiveFileKey("EEEUSDT", CandleInterval.OneHour, 2023, 2), []);
 
         // Holdout-period files exist in the archive but must never be requested.

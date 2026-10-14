@@ -2,6 +2,14 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-14 — M1 Kapı 2 ikinci deneme düzeltmeleri (teknik)
+- **Gözlem:** sembol listeleme çalıştı; ilk ay keşfi, büyük harfli ASCII olmayan bir sembol dizin adında (ad incelenmedi) istek doğrulayıcının yıl öneki kuralına takılıp durdu.
+- **Düzeltme (T):** yalnızca `^[A-Z0-9]{2,30}$` biçimindeki sembol dizinleri işlenir; diğerleri atlanır ve raporda yalnızca sayıları verilir (adlar yazdırılmaz).
+- **İlerleme çıktısı:** her adımda sayaç satırları (`[Step n/5] …`); mum verisi yazdırılmaz.
+- **Önbellek:** doğrulanmış önbellek dosyası ağdan tekrar indirilmez; aynı checksum'la zaten import edildiyse ayrıştırılmaz da. Arşivde bulunmayan dosyalar (404) için önbellekte işaret tutulur ve yeniden sorulmaz.
+- **Paralellik ve yeniden deneme:** en fazla 6 eşzamanlı istek; geçici hatalarda (429, 5xx, bağlantı, zaman aşımı) en fazla 2 yeniden deneme, üstel bekleme ve `Retry-After` (en fazla 60 sn). Politika ihlalleri yeniden denenmez. Sıralama ve seçim sonuçları paralellikten bağımsızdır (deterministik sıralama).
+- **Doğrulama:** `verify.ps1` yeşil (140 test).
+
 ## 2026-10-14 — M1 veri politikası v1.1: S3 listeleme host'u (kullanıcı onaylı)
 - **Gözlem:** ilk Kapı 2 denemesinde `data.binance.vision/?prefix=...` S3 XML yerine HTML sayfa döndürdü; listeleme XML ayrıştırmasında durdu. Hiçbir dosya indirilmedi, veritabanına yazılmadı.
 - **Karar (U):** `s3-ap-northeast-1.amazonaws.com` yalnızca `data.binance.vision` kovasının S3 listeleme sorguları için allowlist'e eklendi; dosyalar yine `data.binance.vision`'dan alınır. Politika v1.1, `sources.md` S-B8.

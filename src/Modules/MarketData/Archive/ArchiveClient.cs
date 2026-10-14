@@ -23,10 +23,16 @@ public sealed class ArchiveClient
     private static readonly Uri FileBase = new($"https://{ArchiveRequestPolicy.FileHost}/");
     private static readonly string ListingBase = $"https://{ArchiveRequestPolicy.ListingHost}/{ArchiveRequestPolicy.ListingBucket}";
 
-    public ArchiveClient(ArchiveGuardHandler guard)
+    private const int MaxRetries = 2;
+
+    private readonly TimeSpan _retryBaseDelay;
+
+    /// <param name="retryBaseDelay">First back-off delay for transient failures (default 2 s; tests use less).</param>
+    public ArchiveClient(ArchiveGuardHandler guard, TimeSpan? retryBaseDelay = null)
     {
         _http = new HttpClient(guard, disposeHandler: false) { Timeout = TimeSpan.FromSeconds(60) };
         _policy = guard.Policy;
+        _retryBaseDelay = retryBaseDelay ?? TimeSpan.FromSeconds(2);
     }
 
     /// <summary>Downloads a monthly file and its checksum. Returns null when the zip does not exist (HTTP 404).</summary>
@@ -84,7 +90,7 @@ public sealed class ArchiveClient
             var query = $"?prefix={Uri.EscapeDataString(prefix)}&max-keys={maxKeys}"
                 + (delimiter is null ? string.Empty : $"&delimiter={Uri.EscapeDataString(delimiter)}")
                 + (marker is null ? string.Empty : $"&marker={Uri.EscapeDataString(marker)}");
-            using var response = await _http.GetAsync(new Uri(ListingBase + query), cancellationToken);
+            using var response = await GetWithRetryAsync(new Uri(ListingBase + query), cancellationToken);
             EnsureSuccess(response, prefix);
             var root = ParseListing(await response.Content.ReadAsStringAsync(cancellationToken));
             var ns = S3;
@@ -124,7 +130,7 @@ public sealed class ArchiveClient
 
     private async Task<byte[]?> GetBytesAsync(string path, CancellationToken cancellationToken)
     {
-        using var response = await _http.GetAsync(new Uri(FileBase, path), cancellationToken);
+        using var response = await GetWithRetryAsync(new Uri(FileBase, path), cancellationToken);
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
             return null;
@@ -132,6 +138,41 @@ public sealed class ArchiveClient
 
         EnsureSuccess(response, path);
         return await response.Content.ReadAsByteArrayAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// GET with at most <see cref="MaxRetries"/> retries for transient failures (HTTP 429, 5xx, connection errors,
+    /// timeouts), exponential back-off and Retry-After (capped at 60 s). Policy violations are never retried; after
+    /// the last attempt the failure propagates and stops the run.
+    /// </summary>
+    private async Task<HttpResponseMessage> GetWithRetryAsync(Uri uri, CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            TimeSpan? retryAfter = null;
+            try
+            {
+                var response = await _http.GetAsync(uri, cancellationToken);
+                var status = (int)response.StatusCode;
+                if (attempt >= MaxRetries || (status != 429 && status < 500))
+                {
+                    return response;
+                }
+
+                retryAfter = response.Headers.RetryAfter?.Delta;
+                response.Dispose();
+            }
+            catch (HttpRequestException) when (attempt < MaxRetries)
+            {
+            }
+            catch (TaskCanceledException) when (attempt < MaxRetries && !cancellationToken.IsCancellationRequested)
+            {
+            }
+
+            var backoff = _retryBaseDelay * Math.Pow(3, attempt);
+            var delay = retryAfter is { } wait && wait > backoff ? wait : backoff;
+            await Task.Delay(delay > TimeSpan.FromSeconds(60) ? TimeSpan.FromSeconds(60) : delay, cancellationToken);
+        }
     }
 
     /// <summary>Accepts only an S3 ListBucketResult document; anything else (e.g. an HTML page) stops the run.</summary>

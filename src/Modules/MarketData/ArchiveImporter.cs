@@ -31,12 +31,25 @@ public sealed class ArchiveImporter(ArchiveClient? client, ArchiveCacheDirectory
             ArchiveFile? file;
             if (File.Exists(zipPath))
             {
+                // Cached and verified: no network request. If the same bytes are already imported, skip parsing too.
                 var zip = await File.ReadAllBytesAsync(zipPath, cancellationToken);
                 var checksum = File.Exists(checksumPath) ? await File.ReadAllTextAsync(checksumPath, Encoding.ASCII, cancellationToken) : null;
                 file = new ArchiveFile(key, zip, ChecksumVerifier.Verify(key, zip, checksum));
+                var imported = await store.ImportedShaAsync(key, cancellationToken);
+                if (string.Equals(imported, file.Sha256, StringComparison.Ordinal))
+                {
+                    return new FileImportResult(key, FileStatus.AlreadyImported, file.Sha256, 0, null);
+                }
             }
             else
             {
+                // A file the archive did not have (HTTP 404) is remembered so a re-run does not ask again.
+                var missingMarker = zipPath + ".missing";
+                if (File.Exists(missingMarker))
+                {
+                    return new FileImportResult(key, FileStatus.Missing, null, 0, "not found in the archive (cached result)");
+                }
+
                 if (client is null)
                 {
                     throw new InvalidOperationException($"{key.FileName} is not cached and network access is disabled.");
@@ -45,6 +58,8 @@ public sealed class ArchiveImporter(ArchiveClient? client, ArchiveCacheDirectory
                 file = await client.DownloadAsync(key, cancellationToken);
                 if (file is null)
                 {
+                    Directory.CreateDirectory(Path.GetDirectoryName(missingMarker)!);
+                    await File.WriteAllTextAsync(missingMarker, string.Empty, cancellationToken);
                     return new FileImportResult(key, FileStatus.Missing, null, 0, "not found in the archive");
                 }
 

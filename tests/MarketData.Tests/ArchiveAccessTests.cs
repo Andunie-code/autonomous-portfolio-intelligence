@@ -143,6 +143,31 @@ public class ArchiveAccessTests
     }
 
     [Fact]
+    public async Task Transient_failures_are_retried_a_bounded_number_of_times()
+    {
+        var key = new ArchiveFileKey("AAAUSDT", CandleInterval.OneDay, 2021, 1);
+        var recovering = new FakeArchive { TransientFailures = 2 };
+        recovering.Add(key, SyntheticKlines.Lines(key));
+        Assert.NotNull(await new ArchiveClient(new ArchiveGuardHandler(Core, recovering), TimeSpan.FromMilliseconds(1)).DownloadAsync(key, CancellationToken.None));
+
+        var failing = new FakeArchive { TransientFailures = 3 };
+        failing.Add(key, SyntheticKlines.Lines(key));
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            new ArchiveClient(new ArchiveGuardHandler(Core, failing), TimeSpan.FromMilliseconds(1)).DownloadAsync(key, CancellationToken.None));
+        Assert.Equal(3, failing.Requests.Count);
+    }
+
+    [Fact]
+    public void Symbol_names_must_be_plain_upper_case_ascii()
+    {
+        Assert.True(ArchiveFileKey.IsValidSymbol("1000SATSUSDT"));
+        Assert.True(ArchiveFileKey.IsValidSymbol("1INCHUSDT"));
+        Assert.False(ArchiveFileKey.IsValidSymbol("币安USDT"));
+        Assert.False(ArchiveFileKey.IsValidSymbol("btcusdt"));
+        Assert.False(ArchiveFileKey.IsValidSymbol("BTC-USDT"));
+    }
+
+    [Fact]
     public void Checksum_mismatch_or_missing_checksum_rejects_the_file()
     {
         var key = new ArchiveFileKey("BTCUSDT", CandleInterval.OneDay, 2023, 1);

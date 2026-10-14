@@ -58,7 +58,7 @@ switch (command)
             client => new ArchiveImporter(client, cache, store, incidents),
             store,
             ExclusionListLoader.LoadDefault(),
-            new M1PipelineOptions());
+            new M1PipelineOptions { Progress = line => Console.WriteLine($"{DateTimeOffset.UtcNow:HH:mm:ss} {line}") });
 
         var result = await pipeline.RunAsync(CancellationToken.None);
         var (markdown, json) = M1ReportWriter.Write(result, cache.ReportsDirectory);

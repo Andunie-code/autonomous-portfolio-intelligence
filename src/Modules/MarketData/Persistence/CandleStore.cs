@@ -90,6 +90,16 @@ public sealed class CandleStore(string connectionString)
         }
     }
 
+    /// <summary>SHA-256 recorded for an already imported archive file, or null.</summary>
+    public async Task<string?> ImportedShaAsync(ArchiveFileKey key, CancellationToken cancellationToken)
+    {
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var command = new NpgsqlCommand("SELECT sha256 FROM market.source_files WHERE archive_key = $1", connection);
+        command.Parameters.AddWithValue(key.Path);
+        return await command.ExecuteScalarAsync(cancellationToken) as string;
+    }
+
     public async Task<IReadOnlyList<Candle>> ReadAsync(string symbol, CandleInterval interval, TimeRange range, CancellationToken cancellationToken)
     {
         await using var connection = new NpgsqlConnection(connectionString);

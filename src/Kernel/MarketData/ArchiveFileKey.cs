@@ -30,6 +30,9 @@ public sealed partial record ArchiveFileKey
 
     public string Symbol { get; }
 
+    /// <summary>True for plain upper-case ASCII symbols such as BTCUSDT or 1000SATSUSDT.</summary>
+    public static bool IsValidSymbol(string symbol) => SymbolPattern().IsMatch(symbol);
+
     public CandleInterval Interval { get; }
 
     public int Year { get; }

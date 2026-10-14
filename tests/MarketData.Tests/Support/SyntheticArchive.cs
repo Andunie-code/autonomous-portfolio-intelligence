@@ -113,10 +113,25 @@ public sealed class FakeArchive : HttpMessageHandler
         }
     }
 
+    /// <summary>Adds a raw archive key (e.g. a directory name that is not a valid symbol).</summary>
+    public void AddRawKey(string path) => _files[path] = [];
+
+    /// <summary>Number of initial requests answered with HTTP 503 (transient failure simulation).</summary>
+    public int TransientFailures { get; set; }
+
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var uri = request.RequestUri!;
-        Requests.Add(uri);
+        lock (Requests)
+        {
+            Requests.Add(uri);
+            if (TransientFailures > 0)
+            {
+                TransientFailures--;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+            }
+        }
+
         var path = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/'));
         if (uri.Host == ArchiveRequestPolicy.ListingHost && path == ArchiveRequestPolicy.ListingBucket)
         {
