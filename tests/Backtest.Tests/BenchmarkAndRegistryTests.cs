@@ -52,6 +52,10 @@ public class BenchmarkTests
 
         var expected = 10_000m / (1 + costs.FeeRate) / (100m * (1 + costs.OpenSlippage)) * 150m * (1 - costs.OpenSlippage) * (1 - costs.FeeRate);
         Assert.Equal(Math.Round(expected, 10), Math.Round(result.FinalEquity, 10));
+
+        // Turnover counts each leg once: entry and exit notional over the average equity (about 2.4 here).
+        var flat = Benchmarks.BuyAndHold("BTCUSDT", Flat("BTCUSDT", 100, 100m), Start, At(100), costs, 10_000m);
+        Assert.InRange(Metrics.Compute(flat, 1).Turnover, 1.99, 2.01);
     }
 
     [Fact]

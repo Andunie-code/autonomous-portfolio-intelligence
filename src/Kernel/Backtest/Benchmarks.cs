@@ -104,7 +104,8 @@ public static class Benchmarks
                 {
                     var fill = costs.SellPrice(lastClose[symbol], costs.OpenSlippage);
                     cash += quantity[symbol] * fill - costs.Fee(quantity[symbol] * fill);
-                    trades.Add(new Trade(symbol, t, fill, -quantity[symbol], t + length, fill, ExitReason.EndOfTest, costs.Fee(quantity[symbol] * fill), quantity[symbol] * (lastClose[symbol] - fill)));
+                    // One leg: entry and exit time are the same instant so turnover counts it once.
+                    trades.Add(new Trade(symbol, t + length, fill, -quantity[symbol], t + length, fill, ExitReason.EndOfTest, costs.Fee(quantity[symbol] * fill), quantity[symbol] * (lastClose[symbol] - fill)));
                     quantity[symbol] = 0;
                 }
             }
