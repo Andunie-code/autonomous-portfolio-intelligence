@@ -75,9 +75,9 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Stop kuralı testleri geçiyor (gap, `Low ≤ S`, aynı mumda stop önceliği, mum içinde seviye değişmezliği; `testing-strategy.md` §3).
   - İki baseline için maliyetler düşülmüş, benchmark karşılaştırmalı rapor üretiliyor.
 
-### M3 — DSL, değerlendirme hattı ve evaluator (yerel) (L) — ▶ başladı (2026-10-16; kullanıcı onayı)
+### M3 — DSL, değerlendirme hattı ve evaluator (yerel) (L) — ✅ tamamlandı (2026-10-16)
 - **Ön kayıt:** [`m3-protocol.md`](m3-protocol.md) v1 ve ADR-0016 (Kapı A, kullanıcı onayı).
-- **Durum (2026-10-16):** Kapı A onaylandı (`9928531`). Kapı B kodu ve testleri tamamlandı (`verify.ps1` yeşil, 272 test). Ön kayıtlı kalibrasyon eşik atayamadı; protokol gereği kullanıcı kararı bekleniyor ([`m3-calibration-results.md`](m3-calibration-results.md)). Kapı C (E1 import'u) ve Kapı D (Kohort 0) bekliyor.
+- **Durum (2026-10-16):** Kapı A (`9928531`) ve Protokol v2 (`5668d12`) ön kayıtlı. Kapı B: kod ve testler. Kapı C: E1 alt kümesi, kullanıcı kabulü ([`m3-e1-subset.md`](m3-e1-subset.md)). v2 kalibrasyonu geçti ([`m3-calibration-results-v2.md`](m3-calibration-results-v2.md)). Kapı D: Kohort 0 donduruldu (`be2bce3`) ve sentetik evaluator'a kaydedildi. M5'e devredenler: evaluator image'ı ve container, V9, V14'ün Trading tarafı.
 - **Kapılar (U):** A = Protokol v1 ve ADR-0016 onayı; B = çevrimdışı kod ve testler, `verify.ps1` yeşil; C = E1 alt küme import'u (kullanıcının etkileşimli Kapı-2 koşusu); D = Kohort 0 dondurma ve M3 kabul raporu.
 - **Kapsam:**
   - DSL ve validator, interpreter.

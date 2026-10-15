@@ -28,7 +28,7 @@ $env:ConnectionStrings__HoldoutDb = "Host=127.0.0.1;Port=$port;Database=holdout_
 $env:ConnectionStrings__StatusRelay = "Host=127.0.0.1;Port=$port;Database=portfolio_dev;Username=pi_dev;Password=$password"
 $env:Evaluator__CreateDatabase = 'true'
 try {
-    dotnet run --project src/HoldoutEvaluator -c Release -- seed-cohort0 $manifest $registeredAt
+    dotnet run --project src/HoldoutEvaluator -c Release -- seed-cohort0 (Resolve-Path $manifest).Path $registeredAt
     exit $LASTEXITCODE
 }
 finally {

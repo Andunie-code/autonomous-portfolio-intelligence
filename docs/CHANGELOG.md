@@ -2,6 +2,25 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-16 — M3 Kapı D: Kohort 0 ve M3 kapanışı
+- **Dev DB:** migration 0004 ve 0005 uygulandı (`scripts/dev-up.ps1`).
+- **Kohort 0 manifestosu** (`scripts/m3-cohort0.ps1`, yalnızca `R`):
+  - `ema-trend`: M_R −3,54 %, δ 0,05, L_c 12 ay, planlanan işlem 28, gücü yetersiz.
+  - `supertrend`: M_R −4,99 %, δ 0,05, L_c 12 ay, planlanan işlem 83, gücü yetersiz.
+  - 24 aya kadar hiçbir sürede %80 güce ulaşılamıyor; bu sonuç olduğu gibi kaydedildi.
+  - `policy` sonuç hash'leri M2 ile aynı.
+  - İki M2 denemesi `research.trials`'e `dev-assisted` olarak işlendi (aile 1 ve 2).
+- **Dondurma:** `docs/cohorts/cohort-0.json`, yerel commit `be2bce3`; `registered_at` = 2026-10-15T22:52:33Z (architecture §6.3 istisnası).
+- **Sentetik evaluator'da uçtan uca kayıt** (`src/HoldoutEvaluator/evaluator-seed-cohort0.ps1`, `holdout_synth`):
+  - Kohort id 1; A_0 = 2026-10-17T00:00Z ve pencere sonu = 2027-10-17T00:00Z sunucu tarafından türetildi.
+  - Üyeler `ProspectiveSealed`, deneme sırası 1.
+  - Gerçek holdout kaydı M5'te aynı değerlerle seed istisnasıyla yapılır.
+- `verify.ps1` yeşil: 273 test (Architecture 43, Backtest 83, MarketData 93, HoldoutEvaluator 38, Infrastructure 16), secret scan geçti.
+- **Bilinen açıklar (M5'e devreden):**
+  - Evaluator Docker image'ı derlenmedi ve container çalıştırılmadı; manifestoda image digest yerine `local-build:<sha>` var.
+  - V9 (operasyonel devre dışı bırakma) ve V14'ün Trading tarafı M5'te test edilir.
+  - Gerçek holdout ortamı M5'te kurulur.
+
 ## 2026-10-16 — Protokol v2 kalibrasyonu (geçti)
 - Ön kayıt `5668d12`'den sonra bir kez koşuldu (`docs/m3-calibration-results-v2.md`): κ = 0,056 (ortalama t = 4,67; hedef 4,65). FP %0, TP %80,0.
 - **Atanan araştırma kapısı eşikleri (T, protokol kuralıyla):** `N_min = 100`, `τ_wf = 0,75`, `τ_nb = 0,80`, `τ_dsr = 0,90` (requirements §8 TBD'si kapandı).
