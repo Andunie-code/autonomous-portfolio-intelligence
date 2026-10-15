@@ -2,6 +2,12 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-16 — M3 başlangıcı ve Protokol v1 ön kaydı (Kapı A, kullanıcı onaylı)
+- **Kullanıcı kararları (U):** M3 başlatıldı. **D26 (B5 kapandı):** α = 0,05 tek yönlü (aile içinde Bonferroni, kohort içinde Holm), güç 0,80, δ = min(max(0,05; 0,50 × backtest excess); 0,15), δ biçimi (a), ileriye dönük maks. DD > 0,25 → `Failed`, birincil benchmark nakit. **D27:** DSL indikatör havuzu (SMA, MACD, ADX, Bollinger, Donchian, ROC, Volume SMA) ve BTCUSDT rejim filtresi. **D28:** E1 mantığı sentetik testlerle; E1 adaylarından ilk 5 parite kullanıcının Kapı-2 koşusuyla import edilir. Kohort 0 (iki baseline) Protokol v1 onayından sonra dondurulur.
+- **Teknik ön kayıt (T; Kapı A kullanıcı onayı 2026-10-16):** `docs/m3-protocol.md` v1 — indikatör formülleri, rejim filtresi ve Kleene `Unknown` semantiği, birincil metrik (`mean(4h log getiri) × 2190`), stationary block bootstrap (`b = ⌈n^{1/3}⌉`, B = 10.000), Holm/Bonferroni uygulaması, süre ve güç aracı (normal yaklaşım; güç tanımı δ koşulunu içermez), araştırma kapıları G1–G6, kalibrasyon protokolü (hedef FP ≤ %5, TP ≥ %80, aday eşik ızgarası ve seçim kuralı), aile normalizasyonu ve global deneme sayacı, Kohort 0 ve E1 kuralları (ADR-0012'deki kesinti istisnası E1'de uygulanmaz).
+- **Yeni ADR:** ADR-0016 (DSL v1 beyaz listesi ve şeması; baseline DSL karşılıkları). **Revizyon notları:** ADR-0003 (beyaz liste ADR-0016'da), ADR-0013 (M3'te `holdout_synth` veritabanı, yalnızca sentetik).
+- `requirements.md` (D26–D28, B5 kapandı, §8 TBD'ler) ve `roadmap.md` (M3 kapıları ve kapsamı) güncellendi.
+
 ## 2026-10-14 — M2 kapanışı (kullanıcı kabulü)
 - M2 baseline raporu (`docs/m2-baseline-results.md`) ve M2'nin tamamlanması kullanıcı tarafından onaylandı. İlk dikey dilim (D15: M0–M2) tamamlandı. M3 ayrı onayla başlar.
 

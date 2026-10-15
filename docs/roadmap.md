@@ -1,6 +1,6 @@
 # Yol Haritası
 
-Son güncelleme: 2026-10-14 (rev. 5) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-16 (rev. 5.2) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: **M0 yerelde tamamlandı** (2026-10-13; doğrulama `716a1bd` commit'inde, temiz klonda). Uzak depo: private GitHub deposu `Andunie-code/autonomous-portfolio-intelligence`. M1 ve sonrası başlamadı; her milestone ayrı kullanıcı onayı gerektirir. Bir milestone, kabul kriterlerindeki testler **gerçekten uygulanıp geçtiğinde** tamamlanmış sayılır.
 
@@ -75,21 +75,25 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Stop kuralı testleri geçiyor (gap, `Low ≤ S`, aynı mumda stop önceliği, mum içinde seviye değişmezliği; `testing-strategy.md` §3).
   - İki baseline için maliyetler düşülmüş, benchmark karşılaştırmalı rapor üretiliyor.
 
-### M3 — DSL, değerlendirme hattı ve evaluator (yerel) (M)
+### M3 — DSL, değerlendirme hattı ve evaluator (yerel) (L) — ▶ başladı (2026-10-16; kullanıcı onayı)
+- **Ön kayıt:** [`m3-protocol.md`](m3-protocol.md) v1 ve ADR-0016 (Kapı A, kullanıcı onayı).
+- **Kapılar (U):** A = Protokol v1 ve ADR-0016 onayı; B = çevrimdışı kod ve testler, `verify.ps1` yeşil; C = E1 alt küme import'u (kullanıcının etkileşimli Kapı-2 koşusu); D = Kohort 0 dondurma ve M3 kabul raporu.
 - **Kapsam:**
   - DSL ve validator, interpreter.
+  - **Genişletilmiş indikatör havuzu (U, D27):** SMA, MACD, ADX, Bollinger, Donchian, ROC, Volume SMA; BTCUSDT piyasa rejim filtresi (ADR-0016).
   - Walk-forward, bootstrap, parametre komşuluğu, Deflated Sharpe.
   - **Aile kimliği** (normalizasyon, yapı hash'i, aile temsilcileriyle benzerlik kontrolü; ADR-0015) ve deneme sayacı.
   - **Kohort registry'si:** değiştirilemez manifesto; `registered_at` ve `A_c`'nin sunucu tarafından atanması; sınırların yetkili kayıtta uygulanması. GitHub push'u isteğe bağlıdır ve kullanıcı onayına tabidir.
   - **Ayrı sonuç tabloları** (tanısal ve ileriye dönük); trigger yalnızca ileriye dönük tablolarda.
   - **İki izli yaşam döngüsü** (ADR-0012): operasyonel iz ve türetilmiş doğrulama durumu.
-  - **Protokol v1:** zorunlu alanlar; bloke edici değerlerin önerisi ve kullanıcı incelemesi (B5).
+  - **Protokol v1:** zorunlu alanlar; bloke edici değerler kullanıcı kararıyla (B5 → D26).
   - **Süre protokolü aracı:** güç simülasyonu, rejim etiketleri, "gücü yetersiz" işareti.
   - **Evaluator** (tanısal ve ileriye dönük): yerelde ayrı bir container, ayrı roller, **yalnızca sentetik veri.**
   - Sınırlar: K_D, açık kohort sınırı, aile kotası. Sonuç ve `Invalid` kuralları.
-  - E1 verisinin import'u ve E1 kategorisi.
+  - E1 kategorisi (sentetik testlerle) ve E1 adaylarından ilk 5 paritenin import'u (U, D28).
   - Kapı eşiklerinin sentetik kalibrasyonu.
 - **Kabul kriterleri:**
+  - Yeni indikatörlerin golden ve look-ahead testleri, rejim filtresinin look-ahead testi geçiyor; M2'nin dört sonuç hash'i engine değişikliklerinden sonra aynı.
   - DSL ve baseline parity'si sağlanıyor; kalibrasyon protokolü kaydedildi; yanlış pozitif ve doğru pozitif testleri geçiyor.
   - **Manifesto:**
     - şema doğrulaması; eksik protokol "doğrulamaya uygun değil" olarak işaretleniyor;

@@ -11,3 +11,6 @@ Stratejiler, beyaz listeli indikatör ve operatörlerden oluşan, sığ şemalı
 ## Sonuçlar
 - İfade gücü sınırlıdır; yeni bir indikatör ya da operatör eklemek, insan tarafından incelenen bir kod değişikliğidir.
 - Şemanın sığ tutulması, Gemini'nin desteklediği JSON Schema alt kümesiyle de uyumludur (`sources.md` S-G7).
+
+## Revizyon notu (2026-10-16)
+Beyaz liste (indikatörler, operatörler, şema ve sınırlar) ADR-0016'dadır (DSL v1).

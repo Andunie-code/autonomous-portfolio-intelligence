@@ -28,6 +28,7 @@ Tek makine, Docker Compose:
 
 ### 2. Tek PostgreSQL instance'ı, ayrı veritabanları
 - Veritabanları: `ops` ve `holdout` (M3–M5'te eklenir). M0–M2'de yalnızca mevcut geliştirme veritabanı (`portfolio_dev`) bulunur; `ops` ile ilişkisi M5'te belirlenir (YAGNI).
+  - **M3 (rev. 2026-10-16):** holdout tarafının şeması, rolleri ve trigger'ları aynı geliştirme PostgreSQL container'ında ayrı bir `holdout_synth` veritabanında, **yalnızca sentetik veriyle** kurulur ve test edilir. Evaluator `evaluator` Compose profiliyle isteğe bağlı başlar. Gerçek `holdout` veritabanı, `pg_hba` kuralları ve ağ ayrımı M5'tedir.
 - `REVOKE CONNECT ON DATABASE ... FROM PUBLIC`; her veritabanına yalnızca ilgili rollere `GRANT CONNECT`.
 - Rol ayrımı değişmez: `research_app`, `trading_app`, `market_import`, `ops_api`, `status_relay`, `eval_registry`, `eval_diagnostic`, `eval_prospective` (`architecture.md` §6.2).
 - **`pg_hba` kuralları** (ağ düzeyine en yakın katman):

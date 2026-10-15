@@ -1,6 +1,6 @@
 # Gereksinimler
 
-Son güncelleme: 2026-10-14 (rev. 5) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-16 (rev. 5.2) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: M0 tamamlandı. M1 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
 
@@ -46,6 +46,9 @@ Kârlılık varsayılmaz. Sistemin amacı, bir stratejinin avantajı olup olmad�
 | D22 | Deneysel pariteler (U5, U6) | Çekirdek: 4 yıl; E1: kesim öncesi ≥ 1 yıl kullanılabilir geçmiş; E2: geri kalanlar (yalnızca transfer); listeleme sonrası 30 gün karantina. E1 ve E2'nin toplam maruziyetine `ExperimentalPairsMaxExposure` = **%10** tavan (yapılandırılabilir; yalnızca kullanıcı tarafından `RiskConfig` üzerinden) (ADR-0012) |
 | D23 | Operasyonel güvenlik ve değiştirilemezlik (U7) | Kullanıcı açık kohortların PnL'ini görebilir. Manifestolar, sonuçlar ve audit geçmişi değiştirilemez; devre dışı bırakma, kill switch ve pozisyon kapatma her zaman serbesttir ve değerlendirmeyi etkilemez |
 | D24 | StatusRelay (2026-10-14) | Ayrı bir StatusRelay container'ı/process'i çalıştırılmaz. HoldoutEvaluator, kısıtlı `status_relay` DB rolüyle `research.cohort_status`'a doğrudan ekleme yapar. Research.Host bu tabloya yazamaz (ADR-0013) |
+| D26 | Protokol v1 bloke edici değerleri (B5, 2026-10-16) | Kohort içi α = **0,05** tek yönlü (aile içinde Bonferroni, kohort içinde Holm); hedef güç **0,80**; δ = min(max(**0,05**; **0,50** × backtest excess); **0,15**); δ biçimi **(a)**: alt sınır > 0 **ve** nokta tahmini ≥ δ; ileriye dönük pencerede maks. drawdown **> 0,25** → `Failed`; birincil metriğin benchmark'ı **nakit** (maliyet sonrası mutlak yıllık getiri). Ayrıntı: `m3-protocol.md` §4 |
+| D27 | DSL indikatör havuzu (2026-10-16) | M2 indikatörlerine ek olarak SMA, MACD, ADX, Bollinger, Donchian, ROC, Volume SMA ve BTCUSDT piyasa rejim filtresi (aynı kapanış anındaki BTC mumu, look-ahead yok). ADR-0016 |
+| D28 | E1 verisi M3'te (2026-10-16) | Kategori mantığı çevrimdışı ve sentetik testlerle; ayrıca E1 adaylarından hacme göre ilk 5 parite (1h, 4h) kullanıcının etkileşimli Kapı-2 koşusuyla import edilir |
 | D25 | Pozisyon başına hard stop (2026-10-14) | `RiskConfig`'te bağlayıcı bir "pozisyon başına maksimum kayıp" koruyucu stop'u bulunur: giriş fiyatından **%10** (`MaxPositionLossPct = 0.10`, 2026-10-14). Gerekçe: varlık başına %20 tavanla tek bir tam pozisyon portföyde en fazla %2 kaybettirir ve %3 günlük limiti tek başına tüketemez. Strateji stop'u ile birlikte, girişe en yakın olan geçerlidir (ADR-0014) |
 | D11 | Kill switch (rev. 2026-10-14) | Pozisyonları tut, yeni emir açma; açık giriş emirleri iptal edilir. **Koruyucu stop emirleri iptal edilmez** (çıkışlar her zaman çalışır, ADR-0014). "Tümünü kapat" ayrı bir manuel eylem |
 | D12 | AI sağlayıcısı | **Geçici.** Runtime'da yetkili tek sağlayıcı Gemini (başlangıç modeli `gemini-3.5-flash-lite`). Uygulama şimdilik Anthropic API kullanmaz |
@@ -119,8 +122,9 @@ Gerçek para ile işlem, futures/margin, birden fazla borsa, haber ve sentiment,
 | Parametre | Belirleme yöntemi | Ne zaman | Kim |
 |---|---|---|---|
 | Kapı eşikleri (min. işlem sayısı, Deflated Sharpe olasılığı, walk-forward tutarlılığı) | M3'te sentetik kalibrasyon: random walk üzerinde hedef yanlış pozitif oranını sağlayan eşikler. **Hedef yanlış pozitif oranının kendisi de TBD**; protokolle birlikte kaydedilir | M3 | Teknik lider, protokolle |
-| **BLOKE EDİCİ:** kohort içi α, hedef güç, ekonomik δ (taban değer ve küçültme oranı), δ'nın uygulanma biçimi (nokta tahmin mi, alt sınır mı), maksimum drawdown kuralı | M3'te Protokol v1 ve gerekçeleri; kullanıcı incelemesi. Belirlenmeden hiçbir kohort `Validated` olamaz | M3 | Teknik lider önerir, kullanıcı onaylar |
-| Birincil metriğin kesin formülü, bootstrap blok uzunluğu kuralı | Protokol v1 | M3 | Teknik lider |
+| ~~**BLOKE EDİCİ:** kohort içi α, hedef güç, ekonomik δ, δ'nın uygulanma biçimi, maksimum drawdown kuralı~~ — **karara bağlandı:** D26 (B5) | — | — | — |
+| ~~Birincil metriğin kesin formülü, bootstrap blok uzunluğu kuralı~~ — **ön kayıtlı:** `m3-protocol.md` §4 (Kapı A onayıyla) | — | — | — |
+| Kapı eşiklerinin değerleri | Kalibrasyon kuralı ve aday ızgarası ön kayıtlı (`m3-protocol.md` §7, hedef FP ≤ %5); değerler kalibrasyon sonucundan | M3 | Teknik lider |
 | ~~Maliyet ve slippage modeli değerleri~~ — **ön kayıtlı:** `m2-protocol.md` v1 §8 | — | — | — |
 | Docker `mem_limit` ve `cpus` değerleri | Başlangıç değerleri ADR-0013'te; gerçek kullanımla ölçülüp ayarlanır | M3, M5 | Teknik lider |
 | Aile benzerlik eşikleri (korelasyon 0,9, Jaccard 0,8) | Mühendislik başlangıç değerleri; veriyle gözden geçirilir | M3 | Teknik lider |
@@ -140,7 +144,7 @@ Gerçek para ile işlem, futures/margin, birden fazla borsa, haber ve sentiment,
 | B1 | 12.000 TL kredinin Gemini API **ücretli katmanına** uygulanıp uygulanmadığı (hesap konsolundan) | M4 yeterlilik testleri (T10) |
 | ~~B2~~ | ~~M5'te VPS satın alımı~~ — **Kaldırıldı** (rev. 5, D5: VPS yok) | — |
 | B4 | M1 başlatma onayı; Binance'in açık uç noktalarına (anahtarsız) erişim izni; çekirdek parite seçim prosedürünün onayı. **Durum (2026-10-14): kapandı.** Seçim prosedürü, Kapı 1 ve Kapı 2 onaylandı; M1 kullanıcı kabulüyle tamamlandı (`m1-core-universe.md`) | — |
-| B5 | Protokol v1'in bloke edici istatistiksel değerleri | İlk `Validated` sonucu (M3 sonrası). Testnet'i engellemez |
+| B5 | Protokol v1'in bloke edici istatistiksel değerleri. **Durum (2026-10-16): kapandı** (D26) | — |
 | B6 | Exchange (Testnet) anahtarının IP kısıtı (§4, U): yerel çalışmada ev bağlantısının IP'si değişebilir. Kısıt nasıl uygulanacak ya da gevşetilecek mi? | M6 |
 
 **Not:** İlk `Validated` sonucu, kohortun dondurulmasından en erken 6 ay sonra gelebilir. Testnet buna bağlı değildir.
