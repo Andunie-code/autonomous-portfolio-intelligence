@@ -2,6 +2,12 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-16 — Protokol v2 kalibrasyonu (geçti)
+- Ön kayıt `5668d12`'den sonra bir kez koşuldu (`docs/m3-calibration-results-v2.md`): κ = 0,056 (ortalama t = 4,67; hedef 4,65). FP %0, TP %80,0.
+- **Atanan araştırma kapısı eşikleri (T, protokol kuralıyla):** `N_min = 100`, `τ_wf = 0,75`, `τ_nb = 0,80`, `τ_dsr = 0,90` (requirements §8 TBD'si kapandı).
+- TP hedefin tam sınırında; darboğazlar G4 ve G6.
+- Kod: `calibrate --v2`; Kohort 0 araçları (`scripts/m3-cohort0.ps1`, `src/HoldoutEvaluator/evaluator-seed-cohort0.ps1`).
+
 ## 2026-10-16 — Protokol v2 ön kaydı (kullanıcı onaylı)
 - **Kullanıcı kararları (U):** Protokol v2 onaylandı (`docs/m3-protocol-v2.md`): kapılar `no-halt` koşusunda; DSR'de `V = 1/(T − 1)`; tanısal kural (DD > 0,25 ya da %95 üst sınır < 0 → `Rejected`). Kohort 0, v2 kalibrasyonundan sonra dondurulacak.
 - **Birim ve ulaşılabilirlik kontrolü (kullanıcı talimatı):** `N = 100` ve 4 yıllık pencerede G6 en az yıllık Sharpe ≈ 1,9 ister; ≈ %15 etki (yıllık Sharpe ≈ 0,75) teorik olarak geçemez. Doğru pozitif etkisi, hedef t-istatistiği `t* ≈ 4,65` (yıllık Sharpe ≈ 2,3) olarak yeniden tanımlandı.

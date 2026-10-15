@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using PortfolioIntelligence.Kernel.Backtest;
 using PortfolioIntelligence.Kernel.Dsl;
+using PortfolioIntelligence.Kernel.Statistics;
 
 namespace PortfolioIntelligence.Research.Evaluation;
 
@@ -18,12 +19,17 @@ public sealed record CalibrationOptions(
     double TrendKappa = 0.063,
     int TrendMeanBars = 300,
     double TrendUpShare = 0.5,
-    int MaxParallelism = 4);
+    int MaxParallelism = 4,
+    int ProtocolVersion = 1);
 
 public sealed record GridOutcome(GateThresholds Thresholds, double FalsePositive, double TruePositive, bool Admissible);
 
+public sealed record KappaSearch(double Kappa, double MeanT, double TargetT);
+
 public sealed record CalibrationReport(
     CalibrationOptions Options,
+    string RiskVariant,
+    KappaSearch? Kappa,
     string TruePositiveStrategyHash,
     double NullSharpeVariance,
     IReadOnlyList<CandidateStatistics> Null,
@@ -60,8 +66,45 @@ public sealed class CalibrationRunner(CostModel costs, RiskSettings risk, int bo
         }
         """;
 
+    /// <summary>Protocol v2 §3: t* = b(N) + z(0.90) + z(0.80), the smallest edge the most lenient DSR threshold catches with 80 % power.</summary>
+    public static double TargetT(int trials) =>
+        DeflatedSharpe.Benchmark(trials, 1.0) + Normal.InverseCdf(DeflatedSharpeGrid.Min()) + Normal.InverseCdf(0.80);
+
+    public static IReadOnlyList<double> KappaGrid { get; } = Enumerable.Range(20, 61).Select(k => k / 1000.0).ToList();
+
+    /// <summary>Protocol v2 §3: the κ whose mean tp-trend t-statistic over the true-positive universes is closest to t* (ties: smaller κ).</summary>
+    public KappaSearch SearchKappa(CalibrationOptions options, Action<string>? progress = null)
+    {
+        var evaluator = new ResearchGateEvaluator(costs, risk, bootstrapReplicates);
+        var strategy = DslParser.Parse(TruePositiveJson);
+        var target = TargetT(options.CalibrationTrials);
+        KappaSearch? best = null;
+        foreach (var kappa in KappaGrid)
+        {
+            var t = new double[options.TruePositiveUniverses];
+            RunByUniverse(options.TruePositiveUniverses, options.MaxParallelism,
+                u => SyntheticMarkets.Trending(options.TruePositiveSeedBase + u, kappa, options.TrendMeanBars, options.TrendUpShare),
+                (u, input) => t[u] = evaluator.TStatistic(new DslStrategy(strategy), input));
+            var candidate = new KappaSearch(kappa, t.Average(), target);
+            progress?.Invoke(FormattableString.Invariant($"kappa {kappa:0.000}: mean t {candidate.MeanT:0.00} (target {target:0.00})"));
+            if (best is null || Math.Abs(candidate.MeanT - target) < Math.Abs(best.MeanT - target))
+            {
+                best = candidate;
+            }
+        }
+
+        return best!;
+    }
+
     public CalibrationReport Run(CalibrationOptions options, Action<string>? progress = null)
     {
+        KappaSearch? kappa = null;
+        if (options.ProtocolVersion >= 2)
+        {
+            kappa = SearchKappa(options, progress);
+            options = options with { TrendKappa = kappa.Kappa };
+        }
+
         var evaluator = new ResearchGateEvaluator(costs, risk, bootstrapReplicates);
         var generator = new RandomStrategies(options.StrategySeed);
         var strategies = Enumerable.Range(0, options.NullStrategies).Select(_ => generator.Next()).ToList();
@@ -79,7 +122,7 @@ public sealed class CalibrationRunner(CostModel costs, RiskSettings risk, int bo
         });
 
         var variance = Variance(nullStats.Select(s => s.PeriodSharpe).ToList());
-        var trials = new TrialContext(options.CalibrationTrials, variance);
+        var trials = new TrialContext(options.CalibrationTrials, variance, EstimatorVariance: options.ProtocolVersion >= 2);
         for (var i = 0; i < nullStats.Length; i++)
         {
             nullStats[i] = nullStats[i].WithTrials(trials);
@@ -109,7 +152,7 @@ public sealed class CalibrationRunner(CostModel costs, RiskSettings risk, int bo
             });
 
         var grid = Grid(nullStats, tpStats, options);
-        return new CalibrationReport(options, DslCanonical.DefinitionHash(tpDefinition), variance, nullStats, tpStats,
+        return new CalibrationReport(options, risk.Variant, kappa, DslCanonical.DefinitionHash(tpDefinition), variance, nullStats, tpStats,
             tpStats.Average(s => s.PrimaryMetric), grid, Select(grid));
     }
 

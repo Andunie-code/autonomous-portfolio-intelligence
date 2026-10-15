@@ -36,8 +36,12 @@ public sealed record CandidateStatistics(
     /// <summary>The same statistics with the deflated Sharpe probability for a given trial context.</summary>
     public CandidateStatistics WithTrials(TrialContext trials) => this with
     {
-        DeflatedSharpeProbability = DeflatedSharpe.Probability(PeriodSharpe, Observations, Skewness, Kurtosis, trials.Trials, trials.SharpeVariance),
+        DeflatedSharpeProbability = DeflatedSharpe.Probability(PeriodSharpe, Observations, Skewness, Kurtosis, trials.Trials,
+            trials.EstimatorVariance ? 1.0 / Math.Max(1, Observations - 1) : trials.SharpeVariance),
     };
+
+    /// <summary>t-statistic of the per-period Sharpe ratio: SR̂·√(T − 1).</summary>
+    public double TStatistic => PeriodSharpe * Math.Sqrt(Math.Max(0, Observations - 1));
 
     /// <summary>Whether the candidate passes every gate except G4 at the most lenient thresholds (G4 is then worth computing).</summary>
     public bool NeedsNeighbourhood
@@ -76,8 +80,12 @@ public sealed record CandidateStatistics(
     }
 }
 
-/// <summary>Trial context for the deflated Sharpe ratio: global trial count and the variance of trial Sharpe ratios.</summary>
-public sealed record TrialContext(int Trials, double SharpeVariance);
+/// <summary>
+/// Trial context for the deflated Sharpe ratio: global trial count and the variance of trial Sharpe ratios.
+/// Protocol v2 §2: with <paramref name="EstimatorVariance"/> the variance is the null estimator variance 1/(T − 1)
+/// of each candidate (same per-period scale as SR̂) and <paramref name="SharpeVariance"/> is ignored.
+/// </summary>
+public sealed record TrialContext(int Trials, double SharpeVariance, bool EstimatorVariance = false);
 
 /// <summary>
 /// Research gates G1–G6 of m3-protocol §6 on the research window, policy run, cost model v1. The parameter
@@ -94,7 +102,15 @@ public sealed class ResearchGateEvaluator(CostModel costs, RiskSettings risk, in
             : statistics;
     }
 
-    /// <summary>Policy run and every statistic except G4 and the trial-dependent deflated Sharpe probability.</summary>
+    /// <summary>Per-period Sharpe t-statistic of one run, without the bootstrap (κ search of protocol v2 §3).</summary>
+    public double TStatistic(DslStrategy strategy, BacktestInput input)
+    {
+        var result = new BacktestEngine(strategy, costs, risk).Run(input);
+        var returns = ReturnStatistics.LogReturns(result.InitialCapital, result.Equity);
+        return ReturnStatistics.Sharpe(returns) * Math.Sqrt(Math.Max(0, returns.Length - 1));
+    }
+
+    /// <summary>One run (policy or no-halt, per the evaluator's risk settings) and every statistic except G4 and the trial-dependent deflated Sharpe probability.</summary>
     public CandidateStatistics Measure(DslStrategy strategy, BacktestInput input)
     {
         var result = new BacktestEngine(strategy, costs, risk).Run(input);

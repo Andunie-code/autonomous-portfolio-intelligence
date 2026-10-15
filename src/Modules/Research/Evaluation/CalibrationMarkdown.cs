@@ -10,12 +10,20 @@ public static class CalibrationMarkdown
     {
         var o = report.Options;
         var s = new StringBuilder();
-        s.AppendLine("# M3 kalibrasyon sonuçları (m3-protocol v1 §7)");
+        s.AppendLine(o.ProtocolVersion >= 2 ? "# M3 kalibrasyon sonuçları — Protokol v2 (m3-protocol-v2 §1–§3)" : "# M3 kalibrasyon sonuçları (m3-protocol v1 §7)");
         s.AppendLine();
         s.AppendLine("- Veri: yalnızca sentetik (seed'li). Kalibrasyon koşuları deneme sayacına girmez.");
-        s.AppendLine(Inv($"- Null: {o.NullStrategies} rastgele DSL stratejisi (üreteç seed {o.StrategySeed}) × {o.NullUniverses} null evren (seed {o.NullUniverseSeedBase}…), 20 parite, 4h, policy koşusu, maliyet modeli v1."));
+        s.AppendLine(Inv($"- Null: {o.NullStrategies} rastgele DSL stratejisi (üreteç seed {o.StrategySeed}) × {o.NullUniverses} null evren (seed {o.NullUniverseSeedBase}…), 20 parite, 4h, {report.RiskVariant} koşusu, maliyet modeli v1."));
         s.AppendLine(Inv($"- Doğru pozitif: `tp-trend` (EMA 20/60, 3 × ATR(14) stop; tanım hash'i `{report.TruePositiveStrategyHash[..12]}…`) × {o.TruePositiveUniverses} gömülü trendli evren (seed {o.TruePositiveSeedBase}…; κ = {o.TrendKappa}, ortalama rejim {o.TrendMeanBars} mum, yukarı payı {o.TrendUpShare}). Ortalama birincil metrik: {report.TruePositiveMeanMetric:P1}."));
-        s.AppendLine(Inv($"- Deflated Sharpe: N = {o.CalibrationTrials}, deneme Sharpe varyansı (null dağılımından, 4h dönem başına) = {report.NullSharpeVariance:E3}."));
+        if (report.Kappa is { } k)
+        {
+            s.AppendLine(Inv($"- κ araması (v2 §3): hedef t* = {k.TargetT:0.000}; seçilen κ = {k.Kappa:0.000}, ortalama t = {k.MeanT:0.000} (ızgara 0,020–0,080)."));
+            s.AppendLine(Inv($"- Deflated Sharpe: N = {o.CalibrationTrials}, V = 1/(T − 1) (v2 §2; 4h dönem başına)."));
+        }
+        else
+        {
+            s.AppendLine(Inv($"- Deflated Sharpe: N = {o.CalibrationTrials}, deneme Sharpe varyansı (null dağılımından, 4h dönem başına) = {report.NullSharpeVariance:E3}."));
+        }
         s.AppendLine(Inv($"- Hedefler: FP ≤ {o.TargetFalsePositive:P0}, TP ≥ {o.TargetTruePositive:P0}. Süre: {elapsed:hh\\:mm\\:ss}."));
         s.AppendLine();
         s.AppendLine("## Kapı bazında geçme oranları (en gevşek eşiklerle)");

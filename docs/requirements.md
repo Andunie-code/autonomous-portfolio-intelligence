@@ -124,7 +124,7 @@ Gerçek para ile işlem, futures/margin, birden fazla borsa, haber ve sentiment,
 | Kapı eşikleri (min. işlem sayısı, Deflated Sharpe olasılığı, walk-forward tutarlılığı) | M3'te sentetik kalibrasyon: random walk üzerinde hedef yanlış pozitif oranını sağlayan eşikler. **Hedef yanlış pozitif oranının kendisi de TBD**; protokolle birlikte kaydedilir | M3 | Teknik lider, protokolle |
 | ~~**BLOKE EDİCİ:** kohort içi α, hedef güç, ekonomik δ, δ'nın uygulanma biçimi, maksimum drawdown kuralı~~ — **karara bağlandı:** D26 (B5) | — | — | — |
 | ~~Birincil metriğin kesin formülü, bootstrap blok uzunluğu kuralı~~ — **ön kayıtlı:** `m3-protocol.md` §4 (Kapı A onayıyla) | — | — | — |
-| Kapı eşiklerinin değerleri | Kalibrasyon kuralı ve aday ızgarası ön kayıtlı (`m3-protocol.md` §7, hedef FP ≤ %5); değerler kalibrasyon sonucundan | M3 | Teknik lider |
+| ~~Kapı eşiklerinin değerleri~~ — **kalibre edildi** (Protokol v2): `N_min = 100`, `τ_wf = 0,75`, `τ_nb = 0,80`, `τ_dsr = 0,90` (`m3-calibration-results-v2.md`) | — | — | — |
 | ~~Maliyet ve slippage modeli değerleri~~ — **ön kayıtlı:** `m2-protocol.md` v1 §8 | — | — | — |
 | Docker `mem_limit` ve `cpus` değerleri | Başlangıç değerleri ADR-0013'te; gerçek kullanımla ölçülüp ayarlanır | M3, M5 | Teknik lider |
 | Aile benzerlik eşikleri (korelasyon 0,9, Jaccard 0,8) | Mühendislik başlangıç değerleri; veriyle gözden geçirilir | M3 | Teknik lider |

@@ -35,6 +35,20 @@ await new SqlMigrator(NullLogger<SqlMigrator>.Instance).MigrateAsync(holdout, Sq
 
 var database = new HoldoutDatabase(holdout, ops);
 var relay = ops is null ? null : new StatusRelay(database);
+
+// Owner-only Kohort 0 seed (architecture §6.3): seed-cohort0 <manifest path> <registered_at, ISO 8601 UTC>.
+if (args.Length >= 3 && args[0] == "seed-cohort0")
+{
+    var registeredAt = DateTimeOffset.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture).ToUniversalTime();
+    var seeded = await CohortSeeder.SeedAsync(database, await File.ReadAllTextAsync(args[1]), registeredAt, relay, CancellationToken.None);
+    Console.WriteLine($"Kohort 0 registered as cohort {seeded.CohortId}: registered_at {seeded.RegisteredAt:O}, A_0 {seeded.StartsAt:O}, window end {seeded.WindowEnd:O}");
+    foreach (var (member, status, attempt) in seeded.Members)
+    {
+        Console.WriteLine($"  member {member}: {status} (attempt {attempt})");
+    }
+
+    return;
+}
 var source = new SyntheticWindowSource(seed);
 var clock = new SystemClock();
 var prospective = new ProspectiveService(database, source, clock, relay);

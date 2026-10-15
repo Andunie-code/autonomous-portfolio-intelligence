@@ -58,6 +58,22 @@ public class EvaluationPipelineTests
     }
 
     [Fact]
+    public void Protocol_v2_target_t_and_estimator_variance_follow_the_feasibility_analysis()
+    {
+        // m3-protocol-v2 §2a: b(100) ≈ 2.53, t* = b + z(0.90) + z(0.80) ≈ 4.65.
+        Assert.Equal(2.53, DeflatedSharpe.Benchmark(100, 1.0), 2);
+        Assert.Equal(4.65, CalibrationRunner.TargetT(100), 2);
+
+        // V = 1/(T − 1): DSR probability ≈ Φ(t − b(N)) for a symmetric, normal-tailed series.
+        var t = 8766;
+        var sharpe = 4.0 / Math.Sqrt(t - 1);
+        var statistics = new CandidateStatistics("x", 0.1, 100, new BootstrapBounds(0.1, 0.01, 0.2, 0.01), 1, 1, true, sharpe, t, 0, 3, 0);
+        var dsr = statistics.WithTrials(new TrialContext(100, 123.0, EstimatorVariance: true)).DeflatedSharpeProbability;
+        Assert.Equal(Normal.Cdf(4.0 - DeflatedSharpe.Benchmark(100, 1.0)), dsr, 2);
+        Assert.Equal(4.0, statistics.TStatistic, 10);
+    }
+
+    [Fact]
     public void Random_null_strategies_are_valid_and_reproducible()
     {
         var a = new RandomStrategies(5);

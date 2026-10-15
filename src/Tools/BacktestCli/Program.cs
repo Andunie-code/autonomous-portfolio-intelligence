@@ -25,6 +25,13 @@ switch (command)
         return await ParityM3();
     case "calibrate":
         return Calibrate(args.Skip(1).ToArray());
+    case "cohort0":
+    {
+        var root = FindRepositoryRoot();
+        var ops = Environment.GetEnvironmentVariable("ConnectionStrings__Ops")
+            ?? throw new InvalidOperationException("ConnectionStrings__Ops is not set (scripts/m3-cohort0.ps1 sets it).");
+        return await Cohort0.RunAsync(ops, root, GitHead(root), Path.Combine(root, "docs", "cohorts", "cohort-0.json"));
+    }
     default:
         Console.Error.WriteLine("Usage: run-baselines | parity-m3 | calibrate [--quick] [--out <path>]");
         return 1;
@@ -154,8 +161,14 @@ static int Calibrate(string[] options)
         settings = settings with { TruePositiveUniverses = int.Parse(tp, CultureInfo.InvariantCulture) };
     }
     var started = DateTimeOffset.UtcNow;
-    // --no-halt is a diagnostic only: m3-protocol v1 §6 evaluates the gates on the policy run.
-    var risk = options.Contains("--no-halt") ? RiskSettings.NoHalt : RiskSettings.Policy;
+    // --v2: protocol v2 (gates on the no-halt run, DSR estimator variance, κ search). Without it, v1; --no-halt
+    // with v1 is a diagnostic only (v1 §6 evaluates the gates on the policy run).
+    if (options.Contains("--v2"))
+    {
+        settings = settings with { ProtocolVersion = 2 };
+    }
+
+    var risk = options.Contains("--v2") || options.Contains("--no-halt") ? RiskSettings.NoHalt : RiskSettings.Policy;
     var report = new CalibrationRunner(CostModel.V1, risk, quick ? 1000 : 10_000)
         .Run(settings, message => Console.WriteLine($"[{(DateTimeOffset.UtcNow - started).ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)}] {message}"));
     var markdown = CalibrationMarkdown.Render(report, DateTimeOffset.UtcNow - started);
