@@ -46,7 +46,7 @@ Her indikatör `source: "self" | "btc"` alır (varsayılan `self`; rejim filtres
 }
 ```
 - **Koşul düğümü:** `{ "op", "args" }`. Karşılaştırmalar (`gt`, `gte`, `lt`, `lte`, `cross_above`, `cross_below`) tam 2 operand alır. `and`/`or` 2–4 koşul, `not` 1 koşul alır.
-- **Operand:** `{ "ref": "<id>.<çıktı>", "lag": 0|1, "mult": x }`, `{ "price": "open|high|low|close|volume", "source": "self|btc", "lag": 0|1, "mult": x }` ya da `{ "const": x }`. `mult` > 0, varsayılan 1.
+- **Operand:** `{ "ref": "<id>.<çıktı>", "lag": 0|1, "mult": x }`, `{ "price": "open|high|low|close|volume", "source": "self|btc", "lag": 0|1, "mult": x }` ya da `{ "const": x }`. `mult` ∈ (0, 100], varsayılan 1.
 - **Stop:** `{ "type": "percent", "pct": 0,01–0,10 }`, `{ "type": "atr", "ref": "<atr id>.value", "multiple": 0,5–10, "trailing": false }` ya da `{ "type": "indicator", "ref": "<id>.<çıktı>", "trailing": bool }`. `stop` yoksa yalnızca D25 hard stop'u geçerlidir. Stop referansı `self` kaynaklı olmalıdır.
 - **Sınırlar:** en fazla 8 indikatör; koşul derinliği en fazla 3; `lag` en fazla 1; `interval` v1'de yalnızca `4h`; `name` 1–64 karakter, `[a-z0-9-]`.
 - **Doğrulama:** bilinmeyen alan, tip, `op` ya da çıktı reddedilir; referanslar tanımlı indikatörlere çözülmelidir; parametreler aralık içinde olmalıdır; `id`'ler tekil ve `[a-z][a-z0-9_]{0,15}` biçiminde olmalıdır; yalnızca sabitlerden oluşan karşılaştırmalar reddedilir.

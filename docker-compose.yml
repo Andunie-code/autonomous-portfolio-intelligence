@@ -1,6 +1,7 @@
-# M0-M2 local development only. The target single-machine topology (one PostgreSQL instance with
-# separate ops and holdout databases, four networks, resource limits) is described in docs/adr/0013
-# and arrives with M3/M5. There is deliberately no holdout service here yet.
+# Local development. The target single-machine topology (one PostgreSQL instance with separate ops and
+# holdout databases, four networks, resource limits) is described in docs/adr/0013 and arrives with M5.
+# M3: the optional "evaluator" profile runs the holdout evaluator on synthetic data only (holdout_synth);
+# its settings live in src/HoldoutEvaluator/.env.evaluator (git-ignored, see evaluator-up.ps1).
 name: portfolio-intelligence
 
 services:
@@ -19,6 +20,21 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+
+  holdout-evaluator:
+    profiles: ["evaluator"]
+    build:
+      context: .
+      dockerfile: src/HoldoutEvaluator/Dockerfile
+    env_file:
+      - src/HoldoutEvaluator/.env.evaluator
+    ports:
+      - "127.0.0.1:55480:8080"   # loopback only
+    depends_on:
+      dev-db:
+        condition: service_healthy
+    mem_limit: 1536m
+    cpus: 2.0
 
 volumes:
   dev-db-data:

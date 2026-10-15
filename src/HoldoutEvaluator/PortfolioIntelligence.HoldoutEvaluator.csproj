@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- Holdout evaluator (ADR-0009, ADR-0013): authoritative cohort registry, diagnostic and prospective evaluation.
+       M3: synthetic window data only. Runs as its own container; reachable only through its narrow API.
+       Must never reference Research, Execution or the hosts (architecture tests). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Kernel\PortfolioIntelligence.Kernel.csproj" />
+    <ProjectReference Include="..\Infrastructure\PortfolioIntelligence.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Persistence\Migrations\*.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="PortfolioIntelligence.HoldoutEvaluator.Tests" />
+  </ItemGroup>
+</Project>

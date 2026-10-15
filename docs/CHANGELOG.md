@@ -2,6 +2,53 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-16 — M3 Kapı B: çevrimdışı kod ve testler
+Ön kayıt `9928531`'den sonra. Gerçek ağ erişimi yok; gerçek holdout verisi yok.
+
+**Eklenenler:**
+- **Kernel:**
+  - İndikatör havuzu (SMA, MACD, ADX, Bollinger, Donchian, ROC, Volume SMA).
+  - DSL v1: parser, validator, kanonik biçim, tanım ve yapı hash'leri, yorumlayıcı, Kleene `Unknown`.
+  - Motorda BTC referans serisi (`IReferenceSeriesConsumer`).
+  - İstatistik: normal dağılım, stationary bootstrap, Holm, Deflated Sharpe, süre ve güç aracı.
+  - E1 kategori kuralları ve `StrategyHashGuard` (V14).
+- **Research:**
+  - Kapılar G1–G6, parametre komşuluğu.
+  - Sentetik evrenler ve rastgele DSL üreteci; kalibrasyon koşucusu ve raporu.
+  - Aile ve temsilci artefaktları, deneme kaydı (bellek içi ve PostgreSQL).
+  - `DatasetCatalog` (H7), `ExperimentRequestGuard` ve audit (H8).
+- **Migration'lar:**
+  - 0004: `research.trial_families`, `family_structures`, `trials`, `family_artifacts`.
+  - 0005: `audit.events`, `research.cohort_status`, `research.strategy_versions`; NOLOGIN roller `research_app`, `trading_app`, `status_relay`.
+- **`src/HoldoutEvaluator`:**
+  - Holdout şeması: yetkili kohort kaydı, sunucu atamalı `registered_at`/`A_c`, sınırlar, K_D, erken değerlendirme trigger'ı, `Validated` kapısı, `Invalid` ve yeniden değerlendirme kuralları, append-only audit, `validation_status` view'ı.
+  - Roller: `eval_registry`, `eval_diagnostic`, `eval_prospective`.
+  - Servisler: kayıt, tanısal ve ileriye dönük değerlendirme, status relay.
+  - Dar API (`POST /cohorts`, `POST /diagnostic-evaluations`, `GET /cohorts/{id}/status`).
+  - Sentetik pencere kaynağı; Dockerfile ve Compose profili `evaluator` (henüz derlenmedi, çalıştırılmadı).
+- **MarketData:**
+  - E1 alt küme hattı ve raporu.
+  - CLI `e1-plan` ve `e1 --allow-network`, `scripts/m3-e1-import.ps1`.
+- **BacktestCli:** `parity-m3` (`scripts/m3-parity.ps1`) ve `calibrate`.
+
+**Doğrulama:**
+- Gerçek veride (yerel DB, < C) `m3-parity.ps1`: M2'nin dört sonuç hash'i hem C# hem DSL baseline'larıyla birebir üretildi (regresyon kilidi ve parity).
+- `verify.ps1` yeşil: build 0 uyarı/0 hata; 272 test (Architecture 43, Backtest 82, MarketData 93, HoldoutEvaluator 38, Infrastructure 16); secret scan geçti. Kapsanan kontroller: indikatör golden ve look-ahead testleri, DSL doğrulama ve hash'ler, DSL ↔ C# parity, BTC rejim filtresi look-ahead testi, H7–H11, H15–H18, V1–V8, V11–V14 (V9: operasyonel devre dışı bırakma M5'te; V10: M6), aile benzerliği (kopya yakalama, 1.000 temsilci, doğrusal bellek), E1 kuralları ve hattı.
+
+**Kalibrasyon (ön kayıtlı, bir kez koşuldu):** hiçbir eşik bileşimi FP ≤ %5 ve TP ≥ %80 şartlarını birlikte sağlamadı. Protokol §7 gereği eşikler gevşetilmedi ve atanmadı. Ayrıntı `docs/m3-calibration-results.md`. Karar kullanıcıda.
+
+**Teknik kararlar (T):**
+- M3'te roller NOLOGIN; evaluator `SET ROLE` ile çalışır (gerçek login'ler ve `pg_hba` M5'te).
+- Evaluator'da aile anahtarı yapı hash'idir. Benzerlikle aile birleştirme Research tarafında yapılır; evaluator'a iletilmez (bilinen sınırlama).
+- DSL `mult` üst sınırı 100 (ADR-0016).
+- Kalibrasyonda DSR deneme sayısı N = 100. Gömülü kenar κ = 0,063, ≈ %15 hedefine göre seçildi.
+- E1 sıralaması: U0'dan sonraki ilk 180 günün medyan günlük quote hacmi.
+- `Validated` kararı doğrulanmamış ortamda `Invalid (unverified environment)` olarak yazılır (architecture §6.5, Invalid nedeni 4).
+
+**Kullanıcı kararı bekleyenler:**
+- Kalibrasyon sonucu ve kapıların hangi koşuda değerlendirileceği (Protokol v2).
+- Tanısal değerlendirme kuralı önerisi (v1'de tanımlı değildi; kodda öneri olarak duruyor: DD > 0,25 ya da %95 üst sınır < 0 → `Rejected`).
+
 ## 2026-10-16 — M3 başlangıcı ve Protokol v1 ön kaydı (Kapı A, kullanıcı onaylı)
 - **Kullanıcı kararları (U):** M3 başlatıldı. **D26 (B5 kapandı):** α = 0,05 tek yönlü (aile içinde Bonferroni, kohort içinde Holm), güç 0,80, δ = min(max(0,05; 0,50 × backtest excess); 0,15), δ biçimi (a), ileriye dönük maks. DD > 0,25 → `Failed`, birincil benchmark nakit. **D27:** DSL indikatör havuzu (SMA, MACD, ADX, Bollinger, Donchian, ROC, Volume SMA) ve BTCUSDT rejim filtresi. **D28:** E1 mantığı sentetik testlerle; E1 adaylarından ilk 5 parite kullanıcının Kapı-2 koşusuyla import edilir. Kohort 0 (iki baseline) Protokol v1 onayından sonra dondurulur.
 - **Teknik ön kayıt (T; Kapı A kullanıcı onayı 2026-10-16):** `docs/m3-protocol.md` v1 — indikatör formülleri, rejim filtresi ve Kleene `Unknown` semantiği, birincil metrik (`mean(4h log getiri) × 2190`), stationary block bootstrap (`b = ⌈n^{1/3}⌉`, B = 10.000), Holm/Bonferroni uygulaması, süre ve güç aracı (normal yaklaşım; güç tanımı δ koşulunu içermez), araştırma kapıları G1–G6, kalibrasyon protokolü (hedef FP ≤ %5, TP ≥ %80, aday eşik ızgarası ve seçim kuralı), aile normalizasyonu ve global deneme sayacı, Kohort 0 ve E1 kuralları (ADR-0012'deki kesinti istisnası E1'de uygulanmaz).

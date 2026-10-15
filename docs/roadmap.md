@@ -77,6 +77,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
 
 ### M3 — DSL, değerlendirme hattı ve evaluator (yerel) (L) — ▶ başladı (2026-10-16; kullanıcı onayı)
 - **Ön kayıt:** [`m3-protocol.md`](m3-protocol.md) v1 ve ADR-0016 (Kapı A, kullanıcı onayı).
+- **Durum (2026-10-16):** Kapı A onaylandı (`9928531`). Kapı B kodu ve testleri tamamlandı (`verify.ps1` yeşil, 272 test). Ön kayıtlı kalibrasyon eşik atayamadı; protokol gereği kullanıcı kararı bekleniyor ([`m3-calibration-results.md`](m3-calibration-results.md)). Kapı C (E1 import'u) ve Kapı D (Kohort 0) bekliyor.
 - **Kapılar (U):** A = Protokol v1 ve ADR-0016 onayı; B = çevrimdışı kod ve testler, `verify.ps1` yeşil; C = E1 alt küme import'u (kullanıcının etkileşimli Kapı-2 koşusu); D = Kohort 0 dondurma ve M3 kabul raporu.
 - **Kapsam:**
   - DSL ve validator, interpreter.

@@ -2,21 +2,32 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using PortfolioIntelligence.Kernel.Backtest;
+using PortfolioIntelligence.Kernel.Dsl;
 using PortfolioIntelligence.Kernel.MarketData;
 using PortfolioIntelligence.MarketData.Archive;
 using PortfolioIntelligence.MarketData.Persistence;
 using PortfolioIntelligence.Research;
+using PortfolioIntelligence.Research.Evaluation;
 
-// M2: runs the two pre-registered baselines (policy and no-halt) and the benchmarks on the 20 core pairs
-// (docs/m2-protocol.md). Reads market.candles from the local database; no network. Output: metrics only.
+// M2: run-baselines runs the two pre-registered baselines (policy and no-halt) and the benchmarks on the 20 core
+// pairs (docs/m2-protocol.md). M3: parity-m3 re-runs them and their DSL equivalents without recording anything and
+// compares the result hashes; calibrate runs the synthetic gate calibration (docs/m3-protocol.md §7, no database).
+// Reads market.candles from the local database; no network. Output: metrics only.
 const string ProtocolVersion = "m2-protocol v1";
 const string ProtocolCommit = "296757f";
 
 var command = args.FirstOrDefault() ?? "run-baselines";
-if (command != "run-baselines")
+switch (command)
 {
-    Console.Error.WriteLine("Usage: run-baselines");
-    return 1;
+    case "run-baselines":
+        break;
+    case "parity-m3":
+        return await ParityM3();
+    case "calibrate":
+        return Calibrate(args.Skip(1).ToArray());
+    default:
+        Console.Error.WriteLine("Usage: run-baselines | parity-m3 | calibrate [--quick] [--out <path>]");
+        return 1;
 }
 
 var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Ops")
@@ -72,6 +83,100 @@ File.WriteAllText(Path.ChangeExtension(markdownPath, ".json"),
         new JsonSerializerOptions { WriteIndented = true }), Encoding.UTF8);
 Console.WriteLine($"Report: {markdownPath}");
 return 0;
+
+static async Task<int> ParityM3()
+{
+    // Result hashes recorded in docs/m2-baseline-results.md (engine 73a6b60 and 452fabd).
+    var expected = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["ema-trend policy"] = "756c8fe803a9b0663be248408bb801e6c74f01e003ac141d942f2dc9e4c3e82a",
+        ["ema-trend no-halt"] = "12a38d32eee2047af51853f96c6d186ebc66281f96cf0c7bf0e52374788683b2",
+        ["supertrend policy"] = "ff8d0a951f32a7afe806061ffb7725bcf55c2216519304abaeebbd5b0668ad18",
+        ["supertrend no-halt"] = "48c935fc1c9a4e150d0c7d3eaca974fe91105cf75918381e77d53d8c4482adb7",
+    };
+    var connection = Environment.GetEnvironmentVariable("ConnectionStrings__Ops")
+        ?? throw new InvalidOperationException("ConnectionStrings__Ops is not set (scripts/m3-parity.ps1 sets it).");
+    var universe = CoreUniverse.LoadDefault();
+    var store = new CandleStore(connection);
+    var range = new TimeRange(ResearchCutoff.RankingWindow.Start, ResearchCutoff.C);
+    var candles = new Dictionary<string, IReadOnlyList<Candle>>();
+    foreach (var symbol in universe.Ranks.Keys.Order(StringComparer.Ordinal))
+    {
+        candles[symbol] = await store.ReadAsync(symbol, CandleInterval.FourHours, range, CancellationToken.None);
+    }
+
+    var input = new BacktestInput(candles, universe.Ranks, ResearchCutoff.U, ResearchCutoff.C);
+    var ok = true;
+    foreach (var (coded, dsl) in new (IStrategy, IStrategy)[] { (new EmaTrendStrategy(), DslBaselines.EmaTrend()), (new SupertrendStrategy(), DslBaselines.Supertrend()) })
+    {
+        foreach (var risk in new[] { RiskSettings.Policy, RiskSettings.NoHalt })
+        {
+            var key = $"{coded.Name} {risk.Variant}";
+            var codedHash = new BacktestEngine(coded, CostModel.V1, risk).Run(input).Hash();
+            var dslHash = new BacktestEngine(dsl, CostModel.V1, risk).Run(input).Hash();
+            var match = codedHash == expected[key] && dslHash == expected[key];
+            ok &= match;
+            Console.WriteLine($"{key}: m2 {expected[key][..12]} coded {codedHash[..12]} dsl {dslHash[..12]} -> {(match ? "OK" : "MISMATCH")}");
+        }
+    }
+
+    Console.WriteLine(ok ? "Parity: all four M2 result hashes reproduced by the coded and the DSL baselines." : "Parity FAILED.");
+    return ok ? 0 : 2;
+}
+
+static int Calibrate(string[] options)
+{
+    var quick = options.Contains("--quick");
+    var outIndex = Array.IndexOf(options, "--out");
+    var output = outIndex >= 0 && outIndex + 1 < options.Length ? options[outIndex + 1] : null;
+    var settings = quick
+        ? new CalibrationOptions(NullStrategies: 40, NullUniverses: 4, TruePositiveUniverses: 4, MaxParallelism: Environment.ProcessorCount)
+        : new CalibrationOptions(MaxParallelism: Math.Max(1, Environment.ProcessorCount - 2));
+    // Exploration of the planted-edge generator only (m3-protocol §7 fixes its target effect, ≈ 15 %, not its parameters).
+    string? Option(string name) => Array.IndexOf(options, name) is var i and >= 0 && i + 1 < options.Length ? options[i + 1] : null;
+    if (Option("--kappa") is { } kappa)
+    {
+        settings = settings with { TrendKappa = double.Parse(kappa, CultureInfo.InvariantCulture) };
+    }
+
+    if (Option("--regime-bars") is { } regimeBars)
+    {
+        settings = settings with { TrendMeanBars = int.Parse(regimeBars, CultureInfo.InvariantCulture) };
+    }
+
+    if (Option("--up-share") is { } upShare)
+    {
+        settings = settings with { TrendUpShare = double.Parse(upShare, CultureInfo.InvariantCulture) };
+    }
+
+    if (Option("--tp") is { } tp)
+    {
+        settings = settings with { TruePositiveUniverses = int.Parse(tp, CultureInfo.InvariantCulture) };
+    }
+    var started = DateTimeOffset.UtcNow;
+    // --no-halt is a diagnostic only: m3-protocol v1 §6 evaluates the gates on the policy run.
+    var risk = options.Contains("--no-halt") ? RiskSettings.NoHalt : RiskSettings.Policy;
+    var report = new CalibrationRunner(CostModel.V1, risk, quick ? 1000 : 10_000)
+        .Run(settings, message => Console.WriteLine($"[{(DateTimeOffset.UtcNow - started).ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)}] {message}"));
+    var markdown = CalibrationMarkdown.Render(report, DateTimeOffset.UtcNow - started);
+    if (options.Contains("--verbose"))
+    {
+        foreach (var x in report.TruePositive)
+        {
+            Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                $"TP M={x.PrimaryMetric:P1} trades={x.Trades} lower={x.Bounds.Lower:P1} wf={x.WalkForwardShare:0.00} nb={x.NeighbourhoodShare:0.00} multi={x.MultiAsset} sharpe={x.PeriodSharpe:0.0000} dsr={x.DeflatedSharpeProbability:0.000} halt={x.HaltedAt:yyyy-MM-dd}"));
+        }
+    }
+
+    Console.WriteLine(markdown);
+    if (output is not null)
+    {
+        File.WriteAllText(output, markdown, new UTF8Encoding(false));
+        Console.WriteLine($"Report: {output}");
+    }
+
+    return report.Selected is null ? 3 : 0;
+}
 
 static string Markdown(List<(BacktestResult Result, PerformanceMetrics Metrics)> results, string engineSha, string snapshot)
 {

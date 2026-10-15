@@ -37,6 +37,24 @@ public interface IStrategyInstance
     decimal? TrailingStop { get; }
 }
 
+/// <summary>
+/// A strategy that reads a reference series (BTCUSDT, m3-protocol §2). The engine creates one tracker per run,
+/// feeds it the reference candle of every step (null when missing) before the symbols' closes, and creates the
+/// symbol instances bound to it.
+/// </summary>
+public interface IReferenceSeriesConsumer
+{
+    IReferenceTracker CreateReferenceTracker();
+
+    IStrategyInstance CreateInstance(IReferenceTracker tracker);
+}
+
+public interface IReferenceTracker
+{
+    /// <summary>The reference candle with the current step's open time, or null if it is missing.</summary>
+    void Update(Candle? bar);
+}
+
 /// <summary>Baseline A — EMA 50/100 trend v1 (docs/m2-protocol.md §4).</summary>
 public sealed class EmaTrendStrategy : IStrategy
 {

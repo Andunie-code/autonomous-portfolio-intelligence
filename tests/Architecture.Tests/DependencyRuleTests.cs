@@ -9,6 +9,8 @@ public class DependencyRuleTests
     private const string Execution = "PortfolioIntelligence.Execution";
     private const string TradingHost = "PortfolioIntelligence.Trading.Host";
     private const string MarketData = "PortfolioIntelligence.MarketData";
+    private const string HoldoutEvaluator = "PortfolioIntelligence.HoldoutEvaluator";
+    private const string Infrastructure = "PortfolioIntelligence.Infrastructure";
 
     private static readonly ProjectGraph Graph = ProjectGraph.Load(Path.Combine(RepositoryRoot.Path, "src"));
 
@@ -16,7 +18,7 @@ public class DependencyRuleTests
     public void Graph_contains_the_expected_projects()
     {
         Assert.Superset(
-            new HashSet<string> { Kernel, Research, ResearchHost, Execution, TradingHost, MarketData },
+            new HashSet<string> { Kernel, Research, ResearchHost, Execution, TradingHost, MarketData, HoldoutEvaluator },
             Graph.Projects.ToHashSet());
     }
 
@@ -42,6 +44,25 @@ public class DependencyRuleTests
     public void Execution_does_not_depend_on_research()
     {
         Assert.DoesNotContain(Research, Graph.TransitiveReferencesOf(Execution));
+    }
+
+    [Fact]
+    public void Holdout_evaluator_depends_only_on_the_kernel_and_infrastructure()
+    {
+        // ADR-0009/ADR-0013: the evaluator shares the kernel (parity) but no research, execution, market-data or host code.
+        Assert.Equal(new[] { Infrastructure, Kernel }, Graph.TransitiveReferencesOf(HoldoutEvaluator).Order(StringComparer.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(Research)]
+    [InlineData(ResearchHost)]
+    [InlineData(Execution)]
+    [InlineData(TradingHost)]
+    [InlineData(MarketData)]
+    public void Nothing_outside_the_evaluator_references_the_cohort_registry(string project)
+    {
+        // Research reaches the evaluator only through its narrow API; risk and execution never see cohorts (testing §7.3).
+        Assert.DoesNotContain(HoldoutEvaluator, Graph.TransitiveReferencesOf(project));
     }
 
     [Fact]

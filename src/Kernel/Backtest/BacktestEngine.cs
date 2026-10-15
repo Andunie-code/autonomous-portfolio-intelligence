@@ -57,7 +57,8 @@ public sealed record BacktestInput(
     IReadOnlyDictionary<string, int> CoreRank,
     DateTimeOffset TradingStart,
     DateTimeOffset End,
-    decimal InitialCapital = 10_000m);
+    decimal InitialCapital = 10_000m,
+    IReadOnlyList<Candle>? Reference = null);
 
 /// <summary>
 /// Multi-asset, long-only spot backtest on one interval, following docs/m2-protocol.md §2 and §6–§9 exactly:
@@ -94,7 +95,16 @@ public sealed class BacktestEngine(IStrategy strategy, CostModel costs, RiskSett
         var length = interval.FixedLength ?? throw new ArgumentException("Fixed-length interval required.");
         var byTime = input.Candles.ToDictionary(kv => kv.Key, kv => kv.Value.ToDictionary(c => c.OpenTime));
         var symbols = input.Candles.Keys.OrderBy(s => input.CoreRank.GetValueOrDefault(s, int.MaxValue)).ThenBy(s => s, StringComparer.Ordinal).ToList();
-        var states = symbols.ToDictionary(s => s, _ => new SymbolState(strategy.CreateInstance()));
+        // Reference series (m3-protocol §2): one tracker per run, fed the candle with the same open time.
+        var consumer = strategy as IReferenceSeriesConsumer;
+        var tracker = consumer?.CreateReferenceTracker();
+        if (input.Reference?.Any(c => c.Interval != interval) == true)
+        {
+            throw new ArgumentException("Reference series must use the same interval.");
+        }
+
+        var referenceByTime = input.Reference?.ToDictionary(c => c.OpenTime) ?? [];
+        var states = symbols.ToDictionary(s => s, _ => new SymbolState(tracker is null ? strategy.CreateInstance() : consumer!.CreateInstance(tracker)));
         var start = input.Candles.Values.SelectMany(c => c).Min(c => c.OpenTime);
 
         var cash = input.InitialCapital;
@@ -168,6 +178,7 @@ public sealed class BacktestEngine(IStrategy strategy, CostModel costs, RiskSett
 
             // 3. Close: indicators, equity, risk, signals.
             var closeTime = t + length;
+            tracker?.Update(referenceByTime.GetValueOrDefault(t));
             foreach (var (symbol, bar) in bars)
             {
                 var state = states[symbol];

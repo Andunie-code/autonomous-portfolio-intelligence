@@ -150,4 +150,23 @@ public sealed class CandleStore(string connectionString)
         command.Parameters.AddWithValue(manifestJson);
         return (long)(await command.ExecuteScalarAsync(cancellationToken))!;
     }
+
+    /// <summary>The symbols selected by a recorded snapshot (e.g. the M1 core list), from its manifest.</summary>
+    public async Task<IReadOnlySet<string>> SnapshotSelectionAsync(string contentHash, CancellationToken cancellationToken)
+    {
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var command = new NpgsqlCommand(
+            "SELECT DISTINCT jsonb_array_elements_text(manifest->'selected') FROM market.dataset_snapshots WHERE content_hash = $1",
+            connection);
+        command.Parameters.AddWithValue(contentHash);
+        var result = new HashSet<string>(StringComparer.Ordinal);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            result.Add(reader.GetString(0));
+        }
+
+        return result;
+    }
 }
