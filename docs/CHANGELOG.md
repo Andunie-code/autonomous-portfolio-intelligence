@@ -2,6 +2,10 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-16 — Protokol v2 ön kaydı (kullanıcı onaylı)
+- **Kullanıcı kararları (U):** Protokol v2 onaylandı (`docs/m3-protocol-v2.md`): kapılar `no-halt` koşusunda; DSR'de `V = 1/(T − 1)`; tanısal kural (DD > 0,25 ya da %95 üst sınır < 0 → `Rejected`). Kohort 0, v2 kalibrasyonundan sonra dondurulacak.
+- **Birim ve ulaşılabilirlik kontrolü (kullanıcı talimatı):** `N = 100` ve 4 yıllık pencerede G6 en az yıllık Sharpe ≈ 1,9 ister; ≈ %15 etki (yıllık Sharpe ≈ 0,75) teorik olarak geçemez. Doğru pozitif etkisi, hedef t-istatistiği `t* ≈ 4,65` (yıllık Sharpe ≈ 2,3) olarak yeniden tanımlandı.
+
 ## 2026-10-16 — M3 Kapı C: E1 alt kümesi (kullanıcı kabulü)
 - Kullanıcının etkileşimli koşusu: 3745 sembol dizini, 156 E1 adayı. Seçilenler: WIFUSDT, ORDIUSDT, GMTUSDT, BONKUSDT, BOMEUSDT (5/5, elenen 0). Snapshot `b909f280…`. H1 = 0.
 - **Kullanıcı kararı (U):** alt küme, snapshot ve rapor onaylandı. Özet: `docs/m3-e1-subset.md`.
