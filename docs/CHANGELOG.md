@@ -2,6 +2,10 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-16 — M3 Kapı C: E1 alt kümesi (kullanıcı kabulü)
+- Kullanıcının etkileşimli koşusu: 3745 sembol dizini, 156 E1 adayı. Seçilenler: WIFUSDT, ORDIUSDT, GMTUSDT, BONKUSDT, BOMEUSDT (5/5, elenen 0). Snapshot `b909f280…`. H1 = 0.
+- **Kullanıcı kararı (U):** alt küme, snapshot ve rapor onaylandı. Özet: `docs/m3-e1-subset.md`.
+
 ## 2026-10-16 — M3 Kapı B: çevrimdışı kod ve testler
 Ön kayıt `9928531`'den sonra. Gerçek ağ erişimi yok; gerçek holdout verisi yok.
 
