@@ -2,7 +2,13 @@
 
 - Durum: **Kabul edildi (Kapı A, kullanıcı onayı 2026-10-18)** · Tarih: 2026-10-18
 - Karar türü: **T** (teknik lider). Kullanıcı kararları ayrıca belirtildi.
-- Uygulama durumu: **Planlandı, uygulanmadı**
+- Uygulama durumu: **Kapı B'de uygulandı (2026-10-18), çevrimdışı testlerle.** Gerçek Gemini çağrısı yapılmadı; SDK'nın gerçek API'deki davranışı Kapı C spike'ında doğrulanır.
+- Uygulama notları (Kapı B):
+  - `ClientOptions.HttpClientFactory` ile enjeksiyon ve SDK retry'ının kapatılması (`HttpRetryOptions.Attempts = 1`) çevrimdışı doğrulandı: 429 ve 503 yanıtlarında tek HTTP isteği gidiyor.
+  - Batch sözleşmesi uygulandı (`CreateAsync`, `GetAsync`, `CancelAsync`).
+  - Host'lara henüz bağlanmadı (YAGNI). Researcher, M4'te BacktestCli `research-m4` üzerinden çalışır; AiCli ayrı bir araçtır.
+  - Kill switch kuralı DB'de de var: otomatik kapatma `CHECK` ile reddedilir.
+  - Router'da `NoDecision` bir `TaskOutcome` değeri değildir; neden `DecisionTrace.Reason`'a "no decision: …" olarak yazılır, sonuç `onUnavailable`'dır.
 - İlgili: ADR-0007, ADR-0010, ADR-0013, ADR-0016; `architecture.md` §3–§4; `testing-strategy.md` §6; `m4-protocol.md`; `sources.md` S-G1…S-G7 (2026-10-18)
 
 ## Bağlam

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The only AI provider adapter (D12, ADR-0007, ADR-0017 §2). The Google.GenAI SDK is referenced here and nowhere
+       else; all traffic goes through GeminiGuardHandler (host allowlist, no redirects). -->
+  <ItemGroup>
+    <ProjectReference Include="..\Ai\PortfolioIntelligence.Ai.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Google.GenAI" />
+  </ItemGroup>
+</Project>

@@ -119,8 +119,8 @@ public sealed class NpgsqlFamilyStore(string connectionString) : IFamilyStore
     {
         await using var connection = await OpenAsync(ct);
         await using var command = new NpgsqlCommand("""
-            INSERT INTO research.trials (definition_hash, structure_hash, family_id, origin, strategy_name, definition, protocol_version, period_sharpe)
-            VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8) RETURNING id
+            INSERT INTO research.trials (definition_hash, structure_hash, family_id, origin, strategy_name, definition, protocol_version, period_sharpe, hypothesis_id)
+            VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9) RETURNING id
             """, connection);
         command.Parameters.AddWithValue(definitionHash);
         command.Parameters.AddWithValue(structureHash);
@@ -136,6 +136,7 @@ public sealed class NpgsqlFamilyStore(string connectionString) : IFamilyStore
         command.Parameters.AddWithValue(Kernel.Dsl.DslCanonical.Canonicalize(request.Definition, Kernel.Dsl.CanonicalMode.Definition));
         command.Parameters.AddWithValue(request.ProtocolVersion);
         command.Parameters.AddWithValue(periodSharpe);
+        command.Parameters.AddWithValue((object?)request.HypothesisId ?? DBNull.Value);
         return (long)(await command.ExecuteScalarAsync(ct))!;
     }
 
@@ -152,6 +153,13 @@ public sealed class NpgsqlFamilyStore(string connectionString) : IFamilyStore
         }
 
         return result;
+    }
+
+    public async Task<int> TrialCountAsync(CancellationToken ct)
+    {
+        await using var connection = await OpenAsync(ct);
+        await using var command = new NpgsqlCommand("SELECT count(*) FROM research.trials WHERE research_cutoff = market.research_cutoff()", connection);
+        return (int)(long)(await command.ExecuteScalarAsync(ct))!;
     }
 
     private async Task<NpgsqlConnection> OpenAsync(CancellationToken ct)

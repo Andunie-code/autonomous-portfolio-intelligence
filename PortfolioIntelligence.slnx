@@ -17,6 +17,12 @@
     <Project Path="src/Kernel/PortfolioIntelligence.Kernel.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Ai.Gemini/">
+    <Project Path="src/Modules/Ai.Gemini/PortfolioIntelligence.Ai.Gemini.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Ai/">
+    <Project Path="src/Modules/Ai/PortfolioIntelligence.Ai.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Execution/">
     <Project Path="src/Modules/Execution/PortfolioIntelligence.Execution.csproj" />
   </Folder>
@@ -26,9 +32,15 @@
   <Folder Name="/src/Modules/Research/">
     <Project Path="src/Modules/Research/PortfolioIntelligence.Research.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Researcher/">
+    <Project Path="src/Modules/Researcher/PortfolioIntelligence.Researcher.csproj" />
+  </Folder>
   <Folder Name="/src/Tools/" />
   <Folder Name="/src/Tools/DbMigrator/">
     <Project Path="src/Tools/DbMigrator/PortfolioIntelligence.DbMigrator.csproj" />
+  </Folder>
+  <Folder Name="/src/Tools/AiCli/">
+    <Project Path="src/Tools/AiCli/PortfolioIntelligence.AiCli.csproj" />
   </Folder>
   <Folder Name="/src/Tools/BacktestCli/">
     <Project Path="src/Tools/BacktestCli/PortfolioIntelligence.BacktestCli.csproj" />
@@ -37,6 +49,9 @@
     <Project Path="src/Tools/MarketDataCli/PortfolioIntelligence.MarketDataCli.csproj" />
   </Folder>
   <Folder Name="/tests/" />
+  <Folder Name="/tests/Ai.Tests/">
+    <Project Path="tests/Ai.Tests/PortfolioIntelligence.Ai.Tests.csproj" />
+  </Folder>
   <Folder Name="/tests/Architecture.Tests/">
     <Project Path="tests/Architecture.Tests/PortfolioIntelligence.Architecture.Tests.csproj" />
   </Folder>

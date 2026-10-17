@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- M4 AI command line (ADR-0017 §5): kill switch, ledger, reconciliation (no network); spike (Gate C only, real
+       Gemini calls only with the allow-network flag and after an interactive confirmation). The API key is read from the user's own
+       environment (Gemini__ApiKey or dotnet user-secrets) and never printed. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>portfolio-intelligence-aicli</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Modules\Ai\PortfolioIntelligence.Ai.csproj" />
+    <ProjectReference Include="..\..\Modules\Ai.Gemini\PortfolioIntelligence.Ai.Gemini.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+</Project>

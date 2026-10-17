@@ -11,6 +11,11 @@ public class DependencyRuleTests
     private const string MarketData = "PortfolioIntelligence.MarketData";
     private const string HoldoutEvaluator = "PortfolioIntelligence.HoldoutEvaluator";
     private const string Infrastructure = "PortfolioIntelligence.Infrastructure";
+    private const string Ai = "PortfolioIntelligence.Ai";
+    private const string AiGemini = "PortfolioIntelligence.Ai.Gemini";
+    private const string Researcher = "PortfolioIntelligence.Researcher";
+    private const string AiCli = "PortfolioIntelligence.AiCli";
+    private const string GeminiSdk = "Google.GenAI";
 
     private static readonly ProjectGraph Graph = ProjectGraph.Load(Path.Combine(RepositoryRoot.Path, "src"));
 
@@ -18,13 +23,15 @@ public class DependencyRuleTests
     public void Graph_contains_the_expected_projects()
     {
         Assert.Superset(
-            new HashSet<string> { Kernel, Research, ResearchHost, Execution, TradingHost, MarketData, HoldoutEvaluator },
+            new HashSet<string> { Kernel, Research, ResearchHost, Execution, TradingHost, MarketData, HoldoutEvaluator, Ai, AiGemini, Researcher, AiCli },
             Graph.Projects.ToHashSet());
     }
 
     [Theory]
     [InlineData(Research)]
     [InlineData(ResearchHost)]
+    [InlineData(Researcher)]
+    [InlineData(Ai)]
     public void Research_side_never_reaches_execution_or_trading_host(string project)
     {
         var references = Graph.TransitiveReferencesOf(project);
@@ -59,10 +66,48 @@ public class DependencyRuleTests
     [InlineData(Execution)]
     [InlineData(TradingHost)]
     [InlineData(MarketData)]
+    [InlineData(Ai)]
+    [InlineData(AiGemini)]
+    [InlineData(Researcher)]
+    [InlineData(AiCli)]
     public void Nothing_outside_the_evaluator_references_the_cohort_registry(string project)
     {
         // Research reaches the evaluator only through its narrow API; risk and execution never see cohorts (testing §7.3).
         Assert.DoesNotContain(HoldoutEvaluator, Graph.TransitiveReferencesOf(project));
+    }
+
+    [Fact]
+    public void Ai_module_depends_only_on_the_kernel()
+    {
+        // ADR-0017 §1: provider-neutral; never research, execution, a host or an adapter.
+        Assert.Equal(new[] { Kernel }, Graph.TransitiveReferencesOf(Ai));
+        Assert.DoesNotContain(GeminiSdk, Graph.PackagesOf(Ai));
+    }
+
+    [Fact]
+    public void Gemini_adapter_depends_only_on_the_ai_module_and_the_kernel()
+    {
+        Assert.Equal(new[] { Ai, Kernel }, Graph.TransitiveReferencesOf(AiGemini).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Gemini_sdk_is_referenced_only_by_the_adapter()
+    {
+        foreach (var project in Graph.Projects.Where(p => p != AiGemini))
+        {
+            Assert.DoesNotContain(GeminiSdk, Graph.PackagesOf(project));
+        }
+
+        Assert.Contains(GeminiSdk, Graph.PackagesOf(AiGemini));
+    }
+
+    [Fact]
+    public void Researcher_reaches_only_the_kernel_and_the_ai_module_and_takes_no_database_or_sdk_package()
+    {
+        // Roadmap M4 contract: no holdout, evaluator, SQL, shell or web access; the outside is IResearchToolBackend.
+        Assert.Equal(new[] { Ai, Kernel }, Graph.TransitiveReferencesOf(Researcher).Order(StringComparer.Ordinal));
+        Assert.Empty(Graph.PackagesOf(Researcher));
+        Assert.DoesNotContain(AiGemini, Graph.TransitiveReferencesOf(Research));
     }
 
     [Fact]

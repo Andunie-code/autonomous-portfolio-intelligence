@@ -35,6 +35,12 @@ public class RepositoryRuleTests
     [InlineData("PowerShell(*--allow-network*)")]
     [InlineData("Bash(*AllowNetwork*)")]
     [InlineData("PowerShell(*AllowNetwork*)")]
+    [InlineData("Read(~/AppData/Roaming/Microsoft/UserSecrets/**)")]
+    [InlineData("Read(**/UserSecrets/**)")]
+    [InlineData("Bash(*user-secrets*)")]
+    [InlineData("PowerShell(*user-secrets*)")]
+    [InlineData("Bash(*Gemini__ApiKey*)")]
+    [InlineData("PowerShell(*Gemini__ApiKey*)")]
     public void Claude_project_settings_deny_holdout_and_secret_access(string rule)
     {
         Assert.Contains(rule, ReadPermissionList("deny"));

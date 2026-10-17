@@ -13,8 +13,11 @@ public enum TrialOrigin
     DevAssisted,
 }
 
-/// <summary>A request to record a trial. <see cref="ClaimedFamilyId"/> is ignored: the system computes the family (H18).</summary>
-public sealed record TrialRequest(DslDefinition Definition, TrialOrigin Origin, string ProtocolVersion, long? ClaimedFamilyId = null);
+/// <summary>
+/// A request to record a trial. <see cref="ClaimedFamilyId"/> is ignored: the system computes the family (H18).
+/// <see cref="HypothesisId"/> links the trial to its research.hypotheses record (M4, migration 0006).
+/// </summary>
+public sealed record TrialRequest(DslDefinition Definition, TrialOrigin Origin, string ProtocolVersion, long? ClaimedFamilyId = null, long? HypothesisId = null);
 
 public sealed record TrialOutcome(long TrialId, long FamilyId, bool NewTrial, bool NewFamily, string AssignedBy, double? Jaccard, double? Correlation);
 
@@ -38,6 +41,9 @@ public interface IFamilyStore
 
     /// <summary>Trial count and the per-period Sharpe ratios of all trials in the current cutoff period.</summary>
     Task<IReadOnlyList<double>> TrialSharpesAsync(CancellationToken ct);
+
+    /// <summary>All trials of the current cutoff period, with or without a Sharpe ratio.</summary>
+    Task<int> TrialCountAsync(CancellationToken ct);
 }
 
 /// <summary>
@@ -86,6 +92,13 @@ public sealed class TrialRegistry(IFamilyStore store, string snapshotHash, doubl
         var trial = await store.AddTrialAsync(request, definitionHash, structureHash, family, sharpe, ct);
         return new TrialOutcome(trial, family, NewTrial: true, NewFamily: true, "first-member", null, null);
     }
+
+    /// <summary>Whether this definition is already a trial of the current cutoff period (a repeat run is not a new trial).</summary>
+    public async Task<bool> IsTrialAsync(DslDefinition definition, CancellationToken ct) =>
+        await store.FindTrialAsync(DslCanonical.DefinitionHash(definition), ct) is not null;
+
+    /// <summary>Global trial count of the current cutoff period.</summary>
+    public async Task<int> CountAsync(CancellationToken ct) => await store.TrialCountAsync(ct);
 
     /// <summary>Trial context for the deflated Sharpe ratio (m3-protocol §6, G6): global count and Sharpe variance.</summary>
     public async Task<Evaluation.TrialContext> ContextAsync(double fallbackVariance, CancellationToken ct)
@@ -151,6 +164,8 @@ public sealed class InMemoryFamilyStore : IFamilyStore
     }
 
     public Task<IReadOnlyList<double>> TrialSharpesAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<double>>(_sharpes.ToList());
+
+    public Task<int> TrialCountAsync(CancellationToken ct) => Task.FromResult(_trials.Count);
 
     public int Families => _representatives.Count;
 }

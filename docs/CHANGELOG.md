@@ -2,6 +2,48 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-18 — M4 Kapı B: çevrimdışı kod, testler ve LLM'siz koşu (kullanıcı kabulü, 2026-10-18)
+Ön kayıt `32cf7c5`'ten sonra. Gerçek AI API çağrısı yok (0 USD); gerçek holdout verisi yok; `≥ C` verisi yok.
+
+**Eklenenler:**
+- **Kernel:** `FisherExact` (tek yönlü), `DslJson` (DSL v1 serializer; round-trip testli).
+- **`src/Modules/Ai`:**
+  - sözleşmeler: `IAiProvider`, nötr şema ve tool'lar;
+  - konfigürasyon `ai.v1.json`: aylık tavan 10 USD, iş payları %30 ve %5, çağrı tavanı 0,10 USD, fiyatlar S-G2, görev politikaları; karar etkileyen görevlerde nitelikli model yok;
+  - `CostLedger` (rezervasyon ve mutabakat), `AiCallGuard` (tavanlar, retry, timeout, circuit breaker, dört otomatik tetik, kill switch watchdog'u);
+  - `AiKillSwitch`, `ModelRouter` (`Production` ve `Qualification` modları), `DecisionTrace`, `EvidenceValidator`;
+  - yeterlilik: `QualificationProtocol`, harness, `TaskQualification`;
+  - mutabakat raporu, spike senaryoları, Npgsql store'ları.
+- **`src/Modules/Ai.Gemini`:** `GeminiProvider` (`Google.GenAI` 1.23.0, enjekte edilen `HttpClient`, SDK retry'ı kapalı), `GeminiGuardHandler` (host allowlist'i, redirect reddi).
+- **`src/Modules/Researcher`:** altı tool'luk `ResearcherToolbox`, `IResearchToolBackend`, hipotez listesi doğrulayıcısı (liste hash'i), `ApprovedHypothesisSource`, `GridExpansion`, `LlmHypothesisSource` (nitelik yoksa çağrı yok), `ResearchCycle`.
+- **Research:** `ResearchToolBackend` (`ExperimentRequestGuard` → deneme tavanı → `no-halt` backtest → deneme ve deney kaydı), `GridSelection` (aday seçimi ve ankore G3), `HypothesisStore`; `TrialRequest.HypothesisId`; `ExperimentStore` arama ve okuma.
+- **Migration 0006:** `ai.kill_switch_events`, `cost_ledger`, `decision_traces`, `qualification_protocols`, `task_qualifications`, `research.hypotheses` ve `research.trials.hypothesis_id`. Tümü append-only; kill switch'in otomatik kapatılması ve güvenlik ihlalli bir "Passed" kaydı DB `CHECK`'iyle de reddedilir.
+- **Araçlar:** `AiCli` (`killswitch status|trip|clear`, `ledger`, `reconcile`, `spike`). `spike` yalnızca ağ bayrağı ve etkileşimli onayla çalışır; Kapı C'ye ayrılmıştır. BacktestCli'ye `research-m4` komutu eklendi. Script'ler: `scripts/m4-llmless.ps1`, `scripts/m4-ai.ps1`.
+- **Korkuluklar:** `.claude/settings.json`'a user-secrets dizini, `user-secrets` komutu ve `Gemini__ApiKey` için deny kuralları; mimari ve repo kuralı testleri.
+
+**Doğrulama:**
+- `verify.ps1` yeşil: 393 test (Architecture 59, Ai 93, Backtest 94, MarketData 93, HoldoutEvaluator 38, Infrastructure 16); secret scan geçti.
+- Kapsananlar:
+  - testing §6.3: nitelikli olmayan modele yönlendirme yok; aylık, iş ve çağrı tavanları; degraded sonuç; refusal ve geçersiz çıktı; kill switch (çağrı yok, uçuştaki çağrının iptali, başka process'in tetiği, Batch iptali, dört otomatik tetik, yalnızca manuel kapatma ve audit); retry (4xx yok, `Retry-After`, en fazla 2, kill switch her retry'dan önce kontrol ediliyor).
+  - Researcher sözleşmesi: tam altı tool; izin dışı tool reddediliyor ve kaydediliyor; Researcher projesi yalnızca Kernel ve Ai'ya bağlı, paket yok, kaynak taraması temiz.
+  - Gemini adapter'ı: ağsız; tek HTTP isteği (SDK retry'ı yok); host guard'ı.
+  - Atomik rezervasyon: 20 eşzamanlı istekten tavana sığan 10'u kabul ediliyor.
+  - Fisher golden değerleri, DSL round-trip (502 tanım).
+- **Kuru koşu:** gerçek koşudan önce 12 hipotez, seed'li sentetik veride ve atılabilir bir DB'de çalıştırıldı (0 hata). Deneme sayılmaz.
+
+**Gerçek veride LLM'siz koşu (ön kayıtlı, bir kez):** `scripts/m4-llmless.ps1`, engine `32cf7c5+src-tree:d47021c5…`. Kod henüz commit'lenmediği için `src/` ağacının git tree hash'i kaydedildi; commit sonrası `git rev-parse <commit>:src` ile doğrulanır.
+- 12 hipotez, 96 deneme; global sayaç 2 → 98; güvenlik ihlali 0; süre 1 dk 8 sn.
+- **Aday yok:** 12 hipotezin tamamı reddedildi. Hiçbiri G2'yi (%95 alt sınır > 0) ve G3'ü geçemedi; G6 olasılıkları ≤ 0,11.
+- En yüksek `M_R`: H08 (BTC rejim filtreli SMA trendi) %22,8, alt sınır −%9,4.
+- Ayrıntı: `docs/m4-llmless-results.md`.
+
+**Teknik kararlar (T):**
+- Spike senaryoları sağlayıcıdan bağımsız olarak Ai modülünde.
+- Zaman aşımına uğrayan ya da kill switch'le iptal edilen çağrı, tahmini maliyetiyle settle edilir (muhafazakâr); sağlayıcı hatası 0 ile settle edilir (mutabakat yakalar).
+- Varsayılan konfigürasyonda çağrı başına tavan 0,10 USD.
+
+**Kapı C'ye kalanlar (B1 gerekli):** gerçek spike, pilot, HypothesisGeneration ön kaydı ve görev uygulaması (`IQualificationTask`), yeterlilik koşusu, mutabakat raporu.
+
 ## 2026-10-18 — M4 başlangıcı ve Kapı A (ön kayıt; kullanıcı onaylı)
 - **Kapı A onayı (U, 2026-10-18):** protokol v1, hipotez listesi (liste hash'i `89ab3965…`), ADR-0017, kontaminasyon kaydı ve `sources.md` güncellemesi onaylandı. Commit'ten önce `verify.ps1` yeşildi (273 test).
 - **Kullanıcı kararları (U):**

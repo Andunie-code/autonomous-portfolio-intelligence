@@ -12,6 +12,7 @@ using PortfolioIntelligence.Research.Evaluation;
 // M2: run-baselines runs the two pre-registered baselines (policy and no-halt) and the benchmarks on the 20 core
 // pairs (docs/m2-protocol.md). M3: parity-m3 re-runs them and their DSL equivalents without recording anything and
 // compares the result hashes; calibrate runs the synthetic gate calibration (docs/m3-protocol.md §7, no database).
+// M4: research-m4 runs the pre-registered LLM-less research cycle (docs/m4-protocol.md) through the Researcher tools.
 // Reads market.candles from the local database; no network. Output: metrics only.
 const string ProtocolVersion = "m2-protocol v1";
 const string ProtocolCommit = "296757f";
@@ -32,8 +33,16 @@ switch (command)
             ?? throw new InvalidOperationException("ConnectionStrings__Ops is not set (scripts/m3-cohort0.ps1 sets it).");
         return await Cohort0.RunAsync(ops, root, GitHead(root), Path.Combine(root, "docs", "cohorts", "cohort-0.json"));
     }
+    case "research-m4":
+    {
+        var root = FindRepositoryRoot();
+        var ops = Environment.GetEnvironmentVariable("ConnectionStrings__Ops")
+            ?? throw new InvalidOperationException("ConnectionStrings__Ops is not set (scripts/m4-llmless.ps1 sets it).");
+        // Uncommitted engine: the script passes HEAD plus the git tree hash of src/ (verifiable after the commit).
+        return await ResearchM4.RunAsync(ops, root, Environment.GetEnvironmentVariable("PI_ENGINE_SOURCE") ?? GitHead(root));
+    }
     default:
-        Console.Error.WriteLine("Usage: run-baselines | parity-m3 | calibrate [--quick] [--out <path>]");
+        Console.Error.WriteLine("Usage: run-baselines | parity-m3 | calibrate [--quick] [--out <path>] | cohort0 | research-m4");
         return 1;
 }
 

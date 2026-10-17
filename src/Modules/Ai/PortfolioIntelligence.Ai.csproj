@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- AI module (ADR-0007, ADR-0010, ADR-0017): provider-neutral contracts, ModelRouter, spend control, AiKillSwitch,
+       DecisionTrace, EvidenceValidator and the qualification harness. No provider SDK here (only in Ai.Gemini);
+       never references Research, Execution or a host. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Kernel\PortfolioIntelligence.Kernel.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Config\ai.v1.json" />
+  </ItemGroup>
+</Project>

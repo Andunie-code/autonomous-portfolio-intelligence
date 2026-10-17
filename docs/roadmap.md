@@ -119,6 +119,11 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - **A:** M4 ön kaydı ([`m4-protocol.md`](m4-protocol.md) v1, [`m4-hypotheses.v1.json`](m4-hypotheses.v1.json)) ve ADR-0017; Gemini belgelerinin yeniden doğrulanması (`sources.md`, 2026-10-18).
   - **B:** tüm çevrimdışı kod; sahte sağlayıcıyla §6.3 testleri ve Researcher sözleşme testi; gerçek veride (`< C`) 12 hipotezin ve 96 denemenin LLM'siz koşusu; `verify.ps1` yeşil; 0 USD harcama.
   - **C (B1 gerekli):** gerçek Gemini spike'ı, pilot, HypothesisGeneration ön kaydı ve yeterlilik koşusu, mutabakat raporu. Tüm çağrılar kullanıcının etkileşimli koşusudur.
+- **Durum (2026-10-18):**
+  - Kapı A `32cf7c5`.
+  - Kapı B kod ve testleri tamamlandı (`verify.ps1`, 393 test).
+  - LLM'siz koşu yapıldı: 12 hipotez ve 96 deneme, aday yok ([`m4-llmless-results.md`](m4-llmless-results.md)).
+  - Kapı B kullanıcı tarafından kabul edildi (2026-10-18). Kapı C B1'i ve ayrı onayı bekliyor.
 - **Kullanıcı kararları (2026-10-18):** LLM'siz koşuda global deneme sayacı ≤ 100; hipotezleri Claude Code önerir, kullanıcı onaylar (köken `dev-assisted`/`grid`, kontaminasyon bayrağı).
 - **Ön koşul:** **B1** (kredinin ücretli katmana uygulanması). Gemini fiyatları, rate limit'leri ve SDK yeniden doğrulanır ve `sources.md` güncellenir. Altyapı işi B1 olmadan başlayabilir; yalnızca yeterlilik koşusu B1'i bekler.
 - **Kapsam:**

@@ -1,0 +1,64 @@
+{
+  "version": "ai-config v1",
+  "spend": {
+    "monthlyCapUsd": 10,
+    "callCapUsd": 0.10,
+    "jobShares": { "Qualification": 0.30, "ResearchCycle": 0.05, "Spike": 0.05 },
+    "velocityWindowMinutes": 60,
+    "velocityShare": 0.20,
+    "costDeviationFactor": 2,
+    "costDeviationConsecutive": 3
+  },
+  "resilience": {
+    "concurrency": 1,
+    "maxRetries": 2,
+    "backoffBaseSeconds": 1,
+    "maxRetryAfterSeconds": 60,
+    "circuitBreakerFailures": 5,
+    "killSwitchPollSeconds": 2,
+    "maxToolRounds": 8
+  },
+  "prices": {
+    "version": "gemini-list-prices 2026-10-18 (sources.md S-G2)",
+    "models": [
+      { "provider": "gemini", "model": "gemini-3.5-flash-lite", "inputPerMillionUsd": 0.30, "outputPerMillionUsd": 2.50 }
+    ]
+  },
+  "tasks": {
+    "HypothesisGeneration": {
+      "kind": "DecisionAffecting",
+      "onUnavailable": "DeterministicFallback",
+      "maxOutputTokens": 8192,
+      "timeoutSeconds": 120,
+      "qualifiedModels": []
+    },
+    "FindingExtraction": {
+      "kind": "DecisionAffecting",
+      "onUnavailable": "Skip",
+      "maxOutputTokens": 4096,
+      "timeoutSeconds": 120,
+      "qualifiedModels": []
+    },
+    "AllocationProposal": {
+      "kind": "DecisionAffecting",
+      "onUnavailable": "DeterministicFallback",
+      "maxOutputTokens": 2048,
+      "timeoutSeconds": 120,
+      "qualifiedModels": []
+    },
+    "ResultInterpretation": {
+      "kind": "Advisory",
+      "onUnavailable": "DeterministicFallback",
+      "maxOutputTokens": 2048,
+      "timeoutSeconds": 120,
+      "model": { "provider": "gemini", "model": "gemini-3.5-flash-lite", "promptVersion": "result-interpretation v1", "acceptedModelVersions": [ "gemini-3.5-flash-lite" ] }
+    },
+    "Summary": {
+      "kind": "Advisory",
+      "onUnavailable": "DeterministicFallback",
+      "maxOutputTokens": 1024,
+      "timeoutSeconds": 120,
+      "model": { "provider": "gemini", "model": "gemini-3.5-flash-lite", "promptVersion": "summary v1", "acceptedModelVersions": [ "gemini-3.5-flash-lite" ] }
+    }
+  }
+}
