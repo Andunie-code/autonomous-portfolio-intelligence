@@ -1,0 +1,6579 @@
+{
+  "version": "m4-hypotheses v1",
+  "trialCount": 96,
+  "hypotheses": [
+    {
+      "id": "h01",
+      "title": "Donchian kırılımı",
+      "structureHash": "ec9b1fe10bb3475bd4680ab3b4010262a7c132ef9b27def01716f7b07eddc81a",
+      "points": [
+        {
+          "point": "n20-m2",
+          "definitionHash": "ba5ba7a3cfe3e9c24e44f9947ccfbcebb2543369a87417c5ece96545cab28435",
+          "definition": {
+            "dsl": "1",
+            "name": "h01-dc-n20-m2",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc_in",
+                "type": "donchian",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "dc_out",
+                "type": "donchian",
+                "params": {
+                  "period": 10
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_in.upper"
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_out.lower"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n20-m3",
+          "definitionHash": "b4ef007721ffc953368203f8fe433b8c62d812a4421a05e52d2db207f516249b",
+          "definition": {
+            "dsl": "1",
+            "name": "h01-dc-n20-m3",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc_in",
+                "type": "donchian",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "dc_out",
+                "type": "donchian",
+                "params": {
+                  "period": 10
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_in.upper"
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_out.lower"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n20-m4",
+          "definitionHash": "73e40238037a26abe9bdaaf082eaabe91206a1548ad957852b0d01af4b2725db",
+          "definition": {
+            "dsl": "1",
+            "name": "h01-dc-n20-m4",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc_in",
+                "type": "donchian",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "dc_out",
+                "type": "donchian",
+                "params": {
+                  "period": 10
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_in.upper"
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_out.lower"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 4,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n55-m2",
+          "definitionHash": "ff2a653bfe58cbac5ca637fe4af0b476d769d4b6b52e105d0d0375d5502ce7df",
+          "definition": {
+            "dsl": "1",
+            "name": "h01-dc-n55-m2",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc_in",
+                "type": "donchian",
+                "params": {
+                  "period": 55
+                }
+              },
+              {
+                "id": "dc_out",
+                "type": "donchian",
+                "params": {
+                  "period": 27
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_in.upper"
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_out.lower"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n55-m3",
+          "definitionHash": "32177d8ddb919db1c1516985cdeb9eda07c139603b6262274b561c0058d852a5",
+          "definition": {
+            "dsl": "1",
+            "name": "h01-dc-n55-m3",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc_in",
+                "type": "donchian",
+                "params": {
+                  "period": 55
+                }
+              },
+              {
+                "id": "dc_out",
+                "type": "donchian",
+                "params": {
+                  "period": 27
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_in.upper"
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_out.lower"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n55-m4",
+          "definitionHash": "30f4239ec2245261d1547f70d67d872fd664a3b1a7f0f6a1b646cf4e13a154f2",
+          "definition": {
+            "dsl": "1",
+            "name": "h01-dc-n55-m4",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc_in",
+                "type": "donchian",
+                "params": {
+                  "period": 55
+                }
+              },
+              {
+                "id": "dc_out",
+                "type": "donchian",
+                "params": {
+                  "period": 27
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_in.upper"
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_out.lower"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 4,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n100-m2",
+          "definitionHash": "a67105a41c738be38e8022a651ea76c33d9ea1ea5956fea7c80f121c02a42976",
+          "definition": {
+            "dsl": "1",
+            "name": "h01-dc-n100-m2",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc_in",
+                "type": "donchian",
+                "params": {
+                  "period": 100
+                }
+              },
+              {
+                "id": "dc_out",
+                "type": "donchian",
+                "params": {
+                  "period": 50
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_in.upper"
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_out.lower"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n100-m3",
+          "definitionHash": "a4962e3626c84538cf50f57e8858a11fa16902fa4cc8d3d82134238445fd3e0e",
+          "definition": {
+            "dsl": "1",
+            "name": "h01-dc-n100-m3",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc_in",
+                "type": "donchian",
+                "params": {
+                  "period": 100
+                }
+              },
+              {
+                "id": "dc_out",
+                "type": "donchian",
+                "params": {
+                  "period": 50
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_in.upper"
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_out.lower"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n100-m4",
+          "definitionHash": "94ffa102a33068da7aa2a2a4ff994a8864021f40c26fd315d01b661161888d21",
+          "definition": {
+            "dsl": "1",
+            "name": "h01-dc-n100-m4",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc_in",
+                "type": "donchian",
+                "params": {
+                  "period": 100
+                }
+              },
+              {
+                "id": "dc_out",
+                "type": "donchian",
+                "params": {
+                  "period": 50
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_in.upper"
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc_out.lower"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 4,
+              "trailing": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "h02",
+      "title": "Bollinger ortalamaya dönüş",
+      "structureHash": "7582e6d7e7c3746e419cc5b9df73c64c18c65b41a4879e53e2cf4f6574f8351b",
+      "points": [
+        {
+          "point": "p20-k1p5",
+          "definitionHash": "e1a1a673dd78f11a1e7459ebd955650bae2f37ce58c4f16d0472bcf86f79a767",
+          "definition": {
+            "dsl": "1",
+            "name": "h02-bb-p20-k1p5",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 20,
+                  "k": 1.5
+                }
+              }
+            ],
+            "entry": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.lower"
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.06
+            }
+          }
+        },
+        {
+          "point": "p20-k2",
+          "definitionHash": "5e99c4b366f60326de7b1e12ac26e39e932490e592653dfb010ea5a1ac4a4675",
+          "definition": {
+            "dsl": "1",
+            "name": "h02-bb-p20-k2",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 20,
+                  "k": 2
+                }
+              }
+            ],
+            "entry": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.lower"
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.06
+            }
+          }
+        },
+        {
+          "point": "p20-k2p5",
+          "definitionHash": "e4fa9ee97b4ae9189a230c53b936d03b8b29dff13ef55c31a4bcde9a373faa73",
+          "definition": {
+            "dsl": "1",
+            "name": "h02-bb-p20-k2p5",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 20,
+                  "k": 2.5
+                }
+              }
+            ],
+            "entry": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.lower"
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.06
+            }
+          }
+        },
+        {
+          "point": "p40-k1p5",
+          "definitionHash": "13c1eccc8ef853a859aaebe37d664fd2c27ee5006c421b86cd536812fa3ac165",
+          "definition": {
+            "dsl": "1",
+            "name": "h02-bb-p40-k1p5",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 40,
+                  "k": 1.5
+                }
+              }
+            ],
+            "entry": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.lower"
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.06
+            }
+          }
+        },
+        {
+          "point": "p40-k2",
+          "definitionHash": "3b37e5581b5e6a9ee16b1a3fa2d12ffc872673fecc5790ad4d6fe3942ba5c0bf",
+          "definition": {
+            "dsl": "1",
+            "name": "h02-bb-p40-k2",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 40,
+                  "k": 2
+                }
+              }
+            ],
+            "entry": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.lower"
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.06
+            }
+          }
+        },
+        {
+          "point": "p40-k2p5",
+          "definitionHash": "80595385b1a5ed779e145a79435aa60cbdd2771657f8d99355b7e92d58161875",
+          "definition": {
+            "dsl": "1",
+            "name": "h02-bb-p40-k2p5",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 40,
+                  "k": 2.5
+                }
+              }
+            ],
+            "entry": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.lower"
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.06
+            }
+          }
+        },
+        {
+          "point": "p60-k1p5",
+          "definitionHash": "dcf68fe5ac836f35801e1b8f79ce01b94b177904557dc77cca15b9a483a0427a",
+          "definition": {
+            "dsl": "1",
+            "name": "h02-bb-p60-k1p5",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 60,
+                  "k": 1.5
+                }
+              }
+            ],
+            "entry": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.lower"
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.06
+            }
+          }
+        },
+        {
+          "point": "p60-k2",
+          "definitionHash": "cf99795a60ca0bf546e3ea076970282af90f9efa3251117888286c4549852c92",
+          "definition": {
+            "dsl": "1",
+            "name": "h02-bb-p60-k2",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 60,
+                  "k": 2
+                }
+              }
+            ],
+            "entry": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.lower"
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.06
+            }
+          }
+        },
+        {
+          "point": "p60-k2p5",
+          "definitionHash": "6e2daaad1778db0e95562dbab3b459c4deb09100b855c0ebc09a5e925bd099a3",
+          "definition": {
+            "dsl": "1",
+            "name": "h02-bb-p60-k2p5",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 60,
+                  "k": 2.5
+                }
+              }
+            ],
+            "entry": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.lower"
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.06
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "h03",
+      "title": "Trend içinde RSI ortalamaya dönüş",
+      "structureHash": "86b80a293df8af6cd3c7b5129196b9dfd9c4bf38c6f403d8d1ab4c820998cc40",
+      "points": [
+        {
+          "point": "r5-t25",
+          "definitionHash": "9df2e6d04b63cedca37fed922f504283b767e24a17dbf64bdc69fbd8aeb09a81",
+          "definition": {
+            "dsl": "1",
+            "name": "h03-rsi-r5-t25",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 5
+                }
+              },
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 200
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "rsi.value"
+                    },
+                    {
+                      "const": 25
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 50
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.08
+            }
+          }
+        },
+        {
+          "point": "r5-t30",
+          "definitionHash": "d20a033b8bc24ac0540b4b458259c6f0d76cb3077b7d5d99cf7773f347aa9fb4",
+          "definition": {
+            "dsl": "1",
+            "name": "h03-rsi-r5-t30",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 5
+                }
+              },
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 200
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "rsi.value"
+                    },
+                    {
+                      "const": 30
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 50
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.08
+            }
+          }
+        },
+        {
+          "point": "r5-t35",
+          "definitionHash": "a771184b0ce8d570baed20010f4bc4da8f2beedb3ac840d60668c7e3fc5052a3",
+          "definition": {
+            "dsl": "1",
+            "name": "h03-rsi-r5-t35",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 5
+                }
+              },
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 200
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "rsi.value"
+                    },
+                    {
+                      "const": 35
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 50
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.08
+            }
+          }
+        },
+        {
+          "point": "r10-t25",
+          "definitionHash": "56535330c2fc92c1ed343a7b31f12841658812e49416728bafbe32dd7b5b3d2d",
+          "definition": {
+            "dsl": "1",
+            "name": "h03-rsi-r10-t25",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 10
+                }
+              },
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 200
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "rsi.value"
+                    },
+                    {
+                      "const": 25
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 50
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.08
+            }
+          }
+        },
+        {
+          "point": "r10-t30",
+          "definitionHash": "2f107168153da0e31f8e0e3f521924a5450d710f9f9b7cbb8076174863caeca0",
+          "definition": {
+            "dsl": "1",
+            "name": "h03-rsi-r10-t30",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 10
+                }
+              },
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 200
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "rsi.value"
+                    },
+                    {
+                      "const": 30
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 50
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.08
+            }
+          }
+        },
+        {
+          "point": "r10-t35",
+          "definitionHash": "37b45d3b5284343ad1784bc9f211be45aaed4dd6f93a919fb1172e76dea7ab15",
+          "definition": {
+            "dsl": "1",
+            "name": "h03-rsi-r10-t35",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 10
+                }
+              },
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 200
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "rsi.value"
+                    },
+                    {
+                      "const": 35
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 50
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.08
+            }
+          }
+        },
+        {
+          "point": "r14-t25",
+          "definitionHash": "e8ced39263aea7e467e6d1858d1d10889cd3da94d1c1ddf937363b7b1ceae97e",
+          "definition": {
+            "dsl": "1",
+            "name": "h03-rsi-r14-t25",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 200
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "rsi.value"
+                    },
+                    {
+                      "const": 25
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 50
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.08
+            }
+          }
+        },
+        {
+          "point": "r14-t30",
+          "definitionHash": "76af613ede1c1cd2019e79f6a3997f4052bdb9be32c48b808ac9a79cb9058441",
+          "definition": {
+            "dsl": "1",
+            "name": "h03-rsi-r14-t30",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 200
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "rsi.value"
+                    },
+                    {
+                      "const": 30
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 50
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.08
+            }
+          }
+        },
+        {
+          "point": "r14-t35",
+          "definitionHash": "a4bd1a5ea046684419a190cb46eccd6384ff605ce475f09e14ec882dae3526e0",
+          "definition": {
+            "dsl": "1",
+            "name": "h03-rsi-r14-t35",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 200
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "rsi.value"
+                    },
+                    {
+                      "const": 35
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "gt",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 50
+                }
+              ]
+            },
+            "stop": {
+              "type": "percent",
+              "pct": 0.08
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "h04",
+      "title": "Sıfır çizgisi üstünde MACD kesişimi",
+      "structureHash": "3f28291e2f958b27a50bfd2a81b24d62c95b6c18e8e16ef1403248e1f8f4ac2d",
+      "points": [
+        {
+          "point": "f8-s21-g6",
+          "definitionHash": "7decefe4e84d5fb7ba3457af8177785f555af0c218bc21447798ae70ccd8ba8f",
+          "definition": {
+            "dsl": "1",
+            "name": "h04-macd-f8-s21-g6",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 8,
+                  "slow": 21,
+                  "signal": 6
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "ref": "macd.signal"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.line"
+                },
+                {
+                  "ref": "macd.signal"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "f8-s21-g9",
+          "definitionHash": "4b2cd416924319a06b11bbe97e0f15db09d39061725e3edeb7abe744b1de60c6",
+          "definition": {
+            "dsl": "1",
+            "name": "h04-macd-f8-s21-g9",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 8,
+                  "slow": 21,
+                  "signal": 9
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "ref": "macd.signal"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.line"
+                },
+                {
+                  "ref": "macd.signal"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "f8-s21-g12",
+          "definitionHash": "353b4658d32384da2b27cf8431b6b8c215d8a62c4899e5744d81e16d25b7e464",
+          "definition": {
+            "dsl": "1",
+            "name": "h04-macd-f8-s21-g12",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 8,
+                  "slow": 21,
+                  "signal": 12
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "ref": "macd.signal"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.line"
+                },
+                {
+                  "ref": "macd.signal"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "f12-s26-g6",
+          "definitionHash": "42561f6f1da2c4cbbefa93167a7e534bda5093ded07be02f8cc722b809711112",
+          "definition": {
+            "dsl": "1",
+            "name": "h04-macd-f12-s26-g6",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 12,
+                  "slow": 26,
+                  "signal": 6
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "ref": "macd.signal"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.line"
+                },
+                {
+                  "ref": "macd.signal"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "f12-s26-g9",
+          "definitionHash": "e5b8112f899f24ff69eb1153c4e9c7e9b45876f9a17127d6106d71b987a12112",
+          "definition": {
+            "dsl": "1",
+            "name": "h04-macd-f12-s26-g9",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 12,
+                  "slow": 26,
+                  "signal": 9
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "ref": "macd.signal"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.line"
+                },
+                {
+                  "ref": "macd.signal"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "f12-s26-g12",
+          "definitionHash": "44382f29b407f29406ca27dd53e5025fd9b2748269e150d937657b92c4047aad",
+          "definition": {
+            "dsl": "1",
+            "name": "h04-macd-f12-s26-g12",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 12,
+                  "slow": 26,
+                  "signal": 12
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "ref": "macd.signal"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.line"
+                },
+                {
+                  "ref": "macd.signal"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "f19-s39-g6",
+          "definitionHash": "c8cd69ef1c7cdfd80bec7a550d0e2fa612f42bf1475dbc518cfc858c6880f284",
+          "definition": {
+            "dsl": "1",
+            "name": "h04-macd-f19-s39-g6",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 19,
+                  "slow": 39,
+                  "signal": 6
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "ref": "macd.signal"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.line"
+                },
+                {
+                  "ref": "macd.signal"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "f19-s39-g9",
+          "definitionHash": "7c7d3f2d8b770da82af847560a9674be5a86c4df5077c7f19f684c04aa82fc41",
+          "definition": {
+            "dsl": "1",
+            "name": "h04-macd-f19-s39-g9",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 19,
+                  "slow": 39,
+                  "signal": 9
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "ref": "macd.signal"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.line"
+                },
+                {
+                  "ref": "macd.signal"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "f19-s39-g12",
+          "definitionHash": "21269213e8376c7c976b0c85e12b592fe039e86f06ddd1210fbbb9bcc53a502f",
+          "definition": {
+            "dsl": "1",
+            "name": "h04-macd-f19-s39-g12",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 19,
+                  "slow": 39,
+                  "signal": 12
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "ref": "macd.signal"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "macd.line"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.line"
+                },
+                {
+                  "ref": "macd.signal"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "h05",
+      "title": "ADX filtreli trend",
+      "structureHash": "d5b82e1807fc9e884083e90387732689be3b7eec540e61fee6e50f8a5aab7481",
+      "points": [
+        {
+          "point": "t20-e50",
+          "definitionHash": "fe72f0d1322a5330b76cf1f7c20741ea9b8d159370199c60e8718326f95fd997",
+          "definition": {
+            "dsl": "1",
+            "name": "h05-adx-t20-e50",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "adx",
+                "type": "adx",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "trend",
+                "type": "ema",
+                "params": {
+                  "period": 50
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.adx"
+                    },
+                    {
+                      "const": 20
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.plus_di"
+                    },
+                    {
+                      "ref": "adx.minus_di"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "adx.plus_di"
+                },
+                {
+                  "ref": "adx.minus_di"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "t20-e100",
+          "definitionHash": "600dfc36397703f8b453ecde0c23ca0867aa3777d37170402a8888aafbf8cc0d",
+          "definition": {
+            "dsl": "1",
+            "name": "h05-adx-t20-e100",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "adx",
+                "type": "adx",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "trend",
+                "type": "ema",
+                "params": {
+                  "period": 100
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.adx"
+                    },
+                    {
+                      "const": 20
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.plus_di"
+                    },
+                    {
+                      "ref": "adx.minus_di"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "adx.plus_di"
+                },
+                {
+                  "ref": "adx.minus_di"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "t20-e200",
+          "definitionHash": "328047a3272b7e10af8134eb78ee2dd7e4e4c9c6706d448f5fe4fc416ab7dd61",
+          "definition": {
+            "dsl": "1",
+            "name": "h05-adx-t20-e200",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "adx",
+                "type": "adx",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "trend",
+                "type": "ema",
+                "params": {
+                  "period": 200
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.adx"
+                    },
+                    {
+                      "const": 20
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.plus_di"
+                    },
+                    {
+                      "ref": "adx.minus_di"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "adx.plus_di"
+                },
+                {
+                  "ref": "adx.minus_di"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "t25-e50",
+          "definitionHash": "14d5c1dc98fd021c62c634cf787e7f5ea832040c69dcf0e935608c80c41baa87",
+          "definition": {
+            "dsl": "1",
+            "name": "h05-adx-t25-e50",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "adx",
+                "type": "adx",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "trend",
+                "type": "ema",
+                "params": {
+                  "period": 50
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.adx"
+                    },
+                    {
+                      "const": 25
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.plus_di"
+                    },
+                    {
+                      "ref": "adx.minus_di"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "adx.plus_di"
+                },
+                {
+                  "ref": "adx.minus_di"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "t25-e100",
+          "definitionHash": "3de8db927d0af04231a56064e2a26770566ce515c27a8469a2fda689d2dc8351",
+          "definition": {
+            "dsl": "1",
+            "name": "h05-adx-t25-e100",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "adx",
+                "type": "adx",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "trend",
+                "type": "ema",
+                "params": {
+                  "period": 100
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.adx"
+                    },
+                    {
+                      "const": 25
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.plus_di"
+                    },
+                    {
+                      "ref": "adx.minus_di"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "adx.plus_di"
+                },
+                {
+                  "ref": "adx.minus_di"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "t25-e200",
+          "definitionHash": "78d03805b09ab81fa9873345b4b24cf8b4cc4bff6a23709a17104d10d9bbe17f",
+          "definition": {
+            "dsl": "1",
+            "name": "h05-adx-t25-e200",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "adx",
+                "type": "adx",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "trend",
+                "type": "ema",
+                "params": {
+                  "period": 200
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.adx"
+                    },
+                    {
+                      "const": 25
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.plus_di"
+                    },
+                    {
+                      "ref": "adx.minus_di"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "adx.plus_di"
+                },
+                {
+                  "ref": "adx.minus_di"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "t30-e50",
+          "definitionHash": "c63d6a7a260efc87ce43bbd4d897525af327ca83588174bba5051ab1dcc6231c",
+          "definition": {
+            "dsl": "1",
+            "name": "h05-adx-t30-e50",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "adx",
+                "type": "adx",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "trend",
+                "type": "ema",
+                "params": {
+                  "period": 50
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.adx"
+                    },
+                    {
+                      "const": 30
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.plus_di"
+                    },
+                    {
+                      "ref": "adx.minus_di"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "adx.plus_di"
+                },
+                {
+                  "ref": "adx.minus_di"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "t30-e100",
+          "definitionHash": "eb0e1fc7f3dd93b3574c0d3694170591cf52a3d714ec498a1ecb24921dadcc26",
+          "definition": {
+            "dsl": "1",
+            "name": "h05-adx-t30-e100",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "adx",
+                "type": "adx",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "trend",
+                "type": "ema",
+                "params": {
+                  "period": 100
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.adx"
+                    },
+                    {
+                      "const": 30
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.plus_di"
+                    },
+                    {
+                      "ref": "adx.minus_di"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "adx.plus_di"
+                },
+                {
+                  "ref": "adx.minus_di"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "t30-e200",
+          "definitionHash": "f0c8a268268afd51e3fff0d29699a965513b46e9840513e2a02024e02b439f99",
+          "definition": {
+            "dsl": "1",
+            "name": "h05-adx-t30-e200",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "adx",
+                "type": "adx",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "trend",
+                "type": "ema",
+                "params": {
+                  "period": 200
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.adx"
+                    },
+                    {
+                      "const": 30
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "adx.plus_di"
+                    },
+                    {
+                      "ref": "adx.minus_di"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "adx.plus_di"
+                },
+                {
+                  "ref": "adx.minus_di"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "h06",
+      "title": "Zaman serisi momentumu (ROC)",
+      "structureHash": "116370c16905b92cef0dd857d8167bf2ee7a62b779d5ee60161f8cc871cd93f7",
+      "points": [
+        {
+          "point": "n42-m2",
+          "definitionHash": "074275915fd94cc8320f33313d22d6579f73c0b4f467251dafd88f4bf0cf2e1e",
+          "definition": {
+            "dsl": "1",
+            "name": "h06-roc-n42-m2",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "roc",
+                "type": "roc",
+                "params": {
+                  "period": 42
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n42-m3",
+          "definitionHash": "dd12a57d226366e502d8ae2ecd66dffcb2e3bd8784cfac881ea32d986f28c173",
+          "definition": {
+            "dsl": "1",
+            "name": "h06-roc-n42-m3",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "roc",
+                "type": "roc",
+                "params": {
+                  "period": 42
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n42-m4",
+          "definitionHash": "7ff580e6f0321be8c2e86e1d9616bca7565ea1615f748e309b056eadee0ce4a5",
+          "definition": {
+            "dsl": "1",
+            "name": "h06-roc-n42-m4",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "roc",
+                "type": "roc",
+                "params": {
+                  "period": 42
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 4,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n90-m2",
+          "definitionHash": "040f6694f5dcff82d5503f3d961e22c419fa156832a66853be97dfd76894f2c8",
+          "definition": {
+            "dsl": "1",
+            "name": "h06-roc-n90-m2",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "roc",
+                "type": "roc",
+                "params": {
+                  "period": 90
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n90-m3",
+          "definitionHash": "5218b54f461eb362385b029a2caa8c2bc14ce909ba7cf3d120a4f19f6beffece",
+          "definition": {
+            "dsl": "1",
+            "name": "h06-roc-n90-m3",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "roc",
+                "type": "roc",
+                "params": {
+                  "period": 90
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n90-m4",
+          "definitionHash": "f1ba5fc614b3b9c5bed08d2ca21859807200e8f4e81d60f55e8833c1d4edb8bc",
+          "definition": {
+            "dsl": "1",
+            "name": "h06-roc-n90-m4",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "roc",
+                "type": "roc",
+                "params": {
+                  "period": 90
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 4,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n180-m2",
+          "definitionHash": "17f01d8154fd2db6059f45b46eb33379d3f27ddc3a48f0142dc5447c77181da9",
+          "definition": {
+            "dsl": "1",
+            "name": "h06-roc-n180-m2",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "roc",
+                "type": "roc",
+                "params": {
+                  "period": 180
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n180-m3",
+          "definitionHash": "9529ee309fc83cba65c9fc6af2489b5f809c4a317f7819c1ac09c72b6f64499c",
+          "definition": {
+            "dsl": "1",
+            "name": "h06-roc-n180-m3",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "roc",
+                "type": "roc",
+                "params": {
+                  "period": 180
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n180-m4",
+          "definitionHash": "33cf4e1d259ba77474663388a7330cb1fb2bd142fefef2be81ea2edd4144401f",
+          "definition": {
+            "dsl": "1",
+            "name": "h06-roc-n180-m4",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "roc",
+                "type": "roc",
+                "params": {
+                  "period": 180
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "roc.value"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 4,
+              "trailing": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "h07",
+      "title": "Hacim teyitli kırılım",
+      "structureHash": "c748433bded858287b5368dd982f6c35e1973e290e7d5a21d04e6c480c82f3df",
+      "points": [
+        {
+          "point": "n20-v1p5",
+          "definitionHash": "a7775733cb3358471f616c0123480a6fdd992253de7430ebc44a069087f3a8fe",
+          "definition": {
+            "dsl": "1",
+            "name": "h07-volbo-n20-v1p5",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc",
+                "type": "donchian",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "vol",
+                "type": "volume_sma",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "dc.upper"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "volume"
+                    },
+                    {
+                      "ref": "vol.value",
+                      "mult": 1.5
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "fast.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2.5,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n20-v2",
+          "definitionHash": "ec047ca0e81a9848078f56f75c6fc596cc52152fba34f92d97533423c819aeb9",
+          "definition": {
+            "dsl": "1",
+            "name": "h07-volbo-n20-v2",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc",
+                "type": "donchian",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "vol",
+                "type": "volume_sma",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "dc.upper"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "volume"
+                    },
+                    {
+                      "ref": "vol.value",
+                      "mult": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "fast.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2.5,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n20-v2p5",
+          "definitionHash": "0d0b8de803de5b1938e4416bffbe939645edf7954ccb36e353724b177d0a16c1",
+          "definition": {
+            "dsl": "1",
+            "name": "h07-volbo-n20-v2p5",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc",
+                "type": "donchian",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "vol",
+                "type": "volume_sma",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "dc.upper"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "volume"
+                    },
+                    {
+                      "ref": "vol.value",
+                      "mult": 2.5
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "fast.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2.5,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n50-v1p5",
+          "definitionHash": "1b8f7843fc0530ca53f87012279cafbfa3a4c66042d989f55b3597f38860a158",
+          "definition": {
+            "dsl": "1",
+            "name": "h07-volbo-n50-v1p5",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc",
+                "type": "donchian",
+                "params": {
+                  "period": 50
+                }
+              },
+              {
+                "id": "vol",
+                "type": "volume_sma",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "dc.upper"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "volume"
+                    },
+                    {
+                      "ref": "vol.value",
+                      "mult": 1.5
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "fast.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2.5,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n50-v2",
+          "definitionHash": "e58645ae4aa886f8d61efb14412dc32e7c1cd201cc7285836a8eb1cd566f4391",
+          "definition": {
+            "dsl": "1",
+            "name": "h07-volbo-n50-v2",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc",
+                "type": "donchian",
+                "params": {
+                  "period": 50
+                }
+              },
+              {
+                "id": "vol",
+                "type": "volume_sma",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "dc.upper"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "volume"
+                    },
+                    {
+                      "ref": "vol.value",
+                      "mult": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "fast.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2.5,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n50-v2p5",
+          "definitionHash": "a262a80048f9b32eb9cd143acf738b358b8bb91ed71d8be26fb38ba2bf3cc0e5",
+          "definition": {
+            "dsl": "1",
+            "name": "h07-volbo-n50-v2p5",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "dc",
+                "type": "donchian",
+                "params": {
+                  "period": 50
+                }
+              },
+              {
+                "id": "vol",
+                "type": "volume_sma",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "dc.upper"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "volume"
+                    },
+                    {
+                      "ref": "vol.value",
+                      "mult": 2.5
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "fast.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2.5,
+              "trailing": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "h08",
+      "title": "BTC rejim filtreli SMA trendi",
+      "structureHash": "069d64c8cb20bbb77b3fa54259bb5badd3e69acfd70dd2d499e5c79c78b5237c",
+      "points": [
+        {
+          "point": "n50-b100",
+          "definitionHash": "1cc348ec4cd9432f30f33300b83dfeceb6969bdb3555e6d5bac4eec8358127cd",
+          "definition": {
+            "dsl": "1",
+            "name": "h08-smabtc-n50-b100",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 50
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "sma",
+                "params": {
+                  "period": 100
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "trend.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n50-b200",
+          "definitionHash": "d404e8fe3bf1057d39ba9408034c8a34149e150478dd463e5f615477daf98f62",
+          "definition": {
+            "dsl": "1",
+            "name": "h08-smabtc-n50-b200",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 50
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "sma",
+                "params": {
+                  "period": 200
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "trend.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n50-b300",
+          "definitionHash": "820aa7285bc739fef8737ed68bebe316b55058b426ced9d230292ef256942281",
+          "definition": {
+            "dsl": "1",
+            "name": "h08-smabtc-n50-b300",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 50
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "sma",
+                "params": {
+                  "period": 300
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "trend.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n100-b100",
+          "definitionHash": "2d84e33d740c2b267a843c00ee8471c112309a676aa44fb91d808dfaaba043b4",
+          "definition": {
+            "dsl": "1",
+            "name": "h08-smabtc-n100-b100",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 100
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "sma",
+                "params": {
+                  "period": 100
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "trend.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n100-b200",
+          "definitionHash": "b86248136096ba0273c0d527ef5d658968c653ac66068edac71a8d3b0d5fc09d",
+          "definition": {
+            "dsl": "1",
+            "name": "h08-smabtc-n100-b200",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 100
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "sma",
+                "params": {
+                  "period": 200
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "trend.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n100-b300",
+          "definitionHash": "bba7417a96a976069e89c6cb415344a5353a3b9a94f71c1a58128ad3799e383d",
+          "definition": {
+            "dsl": "1",
+            "name": "h08-smabtc-n100-b300",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 100
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "sma",
+                "params": {
+                  "period": 300
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "trend.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n150-b100",
+          "definitionHash": "0a894101c39a6f744d57dc9bfd01790c542bf9dedeaedfd69927071d24dbc0ab",
+          "definition": {
+            "dsl": "1",
+            "name": "h08-smabtc-n150-b100",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 150
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "sma",
+                "params": {
+                  "period": 100
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "trend.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n150-b200",
+          "definitionHash": "45475c8853883e61186917ccc56904ac80c91fe2bd83afa12ed6e86b161df481",
+          "definition": {
+            "dsl": "1",
+            "name": "h08-smabtc-n150-b200",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 150
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "sma",
+                "params": {
+                  "period": 200
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "trend.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "n150-b300",
+          "definitionHash": "e34a7b626331a6e34885109ab2901c8211ec8272b9d4bd0f55cec5d0dfe90a8a",
+          "definition": {
+            "dsl": "1",
+            "name": "h08-smabtc-n150-b300",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "trend",
+                "type": "sma",
+                "params": {
+                  "period": 150
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "sma",
+                "params": {
+                  "period": 300
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "trend.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "trend.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "h09",
+      "title": "Bollinger sıkışma kırılımı",
+      "structureHash": "00e92516c59adce43992ea4fa1054db2c29e2deccf8a2112d5452551ef65da51",
+      "points": [
+        {
+          "point": "w0p08-k1p5",
+          "definitionHash": "d27010ec62f0db09e83dee19674ad85fe029c672195e47d61ac61d3b135fd115",
+          "definition": {
+            "dsl": "1",
+            "name": "h09-squeeze-w0p08-k1p5",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 20,
+                  "k": 1.5
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "bb.bandwidth",
+                      "lag": 1
+                    },
+                    {
+                      "const": 0.08
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "bb.upper"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2.5,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "w0p08-k2",
+          "definitionHash": "e7327a8e4e4c63b7c39d444630b749e7fa43f893f1537e7522488524c3e5340a",
+          "definition": {
+            "dsl": "1",
+            "name": "h09-squeeze-w0p08-k2",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 20,
+                  "k": 2
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "bb.bandwidth",
+                      "lag": 1
+                    },
+                    {
+                      "const": 0.08
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "bb.upper"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2.5,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "w0p12-k1p5",
+          "definitionHash": "909162403f7a03a6a52312a931274bbe10491ad0f2752c5199b04d0ff1e6ada4",
+          "definition": {
+            "dsl": "1",
+            "name": "h09-squeeze-w0p12-k1p5",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 20,
+                  "k": 1.5
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "bb.bandwidth",
+                      "lag": 1
+                    },
+                    {
+                      "const": 0.12
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "bb.upper"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2.5,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "w0p12-k2",
+          "definitionHash": "4bb1af57b86b460113ff531a1be86fa874800556358c3f7fd109ae1d04db8c54",
+          "definition": {
+            "dsl": "1",
+            "name": "h09-squeeze-w0p12-k2",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 20,
+                  "k": 2
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "bb.bandwidth",
+                      "lag": 1
+                    },
+                    {
+                      "const": 0.12
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "bb.upper"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2.5,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "w0p16-k1p5",
+          "definitionHash": "7cd56cb95c5da62994b185de6846f5a42084505dea0a4d11f218bebba78783f8",
+          "definition": {
+            "dsl": "1",
+            "name": "h09-squeeze-w0p16-k1p5",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 20,
+                  "k": 1.5
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "bb.bandwidth",
+                      "lag": 1
+                    },
+                    {
+                      "const": 0.16
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "bb.upper"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2.5,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "w0p16-k2",
+          "definitionHash": "fccfd5d63480ad8c3f5c73701a546a9b9d5646167b6e264e2d88d5afb7cc3c43",
+          "definition": {
+            "dsl": "1",
+            "name": "h09-squeeze-w0p16-k2",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "bb",
+                "type": "bollinger",
+                "params": {
+                  "period": 20,
+                  "k": 2
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "lt",
+                  "args": [
+                    {
+                      "ref": "bb.bandwidth",
+                      "lag": 1
+                    },
+                    {
+                      "const": 0.16
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "bb.upper"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "bb.middle"
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 2.5,
+              "trailing": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "h10",
+      "title": "EMA trendinde geri çekilme sonrası giriş",
+      "structureHash": "8deadd9d50725430e221be09691aeed4dc0d1c7b1e2c1b6cf05f170a42af8dc9",
+      "points": [
+        {
+          "point": "f10-s80",
+          "definitionHash": "00d514830b7448d6264f7e4396ca64fe5b1e861859757ae7541daedbc2f2448b",
+          "definition": {
+            "dsl": "1",
+            "name": "h10-pullback-f10-s80",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 10
+                }
+              },
+              {
+                "id": "slow",
+                "type": "ema",
+                "params": {
+                  "period": 80
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "fast.value"
+                    },
+                    {
+                      "ref": "slow.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "fast.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "slow.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "indicator",
+              "ref": "slow.value",
+              "trailing": true
+            }
+          }
+        },
+        {
+          "point": "f10-s120",
+          "definitionHash": "a62c07822e677022ce969bb57f0bfc167e140951b044d9a149f01359afa312c0",
+          "definition": {
+            "dsl": "1",
+            "name": "h10-pullback-f10-s120",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 10
+                }
+              },
+              {
+                "id": "slow",
+                "type": "ema",
+                "params": {
+                  "period": 120
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "fast.value"
+                    },
+                    {
+                      "ref": "slow.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "fast.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "slow.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "indicator",
+              "ref": "slow.value",
+              "trailing": true
+            }
+          }
+        },
+        {
+          "point": "f10-s200",
+          "definitionHash": "cc5bc0928a3299700232f2d9af0bbac3184c0f83d3a607a21ea76c3eb7aa5ec0",
+          "definition": {
+            "dsl": "1",
+            "name": "h10-pullback-f10-s200",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 10
+                }
+              },
+              {
+                "id": "slow",
+                "type": "ema",
+                "params": {
+                  "period": 200
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "fast.value"
+                    },
+                    {
+                      "ref": "slow.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "fast.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "slow.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "indicator",
+              "ref": "slow.value",
+              "trailing": true
+            }
+          }
+        },
+        {
+          "point": "f20-s80",
+          "definitionHash": "b90584988a90047bf0eff021a788b23a510a8b8c2412f606f115523b9e4c1bdf",
+          "definition": {
+            "dsl": "1",
+            "name": "h10-pullback-f20-s80",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "slow",
+                "type": "ema",
+                "params": {
+                  "period": 80
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "fast.value"
+                    },
+                    {
+                      "ref": "slow.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "fast.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "slow.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "indicator",
+              "ref": "slow.value",
+              "trailing": true
+            }
+          }
+        },
+        {
+          "point": "f20-s120",
+          "definitionHash": "0e127da023c5062d6741e2374cc122ae9564731e0b4d1e4d109c6255c743ae19",
+          "definition": {
+            "dsl": "1",
+            "name": "h10-pullback-f20-s120",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "slow",
+                "type": "ema",
+                "params": {
+                  "period": 120
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "fast.value"
+                    },
+                    {
+                      "ref": "slow.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "fast.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "slow.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "indicator",
+              "ref": "slow.value",
+              "trailing": true
+            }
+          }
+        },
+        {
+          "point": "f20-s200",
+          "definitionHash": "70bca752dd4b0e3eb1f817edaeb80c1e01694a30c30c23a76f0451df25e87960",
+          "definition": {
+            "dsl": "1",
+            "name": "h10-pullback-f20-s200",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 20
+                }
+              },
+              {
+                "id": "slow",
+                "type": "ema",
+                "params": {
+                  "period": 200
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "fast.value"
+                    },
+                    {
+                      "ref": "slow.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "fast.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "slow.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "indicator",
+              "ref": "slow.value",
+              "trailing": true
+            }
+          }
+        },
+        {
+          "point": "f30-s80",
+          "definitionHash": "d177f95ecdc03cee99f169a82d32054d0cd9deee3e592590c7c72e3879fe3908",
+          "definition": {
+            "dsl": "1",
+            "name": "h10-pullback-f30-s80",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 30
+                }
+              },
+              {
+                "id": "slow",
+                "type": "ema",
+                "params": {
+                  "period": 80
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "fast.value"
+                    },
+                    {
+                      "ref": "slow.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "fast.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "slow.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "indicator",
+              "ref": "slow.value",
+              "trailing": true
+            }
+          }
+        },
+        {
+          "point": "f30-s120",
+          "definitionHash": "37ad4af198f74eb61a097da725b0e33d65affee372998f3c1bf9fda900943979",
+          "definition": {
+            "dsl": "1",
+            "name": "h10-pullback-f30-s120",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 30
+                }
+              },
+              {
+                "id": "slow",
+                "type": "ema",
+                "params": {
+                  "period": 120
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "fast.value"
+                    },
+                    {
+                      "ref": "slow.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "fast.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "slow.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "indicator",
+              "ref": "slow.value",
+              "trailing": true
+            }
+          }
+        },
+        {
+          "point": "f30-s200",
+          "definitionHash": "64cfdba2efd7667a22c82db7047e4bdc9394acb70dc7aa763121918d719f8c4c",
+          "definition": {
+            "dsl": "1",
+            "name": "h10-pullback-f30-s200",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "fast",
+                "type": "ema",
+                "params": {
+                  "period": 30
+                }
+              },
+              {
+                "id": "slow",
+                "type": "ema",
+                "params": {
+                  "period": 200
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "ref": "fast.value"
+                    },
+                    {
+                      "ref": "slow.value"
+                    }
+                  ]
+                },
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "price": "close"
+                    },
+                    {
+                      "ref": "fast.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "lt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "slow.value"
+                }
+              ]
+            },
+            "stop": {
+              "type": "indicator",
+              "ref": "slow.value",
+              "trailing": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "h11",
+      "title": "RSI momentumu",
+      "structureHash": "21ccbdd5c7d3cc826fcdc67df4961b18b013181d2a29adf63a0b472dbbcab056",
+      "points": [
+        {
+          "point": "r14-t55",
+          "definitionHash": "c710e7cf5736a4b58deab5be084ad4b5e846015579026da0b3f8030483bd70ae",
+          "definition": {
+            "dsl": "1",
+            "name": "h11-rsimom-r14-t55",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 55
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 45
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "r14-t60",
+          "definitionHash": "9d7a1b0493ca8243d9b6b689167b5ed33b498bbb742cc6f660bbce3be65a493e",
+          "definition": {
+            "dsl": "1",
+            "name": "h11-rsimom-r14-t60",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 60
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 45
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "r14-t65",
+          "definitionHash": "ba17ac062a9b64a6d8cce177521773a45542201cea3c570570653101b542f549",
+          "definition": {
+            "dsl": "1",
+            "name": "h11-rsimom-r14-t65",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 14
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 65
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 45
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "r21-t55",
+          "definitionHash": "796f5536f5fe17161dbb3c39b78a5114186920a400a1215e0784e532e6bc41e4",
+          "definition": {
+            "dsl": "1",
+            "name": "h11-rsimom-r21-t55",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 21
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 55
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 45
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "r21-t60",
+          "definitionHash": "6bc51978b6253f2bdf80e43ed0e5097dfe893b0a1a14b2b29b86572cea446636",
+          "definition": {
+            "dsl": "1",
+            "name": "h11-rsimom-r21-t60",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 21
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 60
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 45
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "r21-t65",
+          "definitionHash": "0c0038f515b7956f7f8a3960ff909c79db7aa528e142259c272dfa73afef05d9",
+          "definition": {
+            "dsl": "1",
+            "name": "h11-rsimom-r21-t65",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "rsi",
+                "type": "rsi",
+                "params": {
+                  "period": 21
+                }
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 65
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "rsi.value"
+                },
+                {
+                  "const": 45
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "h12",
+      "title": "BTC rejim filtreli MACD histogramı",
+      "structureHash": "873b68c6fbfe311f39f05a052f895d7b662afb6817b1d171951d66815533db64",
+      "points": [
+        {
+          "point": "f8-s21-b100",
+          "definitionHash": "c814ca7a3177ff993c2f6ab8adc5824be9e7ebd47db9d4e39b658fa8db920d0f",
+          "definition": {
+            "dsl": "1",
+            "name": "h12-histbtc-f8-s21-b100",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 8,
+                  "slow": 21,
+                  "signal": 9
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "ema",
+                "params": {
+                  "period": 100
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.hist"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.hist"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "f8-s21-b200",
+          "definitionHash": "4e331c604c17375a363d5eb966144dd90fdc7e78d2aa5c7715d8bd92941d7966",
+          "definition": {
+            "dsl": "1",
+            "name": "h12-histbtc-f8-s21-b200",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 8,
+                  "slow": 21,
+                  "signal": 9
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "ema",
+                "params": {
+                  "period": 200
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.hist"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.hist"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "f12-s26-b100",
+          "definitionHash": "2c40b9a39bd631d156399822ed80eb72adf0926fc435760cf1a8f82b330e89ed",
+          "definition": {
+            "dsl": "1",
+            "name": "h12-histbtc-f12-s26-b100",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 12,
+                  "slow": 26,
+                  "signal": 9
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "ema",
+                "params": {
+                  "period": 100
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.hist"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.hist"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "f12-s26-b200",
+          "definitionHash": "d9d43c9a55cdf988d6a0a5cb448f01f0824f2d68e6cdb906708059a758809f96",
+          "definition": {
+            "dsl": "1",
+            "name": "h12-histbtc-f12-s26-b200",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 12,
+                  "slow": 26,
+                  "signal": 9
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "ema",
+                "params": {
+                  "period": 200
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.hist"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.hist"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "f19-s39-b100",
+          "definitionHash": "af9e4dd4035a842eae7db7054452f621e0ad3373ac831fcf44aae3b95cc6ba3b",
+          "definition": {
+            "dsl": "1",
+            "name": "h12-histbtc-f19-s39-b100",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 19,
+                  "slow": 39,
+                  "signal": 9
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "ema",
+                "params": {
+                  "period": 100
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.hist"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.hist"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        },
+        {
+          "point": "f19-s39-b200",
+          "definitionHash": "b686df04de2d8a6540fa7f7a8e6ec2ed835e5224925e0b04f9a028a7f324418a",
+          "definition": {
+            "dsl": "1",
+            "name": "h12-histbtc-f19-s39-b200",
+            "interval": "4h",
+            "indicators": [
+              {
+                "id": "macd",
+                "type": "macd",
+                "params": {
+                  "fast": 19,
+                  "slow": 39,
+                  "signal": 9
+                }
+              },
+              {
+                "id": "btc_trend",
+                "type": "ema",
+                "params": {
+                  "period": 200
+                },
+                "source": "btc"
+              },
+              {
+                "id": "atr",
+                "type": "atr",
+                "params": {
+                  "period": 14
+                }
+              }
+            ],
+            "entry": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "cross_above",
+                  "args": [
+                    {
+                      "ref": "macd.hist"
+                    },
+                    {
+                      "const": 0
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "price": "close",
+                      "source": "btc"
+                    },
+                    {
+                      "ref": "btc_trend.value"
+                    }
+                  ]
+                }
+              ]
+            },
+            "exit": {
+              "op": "cross_below",
+              "args": [
+                {
+                  "ref": "macd.hist"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            },
+            "stop": {
+              "type": "atr",
+              "ref": "atr.value",
+              "multiple": 3,
+              "trailing": false
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

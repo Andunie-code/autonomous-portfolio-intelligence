@@ -114,7 +114,12 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Registry'deki strateji sürümleri değiştirilemiyor; hash uyuşmazlığında Trading stratejiyi çalıştırmıyor (V14).
 - **Not:** Gerçek holdout verisi bu milestone'da hiçbir yere indirilmez.
 
-### M4 — ModelRouter, yeterlilik altyapısı ve Researcher (M)
+### M4 — ModelRouter, yeterlilik altyapısı ve Researcher (M) — başladı (2026-10-18, U)
+- **Kapılar (U):**
+  - **A:** M4 ön kaydı ([`m4-protocol.md`](m4-protocol.md) v1, [`m4-hypotheses.v1.json`](m4-hypotheses.v1.json)) ve ADR-0017; Gemini belgelerinin yeniden doğrulanması (`sources.md`, 2026-10-18).
+  - **B:** tüm çevrimdışı kod; sahte sağlayıcıyla §6.3 testleri ve Researcher sözleşme testi; gerçek veride (`< C`) 12 hipotezin ve 96 denemenin LLM'siz koşusu; `verify.ps1` yeşil; 0 USD harcama.
+  - **C (B1 gerekli):** gerçek Gemini spike'ı, pilot, HypothesisGeneration ön kaydı ve yeterlilik koşusu, mutabakat raporu. Tüm çağrılar kullanıcının etkileşimli koşusudur.
+- **Kullanıcı kararları (2026-10-18):** LLM'siz koşuda global deneme sayacı ≤ 100; hipotezleri Claude Code önerir, kullanıcı onaylar (köken `dev-assisted`/`grid`, kontaminasyon bayrağı).
 - **Ön koşul:** **B1** (kredinin ücretli katmana uygulanması). Gemini fiyatları, rate limit'leri ve SDK yeniden doğrulanır ve `sources.md` güncellenir. Altyapı işi B1 olmadan başlayabilir; yalnızca yeterlilik koşusu B1'i bekler.
 - **Kapsam:**
   - `IAiProvider` ve `GeminiProvider`; `ModelRouter` ve görev politikaları.

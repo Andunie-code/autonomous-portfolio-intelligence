@@ -2,6 +2,31 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-18 — M4 başlangıcı ve Kapı A (ön kayıt; kullanıcı onaylı)
+- **Kapı A onayı (U, 2026-10-18):** protokol v1, hipotez listesi (liste hash'i `89ab3965…`), ADR-0017, kontaminasyon kaydı ve `sources.md` güncellemesi onaylandı. Commit'ten önce `verify.ps1` yeşildi (273 test).
+- **Kullanıcı kararları (U):**
+  - M4 başlatıldı. Kapılar: A = belgeler; B = çevrimdışı kod, testler ve gerçek veride LLM'siz koşu; C = gerçek Gemini (B1 gerekli).
+  - LLM'siz koşuda global deneme sayacı ≤ 100.
+  - Hipotezleri Claude Code önerir, kullanıcı onaylar.
+- **Ön kayıt (T):** `docs/m4-protocol.md` v1 ve `docs/m4-hypotheses.v1.json`.
+  - 12 hipotez ve 96 grid noktası (liste hash'i `89ab3965…`). Deneme sayacı 2 → 98; G6'da N = 98.
+  - Aday: grid'de `M_R`'si en yüksek nokta. G3: 2023–2025 için ankore genişleyen pencere. Kapılar `no-halt` koşusunda, v2 eşikleriyle.
+  - Köken `dev-assisted`/`grid`; bilgi kesimi 2026-06, tanısal pencereyle çakışma bayrağı.
+  - Tanımlar yalnızca `DslParser` ve `DslValidator` ile doğrulandı. `R` üzerinde hiçbir koşu yapılmadı.
+- **Yeni ADR-0017:**
+  - Projeler: Ai, Ai.Gemini, Researcher ve AiCli.
+  - SDK ile enjekte edilen `HttpClient` (host guard'ı, çevrimdışı testler); SDK retry'ı kapalı.
+  - `Production` ve `Qualification` router modları.
+  - Append-only kill switch ve ledger (migration 0006), `TimeProvider`.
+  - Gerçek çağrılar yalnızca `--allow-network` ile, etkileşimli olarak.
+- **`sources.md`, Gemini bölümünün 2026-10-18 doğrulaması:**
+  - Fiyatlar değişmedi; thinking token'larının çıktı fiyatına dahil olduğu doğrulandı.
+  - Tier limitleri ve proje başına uygulama.
+  - Ücretli katmanın veri kullanımı.
+  - `Google.GenAI` 1.26.1 ve API yüzeyi (`HttpClientFactory`, `CancellationToken`, `UsageMetadata`, `ModelVersion`).
+  - Structured output ile tool'ların birlikte kullanımı hâlâ önizlemede ve 3.5 için belirtilmemiş.
+- ADR-0007 ve ADR-0010'a not; `roadmap.md` M4 kapıları.
+
 ## 2026-10-16 — M3 Kapı D: Kohort 0 ve M3 kapanışı
 - **Dev DB:** migration 0004 ve 0005 uygulandı (`scripts/dev-up.ps1`).
 - **Kohort 0 manifestosu** (`scripts/m3-cohort0.ps1`, yalnızca `R`):

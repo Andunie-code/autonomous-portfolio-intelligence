@@ -1,6 +1,6 @@
 # Doğrulanmış Harici Bilgiler
 
-Son güncelleme: 2026-10-13
+Son güncelleme: 2026-10-18
 
 Bu belgedeki bilgiler, aksi belirtilmedikçe, belirtilen tarihte resmi kaynaktan okunmuştur. Fiyatlar, limitler ve şartlar değişebilir. Her bilgi, ilgili milestone başlamadan önce yeniden doğrulanır.
 
@@ -19,21 +19,25 @@ Bu belgedeki bilgiler, aksi belirtilmedikçe, belirtilen tarihte resmi kaynaktan
 
 **Doğrulanamayanlar (varsayım):** Testnet'in sıfırlanma sıklığı; Testnet emir defterinin ve likiditesinin gerçek piyasayı temsil etmediği (yaygın bilgi, resmi dokümanda bulunamadı).
 
-## Google Gemini (doğrulama tarihi: 2026-10-12)
+## Google Gemini (ilk doğrulama: 2026-10-12; M4 öncesi yeniden doğrulama: 2026-10-18)
+Yalnızca resmi belge sayfaları okundu; API çağrısı yapılmadı.
+
 | ID | Bilgi | Kaynak |
 |---|---|---|
-| S-G1 | `gemini-3.5-flash-lite` Stable. Girdi limiti 1.048.576 token, çıktı limiti 65.536 token. Desteklenenler: structured outputs, function calling, search grounding, URL context, code execution, thinking, caching, Batch API | https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite · https://ai.google.dev/gemini-api/docs/models |
-| S-G2 | Fiyat (1M token başına): girdi 0,30 $, çıktı 2,50 $; Batch ve Flex: 0,15 $ / 1,25 $; context caching 0,03 $ + saatlik 1,00 $ depolama. Ücretsiz katman mevcut. Fiyat sayfası 2027 için caching fiyat artışlarından söz ediyor (detayları alınmadı) | https://ai.google.dev/gemini-api/docs/pricing |
-| S-G3 | Google Search grounding (Gemini 3.5 ve 3.1 Flash-Lite): ücretsiz katmanda **yok**. Ücretli katmanda Gemini 3+ modelleri arasında paylaşılan aylık 5.000 ücretsiz sorgu, sonrası 1.000 sorgu başına 14 $. Gemini 3+ modellerinde faturalama sorgu başına yapılır. URL context aracı ücretsizdir ama getirilen içerik girdi token'ı olarak faturalanır | pricing · https://ai.google.dev/gemini-api/docs/google-search |
-| S-G4 | Ücretsiz katmanın RPM, TPM ve RPD değerleri dokümanda listelenmiyor; AI Studio'dan okunmalı. Tier 1 için faturalama hesabı gerekir; 250 $ fatura tavanı ve 10 dakikada 10 $ harcama limiti var. Limitler API anahtarı başına değil proje başına uygulanır | https://ai.google.dev/gemini-api/docs/rate-limits |
-| S-G5 | Şartlar: ücretsiz katmanda gönderilen içerik ürünleri geliştirmek için kullanılır ve insanlar tarafından incelenebilir; ücretli katmanda kullanılmaz. Google Search grounding: Search Suggestions son kullanıcıya gösterilmelidir; saklama belirli amaçlarla sınırlıdır; "train on, or otherwise learn from" yasaktır; grounding verisi 30 gün saklanır. Hizmet finansal tavsiye için kullanılmamalıdır | https://ai.google.dev/gemini-api/terms |
-| S-G6 | Resmi .NET SDK'sı: `Google.GenAI`. GA ilanı "tüm desteklenen platformlar" için yapılmış, C# ayrıca anılmıyor | https://ai.google.dev/gemini-api/docs/libraries · https://googleapis.github.io/dotnet-genai/ |
-| S-G7 | Structured output ile tool'ların (Search, URL context, code execution, function calling) birlikte kullanımı "Gemini 3 serisi" için belirtilmiş; 3.5 ayrıca anılmıyor. Desteklenen JSON Schema bir alt küme; büyük veya derin şemalar reddedilebilir | https://ai.google.dev/gemini-api/docs/structured-output |
+| S-G1 | `gemini-3.5-flash-lite` Stable (sayfa güncellemesi 2026-07-30). Girdi limiti 1.048.576 token, çıktı limiti 65.536 token. Desteklenenler: structured outputs, function calling, Batch API, Flex ve Priority çıkarımı, context caching, thinking, search grounding, URL context, code execution, file search. Bilgi kesim tarihi ve kullanımdan kalkma tarihi sayfada yok | https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite · https://ai.google.dev/gemini-api/docs/models |
+| S-G2 | Ücretli katman fiyatı (1M token başına; sayfa güncellemesi 2026-10-16):<br>- Standart: girdi 0,30 $, çıktı **2,50 $ (thinking token'ları dahil)**.<br>- Batch ve Flex: 0,15 $ / 1,25 $.<br>- Priority: 0,54 $ / 4,50 $.<br>- Context caching yalnızca örtük: 0,03 $ + saat başına 1,00 $ depolama.<br>Ücretsiz katmanda girdi ve çıktı ücretsiz; caching ve grounding yok | https://ai.google.dev/gemini-api/docs/pricing |
+| S-G3 | Google Search grounding (Gemini 3.5 ve 3.1 Flash-Lite): ücretsiz katmanda **yok**. Ücretli katmanda Gemini 3+ modelleri arasında paylaşılan aylık 5.000 ücretsiz sorgu, sonrası 1.000 sorgu başına 14 $. Gemini 3+ modellerinde faturalama sorgu başına yapılır. URL context aracı ücretsizdir ama getirilen içerik girdi token'ı olarak faturalanır (2026-10-12; M7 öncesinde yeniden doğrulanacak) | pricing · https://ai.google.dev/gemini-api/docs/google-search |
+| S-G4 | Katmanlar (sayfa güncellemesi 2026-10-15):<br>- Tier 1: faturalama hesabı bağlanınca; 250 $ katman tavanı ve kayan 10 dakikada 10 $ harcama limiti.<br>- Tier 2: 100 $ ödeme ve ilk ödemeden 3 gün sonra; 2.000 $ / 50 $.<br>- Tier 3: 1.000 $ ödeme ve 30 gün; 200 $.<br>Limitler API anahtarı başına değil **proje başına** uygulanır; harcama limitine ulaşılınca 429 `RESOURCE_EXHAUSTED` döner; uygulanması fatura geçmişine bağlı. Ücretsiz katmanın RPM/TPM/RPD değerleri AI Studio'dan okunmalı | https://ai.google.dev/gemini-api/docs/rate-limits |
+| S-G5 | Şartlar (sayfa güncellemesi 2026-04-28, yürürlük 2026-03-23):<br>- Ücretsiz katman: gönderilen içerik ve yanıtlar ürün geliştirmede kullanılır; hesaptan ayrıştırıldıktan sonra insanlar tarafından okunabilir; hassas bilgi gönderilmemelidir.<br>- Ücretli katman: içerik ürün geliştirmede kullanılmaz; DPA kapsamında, yalnızca kötüye kullanım tespiti ve yasal yükümlülükler için sınırlı süre loglanır.<br>- Hizmete finansal tavsiye için güvenilmemelidir.<br>Grounding koşulları: 2026-10-12 kaydı geçerli (M7 öncesinde yeniden doğrulanacak) | https://ai.google.dev/gemini-api/terms |
+| S-G6 | Resmi .NET SDK'sı `Google.GenAI` (NuGet). En yeni kararlı sürüm 1.26.1 (2026-10-14); önceki sürümler 1.26.0 (10-13), 1.25.0 (10-07), 1.24.0 (10-01), 1.23.0 (09-30). Hedefler: net8.0, netstandard2.0. net8.0 bağımlılıkları: `Google.Apis.Auth` ≥ 1.69.0, `Microsoft.Extensions.AI.Abstractions` ≥ 10.6.0, `MimeTypes` ≥ 2.5.2, `System.Text.Json` ≥ 10.0.8. API referansında doğrulananlar:<br>- `Client(…, HttpOptions? httpOptions, ClientOptions? clientOptions)`;<br>- `ClientOptions.HttpClientFactory` (`Func<HttpClient>`);<br>- `HttpOptions` alanları: `BaseUrl`, `ApiVersion`, `Headers`, `RetryOptions`, `Timeout` (ms);<br>- `Models.GenerateContentAsync(model, contents, config, CancellationToken)`;<br>- yanıt alanları: `ModelVersion`, `ResponseId`, `PromptFeedback`, `UsageMetadata` (`PromptTokenCount`, `CandidatesTokenCount`, `ThoughtsTokenCount`, `ToolUsePromptTokenCount`, `CachedContentTokenCount`, `TotalTokenCount`);<br>- `client.Batches` ile oluşturma, sorgulama, iptal, listeleme ve silme | https://googleapis.github.io/dotnet-genai/ · https://googleapis.github.io/dotnet-genai/api/index.html · https://www.nuget.org/packages/Google.GenAI |
+| S-G7 | Structured output ile tool'ların birlikte kullanımı **önizleme** durumunda ve "yalnızca Gemini 3 serisi" için belirtilmiş; 3.5 ayrıca anılmıyor (sayfa güncellemesi 2026-10-13). Desteklenen JSON Schema alt kümesi:<br>- object: `properties`, `required`, `additionalProperties`;<br>- string: `enum`, `format`;<br>- sayı: `enum`, `minimum`, `maximum`;<br>- array: `items`, `prefixItems`, `minItems`, `maxItems`.<br>Örneklerde `$ref` ve `anyOf` kullanılıyor ama desteklendikleri açıkça yazılmıyor. Sayısal derinlik veya boyut sınırı belgelenmemiş: "çok büyük ya da derin şemalar reddedilebilir" | https://ai.google.dev/gemini-api/docs/structured-output |
 
 **Doğrulanacaklar (varsayım):**
-- Structured output ve function calling'in `gemini-3.5-flash-lite` üzerinde birlikte çalışması (M4 spike'ında).
+- Structured output ile function calling'in `gemini-3.5-flash-lite` üzerinde birlikte çalışması (M4 Kapı C spike'ı).
+- `ModelVersion` alanının biçimi ve yapılandırılmış model adıyla eşleşmesi (spike).
+- `ClientOptions.HttpClientFactory` ile enjekte edilen istemcinin tüm çağrılarda kullanılması ve SDK retry'ının kapatılabilmesi (Kapı B, çevrimdışı testle).
 - Ücretsiz katmanın gerçek limitleri (AI Studio'dan).
-- Thinking token'larının çıktı fiyatından faturalanıp faturalanmadığı.
+- ~~Thinking token'larının çıktı fiyatından faturalanıp faturalanmadığı~~ — **doğrulandı** (S-G2, 2026-10-18: çıktı fiyatına dahil).
 
 **Gemini kredisi (kullanıcı beyanı, 2026-10-13):** 12.000 TL Gemini kredisi mevcut. Kredinin Gemini API ücretli katmanına uygulanıp uygulanmadığı, kapsamı ve son kullanma tarihi **doğrulanmadı** (M4 öncesinde). Kredi bir finansman kaynağıdır, harcama onayı değildir (D4).
 

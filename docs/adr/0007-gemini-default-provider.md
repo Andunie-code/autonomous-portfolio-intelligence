@@ -31,3 +31,4 @@ Tek sağlayıcıyla sağlayıcılar arası fallback, karmaşıklık katıp kalit
 - 2026-10-12: Gemini varsayılan sağlayıcı.
 - 2026-10-13 (rev. 2): Router, yeterlilik, D12 ve D13'ün geçici olması, D19.
 - 2026-10-13 (rev. 3): Sağlayıcılar arası fallback ve görev sınıfı başına aylık bütçe kaldırıldı. Harcama kontrolü ADR-0010'a taşındı.
+- 2026-10-18 (M4 Kapı A): Uygulama yapısı ADR-0017'de. `Google.GenAI`, `ClientOptions.HttpClientFactory` ile enjekte edilen `HttpClient`'ı kabul ettiği için resmi SDK ile devam ediliyor (S-G6, 2026-10-18). Kapı B'deki çevrimdışı testler bunu doğrulamazsa adapter doğrudan REST'e geçer ve bu ADR revize edilir.

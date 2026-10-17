@@ -1,7 +1,7 @@
 # ADR-0010: Model yeterliliği, harcama kontrolü ve LLM acil durdurma
 
 - Durum: Kabul edildi (teknik lider kararı T7–T10, T14) · Tarih: 2026-10-13
-- Uygulama durumu: **Planlandı, uygulanmadı**
+- Uygulama durumu: **Planlandı, uygulanmadı** (M4 Kapı B'de uygulanacak; yapı ADR-0017, HypothesisGeneration çerçevesi `m4-protocol.md` §8)
 - İlgili: ADR-0007, `architecture.md` §3, `testing-strategy.md` §6
 
 ## Problem ve kısıtlar
