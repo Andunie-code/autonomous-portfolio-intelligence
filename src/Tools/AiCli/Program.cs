@@ -15,6 +15,7 @@ using PortfolioIntelligence.Ai.Persistence;
 //   reconcile --month yyyy-MM [--invoice-try <amount> --usd-try <rate>] — monthly reconciliation report.
 //   spike --allow-network [--model <id>]  — Gate C only: synthetic technical spike against Gemini after confirmation.
 //   hg-pilot --allow-network [--design <path>] [--model <id>] — HypothesisGeneration pilot on synthetic items (no qualification).
+//   traces --job <id>                     — decision traces of a job: outcome, reason, validator results (no network).
 //   qualify-register --protocol <path>    — registers a committed, unchanged qualification protocol (no network).
 //   qualify --allow-network --protocol <path> — the qualification run through the harness (registered protocol only).
 //                                           Model: --model, else Gemini:Model (Gemini__Model), else the configured default;
@@ -137,6 +138,9 @@ switch (command)
 
         return await HgCommands.PilotAsync(configuration, RequireConnectionString(), call.ApiKey, call.Model, design, ReportsDirectory(), time);
     }
+
+    case "traces":
+        return await HgCommands.TracesAsync(RequireConnectionString(), RequireOption("--job"));
 
     case "qualify-register":
         return await HgCommands.RegisterAsync(RequireConnectionString(), RequireOption("--protocol"));

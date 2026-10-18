@@ -85,6 +85,29 @@ internal static class HgCommands
         return 0;
     }
 
+    /// <summary>Decision traces of one job (read-only): outcome, reason and validator results; no prompt or output text is stored.</summary>
+    public static async Task<int> TracesAsync(string connection, string jobId)
+    {
+        await using var db = new Npgsql.NpgsqlConnection(connection);
+        await db.OpenAsync();
+        await using var command = new Npgsql.NpgsqlCommand("""
+            SELECT at, outcome, degraded, calls, input_tokens, output_tokens, actual_usd, reason, validator_results::text, safety_violations::text
+            FROM ai.decision_traces WHERE job_id = $1 ORDER BY at
+            """, db);
+        command.Parameters.AddWithValue(jobId);
+        await using var reader = await command.ExecuteReaderAsync();
+        var i = 0;
+        while (await reader.ReadAsync())
+        {
+            Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                $"{++i,3} {reader.GetFieldValue<DateTimeOffset>(0):HH:mm:ss} {reader.GetString(1)}{(reader.GetBoolean(2) ? " DEGRADED" : "")} calls={reader.GetInt32(3)} tokens={reader.GetInt32(4)}/{reader.GetInt32(5)} " +
+                $"usd={reader.GetDecimal(6):0.000000} reason={(reader.IsDBNull(7) ? "-" : reader.GetString(7))} validators={reader.GetString(8)} safety={reader.GetString(9)}"));
+        }
+
+        Console.WriteLine($"{i} trace(s) for job {jobId}.");
+        return 0;
+    }
+
     /// <summary>Registers the protocol of a committed, unchanged protocol document (no network).</summary>
     public static async Task<int> RegisterAsync(string connection, string protocolPath)
     {
