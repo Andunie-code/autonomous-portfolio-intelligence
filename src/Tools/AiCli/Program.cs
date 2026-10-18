@@ -13,7 +13,9 @@ using PortfolioIntelligence.Ai.Persistence;
 //   killswitch clear --reason "<text>"    — manual clear: interactive terminal only, actor user:<name> (audited).
 //   ledger [--month yyyy-MM]              — spend summary at list prices.
 //   reconcile --month yyyy-MM [--invoice-try <amount> --usd-try <rate>] — monthly reconciliation report.
-//   spike --allow-network                 — Gate C only: synthetic technical spike against Gemini after confirmation.
+//   spike --allow-network [--model <id>]  — Gate C only: synthetic technical spike against Gemini after confirmation.
+//                                           Model: --model, else Gemini:Model (Gemini__Model), else the configured default;
+//                                           it must have a list price in ai.v1.json (no call without a price).
 // The API key is never printed; output contains metrics only.
 const string ConfirmationWord = "EVET";
 
@@ -123,7 +125,13 @@ switch (command)
             return 1;
         }
 
-        var model = configuration.Policy(TaskClass.Summary).Model!.Model;
+        var model = Option("--model") ?? host.Configuration["Gemini:Model"] ?? configuration.Policy(TaskClass.Summary).Model!.Model;
+        if (!configuration.Prices.Models.Any(p => p.Provider == GeminiProvider.ProviderName && p.Model == model))
+        {
+            Console.Error.WriteLine($"No verified list price for '{model}' in {configuration.Prices.Version}; add it from sources.md first. No call was made.");
+            return 1;
+        }
+
         var spikeCap = configuration.Spend.JobCap(JobKind.Spike);
         Console.Write($"Gate C spike: 5 synthetic scenarios against https://{GeminiGuardHandler.AllowedHost} with model {model}; " +
             $"job cap {spikeCap}, monthly cap {configuration.Spend.MonthlyCap}. Type {ConfirmationWord} to continue: ");
@@ -157,7 +165,7 @@ switch (command)
 
 static int Usage()
 {
-    Console.Error.WriteLine("Usage: killswitch status|trip|clear --reason <text> | ledger [--month yyyy-MM] | reconcile --month yyyy-MM [--invoice-try <x> --usd-try <rate>] | spike --allow-network");
+    Console.Error.WriteLine("Usage: killswitch status|trip|clear --reason <text> | ledger [--month yyyy-MM] | reconcile --month yyyy-MM [--invoice-try <x> --usd-try <rate>] | spike --allow-network [--model <id>]");
     return 1;
 }
 

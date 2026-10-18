@@ -84,8 +84,13 @@ public enum AiRole
 
 public sealed record AiToolCall(string Name, JsonObject Arguments);
 
-/// <summary>One conversation turn. History only grows by appending (architecture §3.1).</summary>
-public sealed record AiMessage(AiRole Role, string? Text, IReadOnlyList<AiToolCall>? ToolCalls = null, string? ToolName = null, string? ToolResultJson = null);
+/// <summary>
+/// One conversation turn. History only grows by appending (architecture §3.1). A model turn carries the provider's
+/// own content (<see cref="ProviderContent"/>, opaque) so the adapter can resend it exactly as received, e.g. thought
+/// blocks and their signatures; it is never interpreted outside the adapter and never used for decisions.
+/// </summary>
+public sealed record AiMessage(AiRole Role, string? Text, IReadOnlyList<AiToolCall>? ToolCalls = null, string? ToolName = null, string? ToolResultJson = null,
+    string? ProviderContent = null);
 
 public sealed record AiRequest(
     string Model,
@@ -108,7 +113,13 @@ public enum AiFinish
 /// <summary>Billed tokens. <see cref="OutputTokens"/> includes thinking tokens (S-G2: billed at the output price).</summary>
 public sealed record AiUsage(int InputTokens, int OutputTokens);
 
-public sealed record AiResponse(string ActualModel, string? Text, IReadOnlyList<AiToolCall> ToolCalls, AiFinish Finish, AiUsage Usage, string? ResponseId = null);
+/// <summary><see cref="Diagnostic"/>: provider finish and block details for logs and the spike (never used for decisions).</summary>
+public sealed record AiResponse(string ActualModel, string? Text, IReadOnlyList<AiToolCall> ToolCalls, AiFinish Finish, AiUsage Usage, string? ResponseId = null,
+    string? Diagnostic = null, string? ProviderContent = null)
+{
+    /// <summary>The model turn to append to the history: text, tool calls and the opaque provider content.</summary>
+    public AiMessage AsModelMessage() => new(AiRole.Model, Text, ToolCalls.Count > 0 ? ToolCalls : null, ProviderContent: ProviderContent);
+}
 
 public enum AiBatchState
 {

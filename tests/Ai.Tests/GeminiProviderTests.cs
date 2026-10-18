@@ -78,6 +78,96 @@ public class GeminiProviderTests
     }
 
     [Fact]
+    public async Task Model_turn_is_resent_exactly_as_received_with_thought_signatures()
+    {
+        var handler = new ScriptedHandler(
+            Json(HttpStatusCode.OK, """
+                {"candidates":[{"content":{"role":"model","parts":[{"text":"plan","thought":true,"thoughtSignature":"c2lnLXRob3VnaHQ="},{"functionCall":{"name":"lookup_constant","args":{"name":"alpha"}},"thoughtSignature":"c2lnLWNhbGw="}]},"finishReason":"STOP"}],
+                 "usageMetadata":{"promptTokenCount":1,"candidatesTokenCount":1},"modelVersion":"test-model-a"}
+                """),
+            Ok("""{"answer":"42"}"""));
+        using var provider = Provider(handler);
+
+        var first = await provider.GenerateAsync(Request, default);
+        var history = new List<AiMessage>(Request.Messages)
+        {
+            first.AsModelMessage(),
+            new(AiRole.Tool, null, ToolName: "lookup_constant", ToolResultJson: """{"value":42}"""),
+        };
+        await provider.GenerateAsync(Request with { Messages = history }, default);
+
+        Assert.Null(first.Text); // the thought text is never part of the answer
+        var resent = JsonNode.Parse(handler.Requests[1].Body)!["contents"]![1]!;
+        Assert.Equal("model", resent["role"]!.GetValue<string>());
+        var parts = resent["parts"]!.AsArray();
+        Assert.Equal("c2lnLXRob3VnaHQ=", parts[0]!["thoughtSignature"]!.GetValue<string>());
+        Assert.True(parts[0]!["thought"]!.GetValue<bool>());
+        Assert.Equal("c2lnLWNhbGw=", parts[1]!["thoughtSignature"]!.GetValue<string>());
+        Assert.Equal("lookup_constant", parts[1]!["functionCall"]!["name"]!.GetValue<string>());
+        Assert.Equal("lookup_constant", JsonNode.Parse(handler.Requests[1].Body)!["contents"]![2]!["parts"]![0]!["functionResponse"]!["name"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task Api_error_message_is_reported_with_the_key_masked()
+    {
+        var body = """{"error":{"code":400,"message":"API key not valid: """ + DummyKey + """ / AIzaSyA1234567890abcdefghijklmnopq","status":"INVALID_ARGUMENT"}}""";
+        using var provider = Provider(new ScriptedHandler(Json(HttpStatusCode.BadRequest, body)));
+
+        var error = await Assert.ThrowsAsync<AiProviderException>(() => provider.GenerateAsync(Request, default));
+
+        Assert.Contains("INVALID_ARGUMENT: API key not valid", error.Message);
+        Assert.DoesNotContain(DummyKey, error.Message);
+        Assert.DoesNotContain("AIzaSy", error.Message);
+    }
+
+    [Fact]
+    public async Task Schemas_are_sent_without_additional_properties_or_schema_keywords()
+    {
+        var handler = new ScriptedHandler(Ok("{}"));
+        var tools = new NeutralToolSet([new NeutralTool("lookup_constant", "test",
+            NeutralSchema.Parse("""{"type":"object","properties":{"name":{"type":"string","enum":["alpha"]}},"required":["name"],"additionalProperties":false}"""))]);
+        using var provider = Provider(handler);
+
+        await provider.GenerateAsync(Request with { Tools = tools }, default);
+
+        var body = handler.Requests.Single().Body;
+        Assert.DoesNotContain("additionalProperties", body);
+        Assert.DoesNotContain("$schema", body);
+        Assert.Contains("\"required\":[\"answer\"]", body.Replace(" ", ""));
+        Assert.Contains("lookup_constant", body);
+    }
+
+    [Fact]
+    public async Task Empty_answer_carries_the_finish_details()
+    {
+        var handler = new ScriptedHandler(Json(HttpStatusCode.OK, """
+            {"candidates":[{"content":{"role":"model"},"finishReason":"MAX_TOKENS","finishMessage":"limit"}],"usageMetadata":{"promptTokenCount":5,"thoughtsTokenCount":256},"modelVersion":"test-model-a"}
+            """));
+        using var provider = Provider(handler);
+
+        var response = await provider.GenerateAsync(Request, default);
+
+        Assert.Null(response.Text);
+        Assert.Equal(AiFinish.MaxTokens, response.Finish);
+        Assert.Contains("finishReason=MAX_TOKENS", response.Diagnostic);
+        Assert.Equal(256, response.Usage.OutputTokens);
+    }
+
+    [Fact]
+    public async Task Spike_observation_shows_why_a_call_failed()
+    {
+        var rig = new RouterRig();
+        for (var i = 0; i < 5; i++)
+        {
+            rig.Provider.Throws(400);
+        }
+
+        var results = await new SpikeRunner(rig.Guard, TestConfig.Model).RunAsync(new JobContext("spike-test", JobKind.Spike), default);
+
+        Assert.All(results, r => Assert.Contains("[call 1: Failed: HTTP 400", r.Observation));
+    }
+
+    [Fact]
     public async Task Blocked_prompt_is_a_refusal()
     {
         using var provider = Provider(new ScriptedHandler(Json(HttpStatusCode.OK, """{"promptFeedback":{"blockReason":"SAFETY"},"usageMetadata":{"promptTokenCount":4},"modelVersion":"test-model-a"}""")));

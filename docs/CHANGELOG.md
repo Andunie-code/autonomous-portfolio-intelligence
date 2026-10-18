@@ -2,6 +2,30 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-19 — M4 Kapı C: ilk spike denemesi ve teşhis iyileştirmeleri
+- **İlk spike (kullanıcının koşusu):** 5 senaryonun 5'i FAIL; maliyet 0 USD (ledger'da tüm çağrılar 0 ile settle edildi).
+  - `function-calling` senaryolarında HTTP 400 `INVALID_ARGUMENT` görüldü; diğerlerinde aynı başarısızlık "empty output" olarak raporlandı.
+  - Kök neden görülemedi, çünkü sağlayıcının hata mesajı ve başarısız çağrının nedeni rapora yazılmıyordu. Bu bir raporlama eksiğiydi; sonuç kaydedildi.
+- **Düzeltmeler (T):**
+  - `GeminiGuardHandler`, başarısız yanıtın `error.status` ve `error.message` alanlarını alıyor (500 karaktere kısaltılmış). Mesajdaki API anahtarı ve `AIza…` biçimli değerler maskeleniyor.
+  - Yanıtlar `Diagnostic` alanı taşıyor (`finishReason`, `blockReason`, parça sayısı).
+  - Spike gözlemine her çağrının başarısızlık nedeni ya da tanı ayrıntısı ekleniyor.
+  - Gemini'ye gönderilen şemalardan `additionalProperties` çıkarılıyor; `$schema` hiç gönderilmiyor. Bilinmeyen alan kontrolünü yerel validator yapmaya devam ediyor; şema dışı çıktı kabul edilmiyor.
+  - `spike --model <id>` ya da `Gemini__Model`: yalnızca fiyat tablosunda bulunan bir model seçilebilir. `gemini-3.8-flash` eklendi (S-G9); varsayılan model değişmedi.
+- `.env`'deki anahtar Claude Code tarafından kullanılmadı (CLAUDE.md: `.env` okunmaz; deny kuralı). Spike'ı kullanıcı çalıştırır.
+- `verify.ps1` yeşil: 398 test.
+
+## 2026-10-19 — M4 Kapı C başlangıcı: B1 kapandı, spike hazırlığı
+- **Kullanıcı kararları (U):**
+  - Kapı C başlatıldı.
+  - **B1 kapandı:** anahtar ücretli katmanda; bütçe ve harcama limitleri ile ayrı anahtar kuralı konsolda kontrol edildi.
+  - **Yeterlilik seti:** HypothesisGeneration pilot ve yeterlilik koşuları, `R` üzerindeki global deneme sayacını (98) şişirmemek için seed'li sentetik evrenlerde yapılacak. Yöntem, Kapı C ön kaydında (`m4-hg-qualification-protocol-v1.md`) gerekçesiyle belirlenir.
+- **Model (T):** `gemini-3.5-flash-lite` (D12'nin başlangıç modeli) değişmedi.
+  - Kullanıcı, `sources.md`'de doğrulanmış resmi kimliğin kullanılmasını istedi; doğrulanan kimlik budur (S-G1, S-G2).
+  - `gemini-4-argon` yalnızca structured output sayfasındaki bir örnekte geçiyor; fiyatı ve durumu doğrulanmadı. Model değişikliği ayrı doğrulama ve karar gerektirir.
+- **Adapter düzeltmesi (T, spike öncesi):** model turu (`ProviderContent`) sonraki istekte opak olarak, alındığı gibi geri gönderiliyor. Böylece thought blokları ve imzaları korunur (S-G8). Yeni çevrimdışı test eklendi.
+- `sources.md` S-G8: `max_output_tokens` thinking token'larını içerir; Flash-Lite'ta thinking varsayılan olarak minimal.
+
 ## 2026-10-18 — M4 Kapı B: çevrimdışı kod, testler ve LLM'siz koşu (kullanıcı kabulü, 2026-10-18)
 Ön kayıt `32cf7c5`'ten sonra. Gerçek AI API çağrısı yok (0 USD); gerçek holdout verisi yok; `≥ C` verisi yok.
 

@@ -141,7 +141,7 @@ Gerçek para ile işlem, futures/margin, birden fazla borsa, haber ve sentiment,
 ## 9. Kullanıcı kararı bekleyen engeller
 | # | Konu | Neyi engelliyor |
 |---|---|---|
-| B1 | 12.000 TL kredinin Gemini API **ücretli katmanına** uygulanıp uygulanmadığı (hesap konsolundan) | M4 yeterlilik testleri (T10) |
+| ~~B1~~ | ~~12.000 TL kredinin Gemini API ücretli katmanına uygulanıp uygulanmadığı~~ — **Kapandı (2026-10-19, U):** kullanıcı, anahtarın faturalandırma hesabı ve kredi tanımlı (ücretli katman) bir Google Cloud projesinde olduğunu; bütçe/harcama limitlerini ve ayrı anahtar kuralını konsolda kontrol ettiğini teyit etti. Uygulama tarafındaki tavanlar (ADR-0010) birincil kontrol olarak kalır | — |
 | ~~B2~~ | ~~M5'te VPS satın alımı~~ — **Kaldırıldı** (rev. 5, D5: VPS yok) | — |
 | B4 | M1 başlatma onayı; Binance'in açık uç noktalarına (anahtarsız) erişim izni; çekirdek parite seçim prosedürünün onayı. **Durum (2026-10-14): kapandı.** Seçim prosedürü, Kapı 1 ve Kapı 2 onaylandı; M1 kullanıcı kabulüyle tamamlandı (`m1-core-universe.md`) | — |
 | B5 | Protokol v1'in bloke edici istatistiksel değerleri. **Durum (2026-10-16): kapandı** (D26) | — |

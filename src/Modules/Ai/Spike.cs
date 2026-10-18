@@ -77,7 +77,7 @@ public sealed class SpikeRunner(AiCallGuard guard, string model, int maxOutputTo
         }
 
         var allowed = Lookup.Contains(toolCall.Name) && Lookup.Tools[0].Parameters.Validate(toolCall.Arguments).Count == 0;
-        history.Add(new AiMessage(AiRole.Model, first.Response!.Text, first.Response.ToolCalls));
+        history.Add(first.Response!.AsModelMessage());
         history.Add(new AiMessage(AiRole.Tool, null, ToolName: toolCall.Name, ToolResultJson: """{"value":42}"""));
         var second = await guard.CallAsync(Request("", schema, Lookup, history), null, job, ct);
         calls.Add(second);
@@ -143,5 +143,9 @@ public sealed class SpikeRunner(AiCallGuard guard, string model, int maxOutputTo
         calls.Aggregate(UsdAmount.Zero, (s, c) => s + c.Estimated),
         calls.Aggregate(UsdAmount.Zero, (s, c) => s + c.Actual),
         (long)calls.Sum(c => c.Latency.TotalMilliseconds),
-        observation);
+        observation + Details(calls));
+
+    /// <summary>Why a call failed (provider error status and message, redacted by the adapter) and the provider's finish details.</summary>
+    private static string Details(IReadOnlyList<GuardedCall> calls) => string.Concat(calls.Select((c, i) =>
+        c.Succeeded ? (c.Response?.Diagnostic is { } d ? $" [call {i + 1}: {d}]" : "") : $" [call {i + 1}: {c.Status}: {c.Reason}]"));
 }

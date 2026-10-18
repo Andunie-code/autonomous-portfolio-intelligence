@@ -19,6 +19,9 @@ public sealed class GeminiGuardHandler(HttpMessageHandler inner) : DelegatingHan
 
     public TimeSpan? LastRetryAfter { get; private set; }
 
+    /// <summary><c>error.status</c> and <c>error.message</c> of the last non-success response (truncated), for diagnostics.</summary>
+    public string? LastErrorDetail { get; private set; }
+
     public int Requests { get; private set; }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -30,12 +33,20 @@ public sealed class GeminiGuardHandler(HttpMessageHandler inner) : DelegatingHan
 
         Requests++;
         LastRetryAfter = null;
+        LastErrorDetail = null;
         var response = await base.SendAsync(request, cancellationToken);
         var status = (int)response.StatusCode;
         if (status is >= 300 and < 400)
         {
             response.Dispose();
             throw new GeminiPolicyViolationException($"Unexpected redirect ({status}) from {AllowedHost}; redirects are rejected.");
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            // Buffered, so the SDK can still read the body after us.
+            await response.Content.LoadIntoBufferAsync(cancellationToken);
+            LastErrorDetail = ErrorDetail(await response.Content.ReadAsStringAsync(cancellationToken));
         }
 
         LastRetryAfter = response.Headers.RetryAfter switch
@@ -45,6 +56,23 @@ public sealed class GeminiGuardHandler(HttpMessageHandler inner) : DelegatingHan
             _ => null,
         };
         return response;
+    }
+
+    private static string ErrorDetail(string body)
+    {
+        const int MaxLength = 500;
+        string detail;
+        try
+        {
+            var error = System.Text.Json.Nodes.JsonNode.Parse(body)?["error"];
+            detail = $"{error?["status"]?.GetValue<string>()}: {error?["message"]?.GetValue<string>()}";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            detail = body;
+        }
+
+        return detail.Length > MaxLength ? detail[..MaxLength] + "…" : detail;
     }
 
     /// <summary>The real network handler. Created only by the CLI after the interactive --allow-network confirmation.</summary>
@@ -74,11 +102,13 @@ public sealed class GeminiProvider : IAiProvider, IDisposable
     private readonly GeminiGuardHandler _guard;
     private readonly HttpClient _http;
     private readonly Client _client;
+    private readonly string _apiKey;
 
     public GeminiProvider(string apiKey, PriceTable prices, HttpMessageHandler innerHandler)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(apiKey);
         _prices = prices;
+        _apiKey = apiKey;
         _guard = new GeminiGuardHandler(innerHandler);
         _http = new HttpClient(_guard, disposeHandler: true) { Timeout = Timeout.InfiniteTimeSpan };
         _client = new Client(
@@ -101,7 +131,7 @@ public sealed class GeminiProvider : IAiProvider, IDisposable
         }
         catch (ApiException e)
         {
-            throw new AiProviderException($"Gemini API error {e.StatusCode} {e.Status}", e.StatusCode, _guard.LastRetryAfter, inner: e);
+            throw new AiProviderException(Redact($"Gemini API error {e.StatusCode} {e.Status}: {_guard.LastErrorDetail ?? e.Message}"), e.StatusCode, _guard.LastRetryAfter, inner: e);
         }
         catch (GeminiPolicyViolationException)
         {
@@ -109,7 +139,7 @@ public sealed class GeminiProvider : IAiProvider, IDisposable
         }
         catch (HttpRequestException e)
         {
-            throw new AiProviderException("Gemini network error: " + e.Message, (int?)e.StatusCode, _guard.LastRetryAfter, network: e.StatusCode is null, inner: e);
+            throw new AiProviderException(Redact("Gemini network error: " + e.Message), (int?)e.StatusCode, _guard.LastRetryAfter, network: e.StatusCode is null, inner: e);
         }
     }
 
@@ -151,6 +181,10 @@ public sealed class GeminiProvider : IAiProvider, IDisposable
         return _prices.Cost(ProviderName, request.Model, new AiUsage(inputTokens, request.MaxOutputTokens));
     }
 
+    /// <summary>Provider messages may echo request details: the key and anything shaped like a Google API key are masked.</summary>
+    private string Redact(string text) =>
+        System.Text.RegularExpressions.Regex.Replace(text.Replace(_apiKey, "***", StringComparison.Ordinal), @"AIza[0-9A-Za-z_\-]{20,}", "***");
+
     public void Dispose()
     {
         _client.Dispose();
@@ -160,6 +194,8 @@ public sealed class GeminiProvider : IAiProvider, IDisposable
     private static List<Content> Contents(IReadOnlyList<AiMessage> messages) => messages.Select(m => m.Role switch
     {
         AiRole.User => new Content { Role = "user", Parts = [new Part { Text = m.Text ?? "" }] },
+        // A model turn received from Gemini is resent exactly as received (thought blocks and signatures, S-G8).
+        AiRole.Model when m.ProviderContent is { } raw => Content.FromJson(raw) ?? throw new InvalidDataException("Unreadable provider content."),
         AiRole.Model => new Content
         {
             Role = "model",
@@ -186,7 +222,7 @@ public sealed class GeminiProvider : IAiProvider, IDisposable
         if (request.OutputSchema is { } schema)
         {
             config.ResponseMimeType = "application/json";
-            config.ResponseJsonSchema = schema.Root.DeepClone();
+            config.ResponseJsonSchema = Wire(schema);
         }
 
         if (request.Tools is { Tools.Count: > 0 } tools)
@@ -199,13 +235,43 @@ public sealed class GeminiProvider : IAiProvider, IDisposable
                     {
                         Name = t.Name,
                         Description = t.Description,
-                        ParametersJsonSchema = t.Parameters.Root.DeepClone(),
+                        ParametersJsonSchema = Wire(t.Parameters),
                     }).ToList(),
                 },
             ];
         }
 
         return config;
+    }
+
+    /// <summary>
+    /// The schema as sent to Gemini: <c>additionalProperties</c> is dropped (a conservative subset; our own validator still
+    /// rejects unknown properties, so nothing off-schema is accepted). No <c>$schema</c> or other keyword is ever sent.
+    /// </summary>
+    public static System.Text.Json.Nodes.JsonNode Wire(NeutralSchema schema)
+    {
+        var copy = schema.Root.DeepClone();
+        Strip(copy);
+        return copy;
+
+        static void Strip(System.Text.Json.Nodes.JsonNode? node)
+        {
+            if (node is System.Text.Json.Nodes.JsonObject o)
+            {
+                o.Remove("additionalProperties");
+                foreach (var (_, child) in o.ToList())
+                {
+                    Strip(child);
+                }
+            }
+            else if (node is System.Text.Json.Nodes.JsonArray a)
+            {
+                foreach (var child in a)
+                {
+                    Strip(child);
+                }
+            }
+        }
     }
 
     private static AiResponse Map(GenerateContentResponse response, string requestedModel)
@@ -236,8 +302,20 @@ public sealed class GeminiProvider : IAiProvider, IDisposable
             new AiUsage(
                 (usage?.PromptTokenCount ?? 0) + (usage?.ToolUsePromptTokenCount ?? 0),
                 (usage?.CandidatesTokenCount ?? 0) + (usage?.ThoughtsTokenCount ?? 0)),
-            response.ResponseId);
+            response.ResponseId,
+            Diagnostic(response, candidate),
+            candidate?.Content is { } content ? JsonSerializer.Serialize(content) : null);
     }
+
+    private static string Diagnostic(GenerateContentResponse response, Candidate? candidate) => string.Join("; ", new[]
+    {
+        $"candidates={response.Candidates?.Count ?? 0}",
+        candidate?.FinishReason is { } finish ? $"finishReason={finish.Value}" : null,
+        string.IsNullOrEmpty(candidate?.FinishMessage) ? null : $"finishMessage={candidate.FinishMessage}",
+        response.PromptFeedback?.BlockReason is { } block ? $"blockReason={block.Value}" : null,
+        string.IsNullOrEmpty(response.PromptFeedback?.BlockReasonMessage) ? null : $"blockMessage={response.PromptFeedback.BlockReasonMessage}",
+        $"parts={candidate?.Content?.Parts?.Count ?? 0}",
+    }.Where(x => x is not null));
 
     private static Dictionary<string, object> ToDictionary(JsonObject arguments) =>
         arguments.ToDictionary(kv => kv.Key, kv => (object)JsonDocument.Parse(kv.Value?.ToJsonString() ?? "null").RootElement.Clone());

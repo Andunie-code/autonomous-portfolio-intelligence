@@ -19,9 +19,10 @@
     "maxToolRounds": 8
   },
   "prices": {
-    "version": "gemini-list-prices 2026-10-18 (sources.md S-G2)",
+    "version": "gemini-list-prices 2026-10-19 (sources.md S-G2, S-G9)",
     "models": [
-      { "provider": "gemini", "model": "gemini-3.5-flash-lite", "inputPerMillionUsd": 0.30, "outputPerMillionUsd": 2.50 }
+      { "provider": "gemini", "model": "gemini-3.5-flash-lite", "inputPerMillionUsd": 0.30, "outputPerMillionUsd": 2.50 },
+      { "provider": "gemini", "model": "gemini-3.8-flash", "inputPerMillionUsd": 0.75, "outputPerMillionUsd": 3.75 }
     ]
   },
   "tasks": {

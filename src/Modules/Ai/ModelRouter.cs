@@ -145,7 +145,7 @@ public sealed class ModelRouter(AiConfiguration configuration, AiCallGuard guard
                     return await NoDecisionAsync(trace, policy, "disallowed tool call", ct);
                 }
 
-                messages.Add(new AiMessage(AiRole.Model, response.Text, response.ToolCalls));
+                messages.Add(response.AsModelMessage());
                 foreach (var toolCall in response.ToolCalls)
                 {
                     var tool = input.Tools.Tools.Single(t => t.Name == toolCall.Name);
@@ -169,7 +169,7 @@ public sealed class ModelRouter(AiConfiguration configuration, AiCallGuard guard
                 }
 
                 repaired = true;
-                messages.Add(new AiMessage(AiRole.Model, response.Text));
+                messages.Add(response.AsModelMessage());
                 messages.Add(new AiMessage(AiRole.User,
                     "The previous output did not match the required JSON schema (" + string.Join("; ", errors) + "). Reply again with only JSON that matches the schema."));
                 continue;
