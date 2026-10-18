@@ -14,7 +14,7 @@ M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar
   - `Research.Qualification`: `HgItem` (`hg-synthetic v1`), `HgPrompt` (`hg-synthetic-prompt v1`, şema hash'i `770469e8…`) ve `HypothesisGenerationTask` (LLM kolu ve deterministik grid baseline'ı; değerlendirme ayrı seed'li sentetik evrende, v2 kapılarıyla).
   - AiCli: `hg-pilot`, `qualify-register` (yalnızca commit'lenmiş ve değişmemiş protokol belgesi), `qualify` (harness üzerinden).
   - Sentetik koşular `research.trials`'a yazılmaz.
-- **Tasarım ve pilot ön kaydı:** `docs/m4-hg-qualification-design.md`, kullanıcı onayı bekliyor.
+- **Tasarım ve pilot ön kaydı (U, 2026-10-19):** `docs/m4-hg-qualification-design.md` ve asgari etki δ = 0,15 onaylandı. Ön kayıt kanıtı, belgenin eklendiği commit'tir; pilot o commit'ten sonra koşulur.
 - `verify.ps1` yeşil: 410 test.
 
 ## 2026-10-19 — M4 Kapı C: ilk spike denemesi ve teşhis iyileştirmeleri
