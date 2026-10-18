@@ -6,7 +6,7 @@ M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar
 - **Pilot (kullanıcının koşusu, ön kayıt `1165601`):** LLM 6/20 (%30), baseline 18/20 (%90); güvenlik ihlali 0; maliyet 0,032664 USD (`docs/m4-hg-pilot-results.md`).
 - **Teşhis:** 10 LLM başarısızlığının nedeni kanıt reddi. Model `claims[].value` alanına `M` yerine işlem sayısı, yıl, parite ya da drawdown değeri yazmış; validator doğru reddetmiş. Ön kayıt gereği prompt, şema ve validator değiştirilmedi; bulgu olası bir v2 tasarımının girdisi.
 - **Örneklem kuralı (tasarım §6, değiştirilmeden):** kol başına n = 70 (kesin güç 0,84); bütçe tahmini ≈ 0,23 USD.
-- **Protokol:** `docs/m4-hg-qualification-protocol-v1.md` taslağı (seed 40000–40069, α = 0,05, δ = 0,15, bütçe 1,00 USD); kullanıcı onayı bekliyor.
+- **Protokol (U, 2026-10-19):** `docs/m4-hg-qualification-protocol-v1.md` (seed 40000–40069, α = 0,05, δ = 0,15, bütçe 1,00 USD) onaylandı. Kullanıcı, ön kayıtlı kuraldan sapmadan v1 ile devam etmeyi seçti. Belge commit'lendi ve `qualify-register` ile kaydedildi.
 - **Kod (T):** AiCli `traces --job <id>`; salt okunur, yalnızca sonuç, neden ve validator mesajları.
 
 ## 2026-10-19 — M4 Kapı C: spike geçti; HypothesisGeneration pilot ve yeterlilik altyapısı
