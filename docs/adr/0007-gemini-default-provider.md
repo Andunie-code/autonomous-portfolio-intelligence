@@ -24,7 +24,7 @@ Tek sağlayıcıyla sağlayıcılar arası fallback, karmaşıklık katıp kalit
 `sources.md`: Gemini S-G1 ile S-G7 arası (2026-10-12); Anthropic S-A1 ile S-A3 arası (yalnızca referans).
 
 ## Riskler
-- Structured output ve tool'ların birlikte kullanımı 3.5 Flash-Lite için belgelenmemiş; M4 spike'ında doğrulanacak.
+- Structured output ve tool'ların birlikte kullanımı 3.5 Flash-Lite için belgelenmemişti. M4 spike'ında (2026-10-18) **çalıştığı gözlendi** (`m4-spike-results.md`); özellik belgede hâlâ önizleme.
 - Gemini, karar etkileyen görevlerde nitelik kazanamayabilir. Sistem LLM'siz modda tam işlevlidir.
 
 ## Revizyon geçmişi

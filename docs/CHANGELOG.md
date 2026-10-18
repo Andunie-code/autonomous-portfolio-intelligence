@@ -2,6 +2,21 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-19 — M4 Kapı C: spike geçti; HypothesisGeneration pilot ve yeterlilik altyapısı
+- **Spike (kullanıcının koşusu, 2026-10-18T22:18Z):** 5 senaryonun 5'i PASS; gerçek maliyet 0,0008562 USD; gecikme 0,6–2,0 sn (`docs/m4-spike-results.md`).
+  - Structured output ile function calling birlikte, `gemini-3.5-flash-lite` üzerinde çalışıyor.
+  - `modelVersion` yapılandırılmış adla aynı.
+  - DSL, şemada bir string alanı olarak sığıyor.
+  - Timeout, retry ve eşzamanlılık değerleri değişmedi.
+  - `sources.md` ve ADR-0007 güncellendi.
+- **Kod (T):**
+  - `FisherExact.Power` ve `RequiredPerArm` (kesin güç; bağımsız hesapla golden testler).
+  - `Research.Qualification`: `HgItem` (`hg-synthetic v1`), `HgPrompt` (`hg-synthetic-prompt v1`, şema hash'i `770469e8…`) ve `HypothesisGenerationTask` (LLM kolu ve deterministik grid baseline'ı; değerlendirme ayrı seed'li sentetik evrende, v2 kapılarıyla).
+  - AiCli: `hg-pilot`, `qualify-register` (yalnızca commit'lenmiş ve değişmemiş protokol belgesi), `qualify` (harness üzerinden).
+  - Sentetik koşular `research.trials`'a yazılmaz.
+- **Tasarım ve pilot ön kaydı:** `docs/m4-hg-qualification-design.md`, kullanıcı onayı bekliyor.
+- `verify.ps1` yeşil: 410 test.
+
 ## 2026-10-19 — M4 Kapı C: ilk spike denemesi ve teşhis iyileştirmeleri
 - **İlk spike (kullanıcının koşusu):** 5 senaryonun 5'i FAIL; maliyet 0 USD (ledger'da tüm çağrılar 0 ile settle edildi).
   - `function-calling` senaryolarında HTTP 400 `INVALID_ARGUMENT` görüldü; diğerlerinde aynı başarısızlık "empty output" olarak raporlandı.

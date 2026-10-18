@@ -36,16 +36,83 @@ public static class FisherExact
         return Math.Clamp(p, 0, 1);
     }
 
+    /// <summary>
+    /// Exact power of the one-sided test with <paramref name="n"/> trials per arm: P(p-value &lt; α) when arm A succeeds
+    /// with probability <paramref name="pA"/> and arm B with <paramref name="pB"/>, summed over all outcomes.
+    /// </summary>
+    public static double Power(int n, double pA, double pB, double alpha)
+    {
+        var a = Binomial(n, pA);
+        var b = Binomial(n, pB);
+        var power = 0.0;
+        for (var x = 0; x <= n; x++)
+        {
+            if (a[x] < 1e-15)
+            {
+                continue;
+            }
+
+            // The p-value falls as x rises and as y falls: scan y upwards until the test stops rejecting.
+            for (var y = 0; y <= n && b[y] >= 0; y++)
+            {
+                if (GreaterPValue(x, n, y, n) >= alpha)
+                {
+                    break;
+                }
+
+                power += a[x] * b[y];
+            }
+        }
+
+        return Math.Clamp(power, 0, 1);
+    }
+
+    /// <summary>Smallest n in <paramref name="candidates"/> with power ≥ <paramref name="targetPower"/>, or null if none.</summary>
+    public static int? RequiredPerArm(double pA, double pB, double alpha, double targetPower, IEnumerable<int> candidates) =>
+        candidates.Order().Cast<int?>().FirstOrDefault(n => Power(n!.Value, pA, pB, alpha) >= targetPower);
+
+    private static double[] Binomial(int n, double p)
+    {
+        var result = new double[n + 1];
+        for (var k = 0; k <= n; k++)
+        {
+            result[k] = p <= 0 ? (k == 0 ? 1 : 0)
+                : p >= 1 ? (k == n ? 1 : 0)
+                : Math.Exp(LogChoose(n, k) + k * Math.Log(p) + (n - k) * Math.Log(1 - p));
+        }
+
+        return result;
+    }
+
     private static double LogChoose(int n, int k) => LogFactorial(n) - LogFactorial(k) - LogFactorial(n - k);
+
+    // ln(n!) for n ≤ 4000 (power analysis evaluates the p-value many times).
+    private static readonly double[] LogFactorials = BuildLogFactorials(4000);
 
     private static double LogFactorial(int n)
     {
-        var sum = 0.0;
-        for (var i = 2; i <= n; i++)
+        if (n < LogFactorials.Length)
+        {
+            return LogFactorials[n];
+        }
+
+        var sum = LogFactorials[^1];
+        for (var i = LogFactorials.Length; i <= n; i++)
         {
             sum += Math.Log(i);
         }
 
         return sum;
+    }
+
+    private static double[] BuildLogFactorials(int max)
+    {
+        var table = new double[max + 1];
+        for (var i = 2; i <= max; i++)
+        {
+            table[i] = table[i - 1] + Math.Log(i);
+        }
+
+        return table;
     }
 }

@@ -35,9 +35,9 @@ Yalnızca resmi belge sayfaları okundu; API çağrısı yapılmadı.
 | S-G9 | `gemini-3.8-flash` (2026-10-19'da okundu): ücretli katman fiyatı (1M token başına) girdi **0,75 $**, çıktı **3,75 $** (thinking dahil) 2026-12-31'e kadar; **2027-01-01'den itibaren 1,50 $ / 7,50 $**. Sayfada "Preview" etiketi yok, ama kararlı olduğu da açıkça yazmıyor. Yalnızca spike'ta seçmeli model olarak fiyat tablosuna eklendi; varsayılan model değişmedi (D12). Sorun giderme sayfası: 400 hatası geçersiz API anahtarı, tükenmiş ön ödemeli kredi, sözdizimi hatası, aralık dışı parametre ya da desteklenmeyen özellikten kaynaklanabilir | https://ai.google.dev/gemini-api/docs/pricing · https://ai.google.dev/gemini-api/docs/troubleshooting |
 
 **Doğrulanacaklar (varsayım):**
-- Structured output ile function calling'in `gemini-3.5-flash-lite` üzerinde birlikte çalışması (M4 Kapı C spike'ı).
-- `ModelVersion` alanının biçimi ve yapılandırılmış model adıyla eşleşmesi (spike).
-- `ClientOptions.HttpClientFactory` ile enjekte edilen istemcinin tüm çağrılarda kullanılması ve SDK retry'ının kapatılabilmesi (Kapı B, çevrimdışı testle).
+- ~~Structured output ile function calling'in `gemini-3.5-flash-lite` üzerinde birlikte çalışması~~ — **gözlendi** (M4 spike, 2026-10-18T22:18Z, `docs/m4-spike-results.md`). Özellik belgede önizleme olarak kalıyor.
+- ~~`ModelVersion` alanının biçimi~~ — **gözlendi:** `gemini-3.5-flash-lite`, yapılandırılmış adla birebir aynı (spike).
+- ~~`ClientOptions.HttpClientFactory` ile enjeksiyon ve SDK retry'ının kapatılması~~ — **doğrulandı:** çevrimdışı testler (Kapı B) ve gerçek spike'ta guard handler üzerinden çağrı.
 - Ücretsiz katmanın gerçek limitleri (AI Studio'dan).
 - ~~Thinking token'larının çıktı fiyatından faturalanıp faturalanmadığı~~ — **doğrulandı** (S-G2, 2026-10-18: çıktı fiyatına dahil).
 

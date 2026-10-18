@@ -29,6 +29,28 @@ public class M4KernelAndSelectionTests
         Assert.Equal(expected, FisherExact.GreaterPValue(a, n, b, m), 9);
     }
 
+    [Theory]
+    [InlineData(20, 0.5, 0.1, 0.8374757681260492)] // exact enumeration (independent Python computation)
+    [InlineData(30, 0.3, 0.3, 0.02800819285550278)] // equal rates: at most α
+    [InlineData(40, 0.65, 0.5, 0.2891653965626393)]
+    public void Fisher_power_matches_exact_enumeration(int n, double pA, double pB, double expected)
+    {
+        Assert.Equal(expected, FisherExact.Power(n, pA, pB, 0.05), 9);
+    }
+
+    [Fact]
+    public void Required_sample_is_the_smallest_candidate_reaching_the_target_power()
+    {
+        var candidates = Enumerable.Range(2, 19).Select(i => i * 10).ToList();
+
+        var n = FisherExact.RequiredPerArm(0.5, 0.1, 0.05, 0.80, candidates);
+
+        Assert.Equal(20, n);
+        Assert.Null(FisherExact.RequiredPerArm(0.55, 0.5, 0.05, 0.80, candidates));
+        var m = FisherExact.RequiredPerArm(0.35, 0.2, 0.05, 0.80, candidates)!.Value;
+        Assert.True(FisherExact.Power(m, 0.35, 0.2, 0.05) >= 0.80 && FisherExact.Power(m - 10, 0.35, 0.2, 0.05) < 0.80);
+    }
+
     [Fact]
     public void Fisher_exact_p_value_falls_as_arm_a_improves()
     {
