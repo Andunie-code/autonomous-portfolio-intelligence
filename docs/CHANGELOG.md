@@ -2,6 +2,14 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-19 — HypothesisGeneration v2 pilotu: `Inconclusive (budget)`
+- **Spike (8192 token):** `dsl-in-neutral-schema` PASS.
+- **Pilot (ön kayıt `13ad935`):** LLM 12/20 (%60), baseline 11/20 (%55); kanıt reddi 1 (v1'de 10); güvenlik ihlali 0; maliyet 0,510653 USD (`docs/m4-hg-pilot-v2-results.md`).
+- **Ön kayıtlı kural (tasarım v2 §6, değiştirilmeden):** n = 150; tahmin 150 × 0,02553 × 2 = 7,66 USD > 5,00 USD → yeterlilik koşusu yapılmaz.
+  - v2 döngüsünün sonucu `Inconclusive (budget)`. Harness koşmadığı için `TaskQualification` kaydı yok.
+  - HypothesisGeneration'da nitelikli model yok; LLM'siz mod sürer.
+- **Harcama:** ekim ayı ledger toplamı 0,671812 USD (aylık tavan 10 USD).
+
 ## 2026-10-19 — `gemini-3.8-flash` spike'ı (pilot öncesi)
 - **Kullanıcının koşusu:** 3/5 PASS; `modelVersion` = `gemini-3.8-flash`.
 - **İki başarısızlık spike ayarlarından kaynaklanıyor:**
