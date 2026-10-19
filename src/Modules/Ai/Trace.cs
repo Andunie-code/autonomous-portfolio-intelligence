@@ -65,8 +65,11 @@ public interface IOutputValidator
     Task<IReadOnlyList<string>> ValidateAsync(JsonNode output, DateTimeOffset decisionTime, CancellationToken ct);
 }
 
-/// <summary>What an evidence reference resolves to: when it became available and its numeric value, if any.</summary>
-public sealed record EvidenceItem(string Id, DateTimeOffset AvailableAt, decimal? Value);
+/// <summary>
+/// What an evidence reference resolves to: when it became available, its primary numeric value and, optionally, named
+/// metrics. A claim that names a <c>metric</c> is checked against that metric; otherwise against <see cref="Value"/>.
+/// </summary>
+public sealed record EvidenceItem(string Id, DateTimeOffset AvailableAt, decimal? Value, IReadOnlyDictionary<string, decimal>? Metrics = null);
 
 public interface IEvidenceResolver
 {
@@ -122,13 +125,15 @@ public sealed class EvidenceValidator(IEvidenceResolver resolver, decimal relati
             if (claim?["value"] is { } valueNode)
             {
                 var claimed = decimal.Parse(valueNode.ToJsonString(), NumberStyles.Float, CultureInfo.InvariantCulture);
-                if (evidence.Value is not { } actual)
+                var metric = claim["metric"] is JsonValue m && m.TryGetValue<string>(out var name) ? name : null;
+                decimal? source = metric is null ? evidence.Value : evidence.Metrics?.TryGetValue(metric, out var named) == true ? named : null;
+                if (source is not { } actual)
                 {
-                    errors.Add($"claim {i}: numeric claim but '{reference}' has no value");
+                    errors.Add(metric is null ? $"claim {i}: numeric claim but '{reference}' has no value" : $"claim {i}: '{reference}' has no metric '{metric}'");
                 }
                 else if (Math.Abs(claimed - actual) > Math.Abs(actual) * relativeTolerance + 1e-12m)
                 {
-                    errors.Add(string.Create(CultureInfo.InvariantCulture, $"claim {i}: value {claimed} does not match '{reference}' ({actual})"));
+                    errors.Add(string.Create(CultureInfo.InvariantCulture, $"claim {i}: value {claimed} does not match '{reference}'{(metric is null ? "" : "." + metric)} ({actual})"));
                 }
             }
         }

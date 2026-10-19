@@ -142,11 +142,93 @@ public class HypothesisGenerationQualificationTests
         Assert.All(rig.Traces.Traces, t => Assert.Equal(RouterMode.Qualification, t.Mode));
     }
 
-    private static (RouterRig Rig, QualificationSession Session) Session()
+    [Fact]
+    public void V1_sets_and_schema_are_unchanged_by_v2()
+    {
+        // The completed v1 qualification (TaskQualification 1) must stay reproducible.
+        Assert.Equal("e72eeccc71694dfc66cf75ff90fb688c931284ac5f3fb6933e4f337d74cc7efd",
+            QualificationItem.SetHash(HgItem.Range(30_000, 20).Select(i => i.ToQualificationItem())));
+        Assert.Equal("770469e889e9bea7ab11cc26e8d02621cfe1800f96afed2fe826c27b0d6ad1fa", HgPrompt.Schema.Hash);
+        Assert.Equal(("hg-synthetic-prompt v1", HgPrompt.Schema), HypothesisGenerationTask.Prompt(1));
+    }
+
+    [Fact]
+    public void V2_items_are_distinct_and_round_trip()
+    {
+        var v2 = HgItem.Range(60_000, 1, variant: 2).Single();
+
+        Assert.Equal(v2, HgItem.Parse(v2.ToQualificationItem()));
+        Assert.StartsWith("hg-synthetic v2;", v2.Content);
+        Assert.EndsWith("exploration=misfit-v2", v2.Content);
+        Assert.Equal("hg2-60000", v2.Id);
+        Assert.Equal(("hg-synthetic-prompt v2", HgPromptV2.Schema), HypothesisGenerationTask.Prompt(2));
+        Assert.All(HypothesisGenerationTask.MisfitExploration, json => Kernel.Dsl.DslParser.Parse(json));
+    }
+
+    [Fact]
+    public void V2_prompt_states_the_rules_and_the_schema_names_the_metric()
+    {
+        var prompt = HgPromptV2.Build([("exp:1", Kernel.Dsl.DslParser.Parse(HypothesisGenerationTask.MisfitExploration[0]), new ExplorationMetrics(0.1, 40, 3, 4, 12, 20, 0.2))]);
+
+        Assert.Contains("Every indicator you declare must be referenced", prompt);
+        Assert.Contains("\"positiveYears\" and \"profitablePairs\" are the", prompt);
+        var metric = HgPromptV2.Schema.Root["properties"]!["claims"]!["items"]!["properties"]!["metric"]!["enum"]!.AsArray().Select(x => x!.GetValue<string>());
+        Assert.Equal(["primaryMetric", "trades", "positiveYears", "profitablePairs", "maxDrawdown"], metric);
+        Assert.DoesNotContain("Every indicator you declare", HgPrompt.Build([("exp:1", Kernel.Dsl.DslParser.Parse(HypothesisGenerationTask.MisfitExploration[0]), new ExplorationMetrics(0.1, 40, 3, 4, 12, 20, 0.2))]));
+    }
+
+    [Fact]
+    public async Task V2_accepts_a_correct_named_metric_citation_and_prunes_unused_indicators()
+    {
+        var item = HgItem.Range(60_000, 1, variant: 2).Single().ToQualificationItem();
+        var (rig, session) = Session(variant: 2);
+        var withSpare = TrendDefinition.Replace("""{"id":"atr","type":"atr","params":{"period":14}}]""",
+            """{"id":"atr","type":"atr","params":{"period":14}},{"id":"spare","type":"rsi","params":{"period":14}}]""", StringComparison.Ordinal);
+        // exp:1 shows trades exactly as the backtest counted them; cite that number by name.
+        var trades = ExplorationTrades(item);
+        rig.Provider.Returns(Proposal(withSpare, new JsonObject { ["text"] = "exp:1 trades often", ["critical"] = true, ["evidenceRef"] = "exp:1", ["metric"] = "trades", ["value"] = trades }));
+        var task = new HypothesisGenerationTask(rig.Time, bootstrapReplicates: 500, variant: 2);
+
+        var outcome = await task.RunLlmAsync(session, item, default);
+
+        var record = task.Records.Single();
+        Assert.True(record.ValidDefinition, record.Reason);
+        Assert.Equal(["spare"], record.PrunedIndicators);
+        Assert.Empty(outcome.SafetyViolations);
+        Assert.Contains("Every indicator you declare", rig.Provider.Requests.Single().Messages[0].Text);
+    }
+
+    [Fact]
+    public async Task V2_rejects_a_wrongly_named_metric_citation()
+    {
+        var item = HgItem.Range(60_000, 1, variant: 2).Single().ToQualificationItem();
+        var (rig, session) = Session(variant: 2);
+        var trades = ExplorationTrades(item);
+        rig.Provider.Returns(Proposal(TrendDefinition, new JsonObject { ["text"] = "x", ["critical"] = true, ["evidenceRef"] = "exp:1", ["metric"] = "primaryMetric", ["value"] = trades }));
+        var task = new HypothesisGenerationTask(rig.Time, bootstrapReplicates: 500, variant: 2);
+
+        var outcome = await task.RunLlmAsync(session, item, default);
+
+        Assert.False(outcome.Success);
+        Assert.Contains("evidence validator rejected", task.Records.Single().Reason);
+    }
+
+    /// <summary>Trades of exp:1 on the item's exploration universe, computed as the task does.</summary>
+    private static int ExplorationTrades(QualificationItem item)
+    {
+        var hg = HgItem.Parse(item);
+        var universe = Research.Evaluation.SyntheticMarkets.Trending(hg.Seed, hg.Kappa, hg.MeanRegimeBars, hg.UpShare);
+        var run = new Kernel.Backtest.BacktestEngine(Kernel.Dsl.DslStrategy.FromJson(HypothesisGenerationTask.MisfitExploration[0]),
+            Kernel.Backtest.CostModel.V1, Kernel.Backtest.RiskSettings.NoHalt).Run(universe);
+        return run.Trades.Count;
+    }
+
+    private static (RouterRig Rig, QualificationSession Session) Session(int variant = 1)
     {
         var rig = new RouterRig();
-        var protocol = new QualificationProtocol(new string('e', 64), "pilot", TaskClass.HypothesisGeneration, "gemini", TestConfig.Model, HgPrompt.PromptVersion,
-            HgPrompt.Schema.Hash, QualificationItem.SetHash(Pilot), QualificationItem.SetHash(Set), 0.05, 0.15, 2, 0.5m);
+        var (promptVersion, schema) = HypothesisGenerationTask.Prompt(variant);
+        var protocol = new QualificationProtocol(new string('e', 64), "pilot", TaskClass.HypothesisGeneration, "gemini", TestConfig.Model, promptVersion,
+            schema.Hash, QualificationItem.SetHash(Pilot), QualificationItem.SetHash(Set), 0.05, 0.15, 2, 0.5m);
         return (rig, new QualificationSession(protocol, new JobContext("hg-test", JobKind.Qualification), rig.Router));
     }
 

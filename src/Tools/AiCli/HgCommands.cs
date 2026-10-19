@@ -25,19 +25,41 @@ internal static class HgCommands
     public const double TargetPower = 0.80;
     public static readonly int[] SampleCandidates = [.. Enumerable.Range(2, 19).Select(i => i * 10)]; // 20, 30, …, 200
 
+    /// <summary>
+    /// Pilot settings of a design document: its <c>```json hg-pilot</c> block (variant, model, seed base, count, budget), or
+    /// the v1 defaults for the v1 design, which has no block. The pilot runs exactly what the committed design states.
+    /// </summary>
+    public sealed record PilotSpec(int Variant, string? Model, int SeedBase, int Count, decimal BudgetUsd);
+
+    public static async Task<PilotSpec> ReadPilotSpecAsync(string designPath)
+    {
+        var design = await File.ReadAllTextAsync(designPath);
+        var match = Regex.Match(design, "```json hg-pilot\\s*\\n(?<json>.*?)\\n```", RegexOptions.Singleline);
+        if (!match.Success)
+        {
+            return new PilotSpec(1, null, PilotSeedBase, PilotItems, PilotBudgetUsd);
+        }
+
+        var spec = JsonNode.Parse(match.Groups["json"].Value)!;
+        return new PilotSpec(spec["variant"]!.GetValue<int>(), spec["model"]!.GetValue<string>(), spec["pilot"]!["seedBase"]!.GetValue<int>(),
+            spec["pilot"]!["count"]!.GetValue<int>(), spec["budgetUsd"]!.GetValue<decimal>());
+    }
+
     /// <summary>Pilot (design §5): runs the pilot set in qualification mode under a transient pilot session; prints rates and the power table.</summary>
     public static async Task<int> PilotAsync(AiConfiguration configuration, string connection, string apiKey, string model, string designPath, string reports, TimeProvider time)
     {
         var design = await File.ReadAllTextAsync(designPath);
         var hash = QualificationProtocol.HashDocument(design);
-        var items = HgItem.Range(PilotSeedBase, PilotItems).Select(i => i.ToQualificationItem()).ToList();
-        var protocol = new QualificationProtocol(hash, "pilot", TaskClass.HypothesisGeneration, GeminiProvider.ProviderName, model, HgPrompt.PromptVersion,
-            HgPrompt.Schema.Hash, QualificationItem.SetHash(items), QualificationItem.SetHash([]), Alpha, MinimumEffect, PilotItems, PilotBudgetUsd);
+        var pilot = await ReadPilotSpecAsync(designPath);
+        var (promptVersion, schema) = HypothesisGenerationTask.Prompt(pilot.Variant);
+        var items = HgItem.Range(pilot.SeedBase, pilot.Count, pilot.Variant).Select(i => i.ToQualificationItem()).ToList();
+        var protocol = new QualificationProtocol(hash, "pilot", TaskClass.HypothesisGeneration, GeminiProvider.ProviderName, model, promptVersion,
+            schema.Hash, QualificationItem.SetHash(items), QualificationItem.SetHash([]), Alpha, MinimumEffect, pilot.Count, pilot.BudgetUsd);
         var (router, ledger, provider) = Wire(configuration, connection, apiKey, time);
         using var _ = provider;
         var job = new JobContext($"hg-pilot-{hash[..12]}", JobKind.Qualification);
         var session = new QualificationSession(protocol, job, router);
-        var task = new HypothesisGenerationTask(time);
+        var task = new HypothesisGenerationTask(time, variant: pilot.Variant);
         var started = time.GetUtcNow();
         foreach (var item in items)
         {
@@ -47,9 +69,9 @@ internal static class HgCommands
                 break;
             }
 
-            if ((await ledger.SummaryAsync(time.GetUtcNow(), job.JobId, TimeSpan.Zero, CancellationToken.None)).Job.Value >= PilotBudgetUsd)
+            if ((await ledger.SummaryAsync(time.GetUtcNow(), job.JobId, TimeSpan.Zero, CancellationToken.None)).Job.Value >= pilot.BudgetUsd)
             {
-                Console.WriteLine($"Stopped: pilot budget {PilotBudgetUsd} USD reached.");
+                Console.WriteLine($"Stopped: pilot budget {pilot.BudgetUsd} USD reached.");
                 break;
             }
 
@@ -77,10 +99,34 @@ internal static class HgCommands
         var path = Path.Combine(reports, $"{job.JobId}.json");
         await File.WriteAllTextAsync(path, JsonSerializer.Serialize(new
         {
-            job = job.JobId, designHash = hash, model, promptVersion = HgPrompt.PromptVersion, schemaHash = HgPrompt.Schema.Hash,
+            job = job.JobId, designHash = hash, model, variant = pilot.Variant, promptVersion, schemaHash = schema.Hash,
             pilotSetHash = protocol.PilotSetHash, summary, cost = cost.Value, power = table.Select(t => new { t.n, t.Power }), requiredPerArm = required,
             records = task.Records,
         }, new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false));
+        Console.WriteLine($"Details: {path}");
+        return 0;
+    }
+
+    /// <summary>
+    /// Baseline arm only (no network, no database, no model): the deterministic grid's success rate on synthetic items, to
+    /// check a design's baseline band on calibration seeds that are never used for a pilot or a qualification set.
+    /// </summary>
+    public static async Task<int> BaselineAsync(int variant, int seedBase, int count, string reports)
+    {
+        var task = new HypothesisGenerationTask(TimeProvider.System, variant: variant);
+        var started = DateTimeOffset.UtcNow;
+        foreach (var item in HgItem.Range(seedBase, count, variant).Select(i => i.ToQualificationItem()))
+        {
+            var outcome = await task.RunBaselineAsync(item, CancellationToken.None);
+            var record = task.Records[^1];
+            Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                $"[{(DateTimeOffset.UtcNow - started).TotalSeconds:0}s] {item.Id}: {(outcome.Success ? "PASS" : "fail")} M={record.EvaluationMetric:0.000} {string.Join(", ", record.GateFailures)}"));
+        }
+
+        var successes = task.Records.Count(r => r.Success);
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"Baseline (variant {variant}, seeds {seedBase}–{seedBase + count - 1}): {successes}/{count} ({(double)successes / count:P1})."));
+        var path = Path.Combine(reports, $"hg-baseline-v{variant}-{seedBase}-{count}.json");
+        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(new { variant, seedBase, count, successes, records = task.Records }, new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false));
         Console.WriteLine($"Details: {path}");
         return 0;
     }
@@ -129,9 +175,9 @@ internal static class HgCommands
         CommittedUnchanged(protocolPath);
         var (router, ledger, provider) = Wire(configuration, connection, apiKey, time);
         using var _ = provider;
-        var task = new HypothesisGenerationTask(time);
+        var task = new HypothesisGenerationTask(time, variant: Variant(spec));
         var harness = new QualificationHarness(new NpgsqlQualificationStore(connection), router, ledger, time);
-        var result = await harness.RunAsync(document, Items(spec["pilot"]!), Items(spec["qualification"]!), task, CancellationToken.None);
+        var result = await harness.RunAsync(document, Items(spec["pilot"]!, Variant(spec)), Items(spec["qualification"]!, Variant(spec)), task, CancellationToken.None);
         var summary = Summarize(task.Records);
         Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
             $"TaskQualification {result.Id}: {result.Verdict} — LLM {result.SuccessesLlm}/{result.TrialsLlm}, baseline {result.SuccessesBaseline}/{result.TrialsBaseline}, " +
@@ -189,19 +235,23 @@ internal static class HgCommands
 
     private static QualificationProtocol ToProtocol(string document, JsonObject spec, string commit)
     {
-        if (spec["promptVersion"]!.GetValue<string>() != HgPrompt.PromptVersion || spec["schemaHash"]!.GetValue<string>() != HgPrompt.Schema.Hash)
+        var (promptVersion, schema) = HypothesisGenerationTask.Prompt(Variant(spec));
+        if (spec["promptVersion"]!.GetValue<string>() != promptVersion || spec["schemaHash"]!.GetValue<string>() != schema.Hash)
         {
             throw new InvalidDataException("Prompt version or schema hash in the protocol differs from the code; a change needs a new protocol.");
         }
 
         return new QualificationProtocol(QualificationProtocol.HashDocument(document), commit, Enum.Parse<TaskClass>(spec["task"]!.GetValue<string>()),
             spec["provider"]!.GetValue<string>(), spec["model"]!.GetValue<string>(), spec["promptVersion"]!.GetValue<string>(), spec["schemaHash"]!.GetValue<string>(),
-            QualificationItem.SetHash(Items(spec["pilot"]!)), QualificationItem.SetHash(Items(spec["qualification"]!)),
+            QualificationItem.SetHash(Items(spec["pilot"]!, Variant(spec))), QualificationItem.SetHash(Items(spec["qualification"]!, Variant(spec))),
             spec["alpha"]!.GetValue<double>(), spec["minimumEffect"]!.GetValue<double>(), spec["samplePerArm"]!.GetValue<int>(), spec["budgetUsd"]!.GetValue<decimal>());
     }
 
-    private static IReadOnlyList<QualificationItem> Items(JsonNode set) =>
-        HgItem.Range(set["seedBase"]!.GetValue<int>(), set["count"]!.GetValue<int>()).Select(i => i.ToQualificationItem()).ToList();
+    private static IReadOnlyList<QualificationItem> Items(JsonNode set, int variant) =>
+        HgItem.Range(set["seedBase"]!.GetValue<int>(), set["count"]!.GetValue<int>(), variant).Select(i => i.ToQualificationItem()).ToList();
+
+    /// <summary>The protocol's item and prompt variant (absent in the v1 protocol: 1).</summary>
+    private static int Variant(JsonObject spec) => spec["variant"]?.GetValue<int>() ?? 1;
 
     /// <summary>The document must be committed and unchanged since (T8: the protocol is fixed before the run). Returns the commit.</summary>
     private static string CommittedUnchanged(string path)

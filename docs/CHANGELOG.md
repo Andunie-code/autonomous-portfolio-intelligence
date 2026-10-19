@@ -2,6 +2,31 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-19 — HypothesisGeneration v2 döngüsü: tasarım ve kod (pilot öncesi)
+- **Kullanıcı kararı (U):**
+  - v2 yeterlilik döngüsü; v1 kayıtları değişmeden kalır.
+  - Model `gemini-3.8-flash`.
+  - Pilot bütçesi 1,00 USD, yeterlilik bütçesi 3,00 USD.
+  - Kanıt ve şema netleştirmesi, kullanılmayan indikatörlerin budanması.
+  - Baseline'ın tavan etkisinin giderilmesi (hedef bant %10–40).
+- **Kod (T):**
+  - **Kernel:** `DslNormalizer.PruneUnusedIndicators`. Parser ve ADR-0016 değişmedi; budama yalnızca v2 görevinde, modelin çıktısına uygulanır ve kaydedilir.
+  - **Ai:** `EvidenceItem.Metrics`; bir iddia `metric` adı verirse validator o metriği kontrol eder. "Herhangi bir metrikle eşleşme" yolu, kontrolü zayıflattığı için seçilmedi.
+  - **Research.Qualification:**
+    - `HgItem` varyant 2 (`hg-synthetic v2`, keşif `misfit-v2`);
+    - `HgPromptV2` (prompt `hg-synthetic-prompt v2`, şema `f4e85d3d…`);
+    - `HypothesisGenerationTask(variant: 2)`.
+    - v1 prompt'u, şeması ve set hash'leri birebir aynı; bir testle sabitlendi.
+  - **AiCli:**
+    - `hg-pilot`, model, set ve bütçeyi tasarım belgesindeki ```` ```json hg-pilot ```` bloğundan okur;
+    - protokolde `variant` alanı;
+    - `hg-baseline` (çevrimdışı; ağ, veritabanı ve model yok).
+- **Baseline kalibrasyonu (çevrimdışı, seed 50000–50049, ilk ve tek deneme):** 17/50 = %34,0, bant içinde. Kurgu ölçümden sonra değiştirilmedi.
+- **Tasarım:** `docs/m4-hg-qualification-design-v2.md`, kullanıcı onayı bekliyor.
+  - Pilot seed'leri 60000–60019 (set hash'i `91377be7…`); yeterlilik seed'leri 70000'den başlar.
+  - δ = 0,15, α = 0,05 (v1 ile aynı).
+- `verify.ps1` yeşil: 416 test.
+
 ## 2026-10-19 — M4 Kapı C: yeterlilik koşusu ve M4 kapanışı (kullanıcı kabulü)
 - **Yeterlilik koşusu (kullanıcının koşusu; protokol `c434d84`, kayıtlı hash `89075de8…`):** **`Failed`** (`TaskQualification` 1).
   - LLM 22/70 (%31,4), baseline 58/70 (%82,9); tek yönlü Fisher p = 1,0000; güvenlik ihlali 0; maliyet 0,112708 USD; 70 trace.

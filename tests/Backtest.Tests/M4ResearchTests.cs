@@ -84,6 +84,30 @@ public class M4KernelAndSelectionTests
     }
 
     [Fact]
+    public void Unused_indicators_are_pruned_and_reported_without_changing_the_rest()
+    {
+        const string json = """
+            {"dsl":"1","name":"x","interval":"4h","indicators":[{"id":"fast","type":"ema","params":{"period":20}},{"id":"slow","type":"ema","params":{"period":60}},
+             {"id":"atr","type":"atr","params":{"period":14}},{"id":"spare","type":"rsi","params":{"period":14}}],
+             "entry":{"op":"cross_above","args":[{"ref":"fast.value"},{"ref":"slow.value"}]},"exit":{"op":"cross_below","args":[{"ref":"fast.value"},{"ref":"slow.value"}]},
+             "stop":{"type":"atr","ref":"atr.value","multiple":3,"trailing":false}}
+            """;
+        Assert.Throws<DslException>(() => DslParser.Parse(json)); // the strict parser is unchanged
+
+        var (pruned, removed) = DslNormalizer.PruneUnusedIndicators(json);
+
+        Assert.Equal(["spare"], removed);
+        var definition = DslParser.Parse(pruned);
+        Assert.Equal(["fast", "slow", "atr"], definition.Indicators.Select(i => i.Id));
+        var (unchanged, none) = DslNormalizer.PruneUnusedIndicators(DslBaselines.EmaTrendJson);
+        Assert.Empty(none);
+        Assert.Equal(DslBaselines.EmaTrendJson, unchanged);
+        var (malformed, nothing) = DslNormalizer.PruneUnusedIndicators("not json");
+        Assert.Equal("not json", malformed);
+        Assert.Empty(nothing);
+    }
+
+    [Fact]
     public void Candidate_is_the_highest_research_metric_and_ties_go_to_the_earlier_point()
     {
         var points = new[] { Run("a", 0.0001), Run("b", 0.0003), Run("c", 0.0003), Run("d", -0.0002) };

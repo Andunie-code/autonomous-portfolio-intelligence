@@ -15,6 +15,7 @@ using PortfolioIntelligence.Ai.Persistence;
 //   reconcile --month yyyy-MM [--invoice-try <amount> --usd-try <rate>] — monthly reconciliation report.
 //   spike --allow-network [--model <id>]  — Gate C only: synthetic technical spike against Gemini after confirmation.
 //   hg-pilot --allow-network [--design <path>] [--model <id>] — HypothesisGeneration pilot on synthetic items (no qualification).
+//   hg-baseline [--variant 2] --seed-base <n> [--count 50] — deterministic grid baseline only (no network, no database).
 //   traces --job <id>                     — decision traces of a job: outcome, reason, validator results (no network).
 //   qualify-register --protocol <path>    — registers a committed, unchanged qualification protocol (no network).
 //   qualify --allow-network --protocol <path> — the qualification run through the harness (registered protocol only).
@@ -130,14 +131,19 @@ switch (command)
     case "hg-pilot":
     {
         var design = Option("--design") ?? "docs/m4-hg-qualification-design.md";
-        if (Prepare($"HypothesisGeneration pilot: {HgCommands.PilotItems} synthetic items (design {design}), budget {HgCommands.PilotBudgetUsd} USD",
-                configuration.Spend.JobCap(JobKind.Qualification)) is not { } call)
+        var pilot = await HgCommands.ReadPilotSpecAsync(design);
+        if (Prepare($"HypothesisGeneration pilot (variant {pilot.Variant}): {pilot.Count} synthetic items (design {design}), budget {pilot.BudgetUsd} USD",
+                configuration.Spend.JobCap(JobKind.Qualification), fixedModel: pilot.Model) is not { } call)
         {
             return 1;
         }
 
         return await HgCommands.PilotAsync(configuration, RequireConnectionString(), call.ApiKey, call.Model, design, ReportsDirectory(), time);
     }
+
+    case "hg-baseline":
+        return await HgCommands.BaselineAsync(int.Parse(Option("--variant") ?? "2", CultureInfo.InvariantCulture),
+            int.Parse(RequireOption("--seed-base"), CultureInfo.InvariantCulture), int.Parse(Option("--count") ?? "50", CultureInfo.InvariantCulture), ReportsDirectory());
 
     case "traces":
         return await HgCommands.TracesAsync(RequireConnectionString(), RequireOption("--job"));
@@ -168,7 +174,7 @@ static int Usage()
 }
 
 // Real Gemini calls (Gate C): the network flag, an interactive terminal, the user's own key, a priced model and a typed confirmation.
-(string ApiKey, string Model)? Prepare(string what, UsdAmount jobCap, bool modelFromProtocol = false)
+(string ApiKey, string Model)? Prepare(string what, UsdAmount jobCap, bool modelFromProtocol = false, string? fixedModel = null)
 {
     if (!args.Contains("--allow-network"))
     {
@@ -195,7 +201,9 @@ static int Usage()
         return null;
     }
 
-    var model = modelFromProtocol ? "(from the protocol)" : Option("--model") ?? host.Configuration["Gemini:Model"] ?? configuration.Policy(TaskClass.Summary).Model!.Model;
+    // A pre-registered design or protocol fixes the model; --model and Gemini:Model apply only where nothing is fixed.
+    var model = modelFromProtocol ? "(from the protocol)"
+        : fixedModel ?? Option("--model") ?? host.Configuration["Gemini:Model"] ?? configuration.Policy(TaskClass.Summary).Model!.Model;
     if (!modelFromProtocol && !configuration.Prices.Models.Any(p => p.Provider == GeminiProvider.ProviderName && p.Model == model))
     {
         Console.Error.WriteLine($"No verified list price for '{model}' in {configuration.Prices.Version}; add it from sources.md first. No call was made.");
