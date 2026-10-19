@@ -2,6 +2,14 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-19 — `gemini-3.8-flash` spike'ı (pilot öncesi)
+- **Kullanıcının koşusu:** 3/5 PASS; `modelVersion` = `gemini-3.8-flash`.
+- **İki başarısızlık spike ayarlarından kaynaklanıyor:**
+  - `dsl-in-neutral-schema`: spike'ın 1024 token sınırı thinking ile doldu (`MAX_TOKENS`, 1009 çıktı token'ı). HypothesisGeneration görevinin sınırı 8192 (tasarım v2 §3).
+  - `function-calling+structured-output`: model tool'u ikinci turda tekrar çağırdı; senaryo tek tura izin veriyor. HypothesisGeneration görevinde tool yok.
+- **Karar (T, öneri):** tasarım v2 değişmeden kalır.
+- **Kod:** `spike --max-output-tokens <n>`, senaryoları görevin token sınırında görmek için. `verify.ps1` yeşil.
+
 ## 2026-10-19 — HypothesisGeneration v2 döngüsü: tasarım ve kod (pilot öncesi)
 - **Kullanıcı kararı (U):**
   - v2 yeterlilik döngüsü; v1 kayıtları değişmeden kalır.

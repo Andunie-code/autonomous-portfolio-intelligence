@@ -13,7 +13,7 @@ using PortfolioIntelligence.Ai.Persistence;
 //   killswitch clear --reason "<text>"    — manual clear: interactive terminal only, actor user:<name> (audited).
 //   ledger [--month yyyy-MM]              — spend summary at list prices.
 //   reconcile --month yyyy-MM [--invoice-try <amount> --usd-try <rate>] — monthly reconciliation report.
-//   spike --allow-network [--model <id>]  — Gate C only: synthetic technical spike against Gemini after confirmation.
+//   spike --allow-network [--model <id>] [--max-output-tokens <n>] — Gate C only: synthetic technical spike against Gemini after confirmation.
 //   hg-pilot --allow-network [--design <path>] [--model <id>] — HypothesisGeneration pilot on synthetic items (no qualification).
 //   hg-baseline [--variant 2] --seed-base <n> [--count 50] — deterministic grid baseline only (no network, no database).
 //   traces --job <id>                     — decision traces of a job: outcome, reason, validator results (no network).
@@ -115,7 +115,9 @@ switch (command)
         using var provider = new GeminiProvider(call.ApiKey, configuration.Prices, GeminiGuardHandler.CreateNetworkHandler());
         var guard = new AiCallGuard(provider, configuration, new NpgsqlCostLedger(connection), killSwitch, time);
         var job = new JobContext($"spike-{time.GetUtcNow():yyyyMMdd'T'HHmmss'Z'}", JobKind.Spike);
-        var results = await new SpikeRunner(guard, call.Model).RunAsync(job, CancellationToken.None);
+        // --max-output-tokens: e.g. 8192 to see a scenario at the HypothesisGeneration task's limit (thinking tokens count, S-G8).
+        var maxOutput = Option("--max-output-tokens") is { } limit ? int.Parse(limit, CultureInfo.InvariantCulture) : 1024;
+        var results = await new SpikeRunner(guard, call.Model, maxOutput).RunAsync(job, CancellationToken.None);
         foreach (var r in results)
         {
             Console.WriteLine($"{r.Scenario}: {(r.Passed ? "PASS" : "FAIL")} ({r.Status}; model {r.ActualModel}; finish {string.Join("/", r.Finishes)}; " +
