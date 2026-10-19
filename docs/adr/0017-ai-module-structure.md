@@ -2,7 +2,9 @@
 
 - Durum: **Kabul edildi (Kapı A, kullanıcı onayı 2026-10-18)** · Tarih: 2026-10-18
 - Karar türü: **T** (teknik lider). Kullanıcı kararları ayrıca belirtildi.
-- Uygulama durumu: **Kapı B'de uygulandı (2026-10-18), çevrimdışı testlerle.** Gerçek Gemini çağrısı yapılmadı; SDK'nın gerçek API'deki davranışı Kapı C spike'ında doğrulanır.
+- Uygulama durumu: **Uygulandı (Kapı B 2026-10-18, Kapı C 2026-10-19).**
+  - SDK'nın gerçek API'deki davranışı spike'ta doğrulandı: enjekte edilen istemci, `modelVersion`, structured output ile tool'ların birlikte kullanımı.
+  - Kapı C eklemeleri: model turunun opak olarak aynen geri gönderilmesi (S-G8), sağlayıcı hata ayrıntısı ve maskeleme, Gemini'ye giden şemalardan `additionalProperties`'in çıkarılması, `spike --model`, `hg-pilot`, `qualify-register`, `qualify`, `traces`.
 - Uygulama notları (Kapı B):
   - `ClientOptions.HttpClientFactory` ile enjeksiyon ve SDK retry'ının kapatılması (`HttpRetryOptions.Attempts = 1`) çevrimdışı doğrulandı: 429 ve 503 yanıtlarında tek HTTP isteği gidiyor.
   - Batch sözleşmesi uygulandı (`CreateAsync`, `GetAsync`, `CancelAsync`).

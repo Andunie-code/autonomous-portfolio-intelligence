@@ -1,6 +1,6 @@
 # Gereksinimler
 
-Son güncelleme: 2026-10-16 (rev. 5.2) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-19 (rev. 5.3; B1 kapandı, M4) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: M0 tamamlandı. M1 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
 
@@ -132,9 +132,9 @@ Gerçek para ile işlem, futures/margin, birden fazla borsa, haber ve sentiment,
 | Evaluator yayın tamponu (başlangıç: 3 gün) | Arşivin yayın gecikmesine göre | M5 | Teknik lider |
 | Yeterlilik eşikleri ve örneklem büyüklükleri (görev sınıfı başına) | Ayrı bir pilot sette varyans ölçülür, ardından güç analizi yapılır. α ve minimum anlamlı etki protokolde gerekçelendirilir | Her yeterlilik protokolü öncesi | Teknik lider |
 | Allocator gölge mod süresi (≥ 4 hafta onaylı alt sınır) | Gölge modun ilk haftalarındaki karar sayısı ve varyansla güç analizi | M8 | Teknik lider |
-| Timeout, retry, eşzamanlılık değerleri | Başlangıç değerleri ADR-0010'da. M4 spike'ında ölçülüp ayarlanır | M4 | Teknik lider |
-| Gemini fiyatları, rate limit'leri, kredi kapsamı | Resmi kaynaklardan ve hesap konsolundan doğrulama | M4 öncesi | Kullanıcı (hesap bilgisi), teknik lider |
-| TL/USD mutabakatı | Defter, liste fiyatlarına göre USD tutar. Google faturasıyla aylık manuel mutabakat yapılır | M4 | Teknik lider |
+| ~~Timeout, retry, eşzamanlılık değerleri~~ — **M4'te ölçüldü** (spike, pilot ve yeterlilik koşusu: gecikme 0,6–2,0 sn, retry ya da timeout olayı yok). Başlangıç değerleri (120 sn, en fazla 2 retry, eşzamanlılık 1) korundu (`m4-spike-results.md`) | — | — | — |
+| ~~Gemini fiyatları, rate limit'leri, kredi kapsamı~~ — **doğrulandı** (`sources.md` S-G1…S-G9, 2026-10-18/19; B1 kapandı, 2026-10-19) | — | — | — |
+| TL/USD mutabakatı | Defter, liste fiyatlarına göre USD tutar. Google faturasıyla aylık manuel mutabakat yapılır. Araç M4'te hazır (`m4-ai.ps1 reconcile`). 2026-10 ledger toplamı 0,146228 USD; fatura ay kapanınca girilir | Her ay sonu (ilki 2026-10) | Kullanıcı (fatura tutarı), teknik lider |
 | PDF metin çıkarma kütüphanesi | M7 başında küçük bir karşılaştırma | M7 | Teknik lider |
 | Barındırılan CI | Ücretsiz seçenekler değerlendirilir; ücretliyse kullanıcı kararı | İhtiyaç olduğunda | Teknik lider |
 

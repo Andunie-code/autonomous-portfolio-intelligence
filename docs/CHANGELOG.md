@@ -2,6 +2,19 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-19 — M4 Kapı C: yeterlilik koşusu ve M4 kapanışı (kullanıcı kabulü)
+- **Yeterlilik koşusu (kullanıcının koşusu; protokol `c434d84`, kayıtlı hash `89075de8…`):** **`Failed`** (`TaskQualification` 1).
+  - LLM 22/70 (%31,4), baseline 58/70 (%82,9); tek yönlü Fisher p = 1,0000; güvenlik ihlali 0; maliyet 0,112708 USD; 70 trace.
+  - Kanıt reddi 34, geçersiz DSL 4.
+  - Ayrıntı: `docs/m4-hg-qualification-results.md`.
+- **Sonuç:** HypothesisGeneration'da nitelikli model yok. `qualifiedModels` boş kalır; araştırma LLM'siz modda sürer (D20).
+- **Mutabakat:** ekim ayı ledger toplamı 0,146228 USD, 102 çağrı (spike, pilot, yeterlilik). Fatura ay kapanınca girilir (`docs/m4-ai-reconciliation-2026-10.md`). Kill switch hiç tetiklenmedi.
+- **Kullanıcı kararı (U):** M4 kapanışı kabul edildi.
+- **Güncellemeler:**
+  - `roadmap.md`: M4 ✅.
+  - `requirements.md` §8: timeout, retry ve eşzamanlılık ölçüldü; Gemini fiyatları doğrulandı; TL/USD mutabakatı aylık.
+  - ADR-0007, ADR-0010 ve ADR-0017'nin uygulama durumları.
+
 ## 2026-10-19 — M4 Kapı C: HypothesisGeneration pilotu ve yeterlilik protokolü taslağı
 - **Pilot (kullanıcının koşusu, ön kayıt `1165601`):** LLM 6/20 (%30), baseline 18/20 (%90); güvenlik ihlali 0; maliyet 0,032664 USD (`docs/m4-hg-pilot-results.md`).
 - **Teşhis:** 10 LLM başarısızlığının nedeni kanıt reddi. Model `claims[].value` alanına `M` yerine işlem sayısı, yıl, parite ya da drawdown değeri yazmış; validator doğru reddetmiş. Ön kayıt gereği prompt, şema ve validator değiştirilmedi; bulgu olası bir v2 tasarımının girdisi.

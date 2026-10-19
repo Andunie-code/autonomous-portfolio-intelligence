@@ -1,7 +1,7 @@
 # ADR-0010: Model yeterliliği, harcama kontrolü ve LLM acil durdurma
 
 - Durum: Kabul edildi (teknik lider kararı T7–T10, T14) · Tarih: 2026-10-13
-- Uygulama durumu: **Kapı B'de uygulandı (2026-10-18)**: harcama kontrolü, `AiKillSwitch` ve otomatik tetikler, ledger, mutabakat raporu ve harness; testing §6.3'teki testler sahte sağlayıcıyla geçti (yapı ADR-0017). Yeterlilik koşusu yapılmadı (Kapı C, B1 gerekli; HypothesisGeneration çerçevesi `m4-protocol.md` §8).
+- Uygulama durumu: **Kapı B'de uygulandı (2026-10-18)**: harcama kontrolü, `AiKillSwitch` ve otomatik tetikler, ledger, mutabakat raporu ve harness; testing §6.3'teki testler sahte sağlayıcıyla geçti (yapı ADR-0017). Kapı C (2026-10-19): HypothesisGeneration için pilot, ön kayıtlı protokol (`c434d84`) ve yeterlilik koşusu yapıldı; sonuç **`Failed`** (`TaskQualification` 1). M4 toplam harcaması 0,146228 USD; mutabakat raporu `m4-ai-reconciliation-2026-10.md`.
 - İlgili: ADR-0007, `architecture.md` §3, `testing-strategy.md` §6
 
 ## Problem ve kısıtlar

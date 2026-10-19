@@ -1,7 +1,7 @@
 # ADR-0007: Sağlayıcıdan bağımsız model yönlendirme; şu an yetkili tek runtime sağlayıcısı Gemini
 
 - Durum: Kabul edildi · Tarih: 2026-10-12 · Revizyon: 2026-10-13 (rev. 3)
-- Uygulama durumu: **Planlandı, uygulanmadı**
+- Uygulama durumu: **Uygulandı (M4, 2026-10-19)**: `IAiProvider`, `GeminiProvider` ve `ModelRouter` (ADR-0017). Gerçek API ile spike 5/5. HypothesisGeneration yeterliliği `Failed`, karar etkileyen görevlerde nitelikli model yok.
 - İlgili: ADR-0010 (yeterlilik, harcama kontrolü, acil durdurma)
 
 ## Bağlam
