@@ -12,7 +12,7 @@ Kullanıcıyla Türkçe iletişim kurulur; teknik terimler İngilizce kalabilir.
 - Her milestone ayrı kullanıcı onayıyla başlar. Onaylanmamış bir milestone'a kendiliğinden geçilmez.
 - Teknik kararlar alınabilir; gerekçe ilgili ADR'ye ve CHANGELOG'a yazılır.
 - "Uygulandı" ya da "geçti" ifadesi yalnızca gerçekten çalıştırılmış ve geçmiş testler için kullanılır.
-- Doğrulama: `powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`. Yerel ortam: `powershell -ExecutionPolicy Bypass -File scripts/dev-up.ps1`. (Windows ExecutionPolicy script çalıştırmayı engelliyorsa `-ExecutionPolicy Bypass` gerekir; alt script çağrıları da bu bayrakla yapılır.)
+- Doğrulama: `powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`. Yerel ortam: `powershell -ExecutionPolicy Bypass -File scripts/dev-up.ps1` (M5'ten sonra yalnızca PostgreSQL'i başlatır; ortam kurulumu kullanıcının `m5-bootstrap.ps1` koşusudur). Araştırma araçları M5'ten sonra `scripts/m5-research.ps1` ile `research_app` olarak çalışır. (Windows ExecutionPolicy script çalıştırmayı engelliyorsa `-ExecutionPolicy Bypass` gerekir; alt script çağrıları da bu bayrakla yapılır.)
 
 ## Onay gerektiren işlemler
 Kullanıcıdan açık onay alınmadan yapılmaz:
@@ -28,7 +28,7 @@ Kullanıcıdan açık onay alınmadan yapılmaz:
 - Açığa çıkmamış kohortların paper ve Testnet sonuçları ile tanısal metrikler, kullanıcı paylaşsa bile **araştırma ya da hipotez girdisi olarak kullanılmaz.**
 - Holdout veritabanına ve evaluator'a erişim denenmez. SSH bağlantısı kurulmaz.
 - Holdout koruma kodu (adında `Holdout` geçen dosyalar) ve evaluator kodu, kullanıcının açık isteği olmadan değiştirilmez.
-- **M5 yerel ortamı (m5-protocol §4, §11):** `ops` veritabanına yalnızca `research_app` login'iyle bağlanılır. `market.live_candles`, `trading.*` ve canlı veriden türeyen tablolar (korelasyon, PnL) okunmaz. `scripts/m5-*.ps1` (bootstrap, deploy, henv, paper-start, paper-report, backup, restore-test), evaluator ve probe komutları ile Trading.Host'un başlatılması **yalnızca kullanıcı** tarafından çalıştırılır. Paper raporlarından yalnızca operasyonel alanlar (m5-protocol §7.3) görülür.
+- **M5 yerel ortamı (m5-protocol §4, §11):** `ops` veritabanına yalnızca `research_app` login'iyle bağlanılır. `market.live_candles`, `trading.*` ve canlı veriden türeyen tablolar (korelasyon, PnL) okunmaz. `scripts/m5-*.ps1` (bootstrap, deploy, migrate, henv, seed-cohort0, paper-start, paper-report, backup, restore-test; `m5-research.ps1` hariç), evaluator ve probe komutları, profilli `docker compose` komutları ve Trading.Host'un başlatılması **yalnızca kullanıcı** tarafından çalıştırılır. Paper raporlarından yalnızca operasyonel alanlar (m5-protocol §7.3) görülür.
 - Holdout ortamına ait sır adları (`tests/Architecture.Tests/HoldoutSecretReferenceTests.cs`) evaluator projesi dışında hiçbir kaynak, config ya da script dosyasında kullanılmaz.
 
 ## Sırlar

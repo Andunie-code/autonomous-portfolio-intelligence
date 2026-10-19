@@ -16,6 +16,8 @@ public sealed class EvaluatorDatabase : IAsyncLifetime
     public const string Digest = "sha256:0000000000000000000000000000000000000000000000000000000000000001";
     public const string EngineSha = "0123456789abcdef0123456789abcdef01234567";
 
+    // Throwaway login secret of the test container, generated per run (no literal in the repository).
+    private static readonly string LoginSecret = Guid.NewGuid().ToString("N");
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17-alpine").Build();
     private int _databases;
 
@@ -41,6 +43,26 @@ public sealed class EvaluatorDatabase : IAsyncLifetime
             .MigrateAsync(connection, SqlMigrator.LoadEmbedded(typeof(HoldoutDatabase).Assembly), CancellationToken.None);
         await ExecuteAsync(connection, $"INSERT INTO results.evaluator_releases (image_digest, engine_sha) VALUES ('{Digest}', '{EngineSha}')");
         return new HoldoutDatabase(connection, OpsConnectionString);
+    }
+
+    /// <summary>A holdout database with an exact name (holdout_henv for the self-test) and optional real role logins.</summary>
+    public async Task<HoldoutDatabase> NewNamedHoldoutAsync(string name, bool logins = false)
+    {
+        var connection = await CreateDatabaseAsync(name);
+        await new SqlMigrator(NullLogger<SqlMigrator>.Instance)
+            .MigrateAsync(connection, SqlMigrator.LoadEmbedded(typeof(HoldoutDatabase).Assembly), CancellationToken.None);
+        await ExecuteAsync(connection, $"INSERT INTO results.evaluator_releases (image_digest, engine_sha) VALUES ('{Digest}', '{EngineSha}')");
+        var roles = new Dictionary<string, string>();
+        if (logins)
+        {
+            foreach (var role in new[] { "eval_registry", "eval_diagnostic", "eval_prospective" })
+            {
+                await ExecuteAsync(ServerConnectionString, $"ALTER ROLE {role} LOGIN PASSWORD '{LoginSecret}'");
+                roles[role] = new NpgsqlConnectionStringBuilder(connection) { Username = role, Password = (LoginSecret) }.ConnectionString;
+            }
+        }
+
+        return new HoldoutDatabase(connection, OpsConnectionString, roles);
     }
 
     public static async Task ExecuteAsync(string connectionString, string sql, string? role = null)

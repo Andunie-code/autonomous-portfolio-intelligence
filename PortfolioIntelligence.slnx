@@ -3,6 +3,9 @@
   <Folder Name="/src/HoldoutEvaluator/">
     <Project Path="src/HoldoutEvaluator/PortfolioIntelligence.HoldoutEvaluator.csproj" />
   </Folder>
+  <Folder Name="/src/HoldoutEvaluator/EnvironmentProbe/">
+    <Project Path="src/HoldoutEvaluator/EnvironmentProbe/PortfolioIntelligence.HoldoutEvaluator.EnvironmentProbe.csproj" />
+  </Folder>
   <Folder Name="/src/Hosts/" />
   <Folder Name="/src/Hosts/Research.Host/">
     <Project Path="src/Hosts/Research.Host/PortfolioIntelligence.Research.Host.csproj" />
@@ -36,6 +39,9 @@
     <Project Path="src/Modules/Researcher/PortfolioIntelligence.Researcher.csproj" />
   </Folder>
   <Folder Name="/src/Tools/" />
+  <Folder Name="/src/Tools/BackupCli/">
+    <Project Path="src/Tools/BackupCli/PortfolioIntelligence.BackupCli.csproj" />
+  </Folder>
   <Folder Name="/src/Tools/DbMigrator/">
     <Project Path="src/Tools/DbMigrator/PortfolioIntelligence.DbMigrator.csproj" />
   </Folder>
@@ -66,5 +72,8 @@
   </Folder>
   <Folder Name="/tests/Infrastructure.Tests/">
     <Project Path="tests/Infrastructure.Tests/PortfolioIntelligence.Infrastructure.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Trading.Tests/">
+    <Project Path="tests/Trading.Tests/PortfolioIntelligence.Trading.Tests.csproj" />
   </Folder>
 </Solution>

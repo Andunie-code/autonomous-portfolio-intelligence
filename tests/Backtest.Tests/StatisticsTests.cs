@@ -111,3 +111,32 @@ public class StatisticsTests
         Assert.True(silent.Underpowered);
     }
 }
+
+/// <summary>P1 decision rule (m5-protocol §9).</summary>
+public class P1RuleTests
+{
+    private static Research.Evaluation.P1Row Row(string s, decimal? cap, double m, double dd, int clips) =>
+        new(s, 0.70, cap, m, dd, 0, 10, clips, 0, 0.5, 2, 0.3, 0.5, 0.6);
+
+    [Fact]
+    public void The_largest_binding_cap_with_a_drawdown_gain_and_a_bounded_return_cost_is_recommended()
+    {
+        var rows = new List<Research.Evaluation.P1Row>();
+        foreach (var s in new[] { "a", "b" })
+        {
+            rows.Add(Row(s, null, 0.05, 0.30, 0));
+            rows.Add(Row(s, 0.30m, 0.02, 0.20, 9));   // costs 3 points of M: not eligible
+            rows.Add(Row(s, 0.40m, 0.045, 0.25, 5));  // eligible
+            rows.Add(Row(s, 0.50m, 0.049, 0.297, 2)); // drawdown gain 0.3 points: not eligible
+            rows.Add(Row(s, 0.60m, 0.05, 0.30, 0));   // never binds
+        }
+
+        var recommendation = Research.Evaluation.P1Rule.Recommend(rows);
+        Assert.Equal(0.40m, recommendation.Cap);
+        Assert.Equal(0.36, recommendation.WarningThreshold, 12);
+
+        var none = Research.Evaluation.P1Rule.Recommend(rows.Where(r => r.Cap is null or 0.60m).ToList());
+        Assert.Null(none.Cap);
+        Assert.Equal(0.5, none.WarningThreshold, 12);
+    }
+}

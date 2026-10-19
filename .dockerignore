@@ -1,0 +1,16 @@
+# Build contexts never carry secrets, local configuration, data or build output (m5-protocol §4.2, §7.4).
+.git
+.env
+.env.*
+**/secrets
+**/secrets/**
+**/bin
+**/obj
+**/TestResults
+data
+docs
+tests
+*.zip
+*.csv
+*.dump
+*.enc

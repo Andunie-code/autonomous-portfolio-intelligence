@@ -11,6 +11,9 @@
     <ProjectReference Include="..\..\src\Infrastructure\PortfolioIntelligence.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="engine-regression.v1.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="xunit" />

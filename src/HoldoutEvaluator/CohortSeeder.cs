@@ -8,10 +8,15 @@ public sealed record SeedResult(long CohortId, DateTimeOffset RegisteredAt, Date
 /// Kohort 0 seed exception (architecture §6.3, V13): the owner registers the cohort with the local commit time as
 /// registered_at through results.seed_cohort; A_c and the window end are still derived by the database, limits and
 /// family attempts still apply, and the event is audited. Used once in M3 (synthetic database) and once in M5.
+/// M5 (m5-protocol §6.3, A-2): the manifest's own release (local-build) is registered as the seed release, and
+/// <paramref name="evaluatingDigest"/>, the real evaluator image, is linked to it by an audited equivalence record
+/// carrying the regression evidence (the M2 result hashes reproduced by that engine). The manifest is unchanged;
+/// a second seed of the same manifest is rejected by the unique manifest hash.
 /// </summary>
 public static class CohortSeeder
 {
-    public static async Task<SeedResult> SeedAsync(HoldoutDatabase database, string manifestJson, DateTimeOffset registeredAt, StatusRelay? relay, CancellationToken ct)
+    public static async Task<SeedResult> SeedAsync(HoldoutDatabase database, string manifestJson, DateTimeOffset registeredAt, StatusRelay? relay, CancellationToken ct,
+        string? evaluatingDigest = null, string? equivalenceEvidenceJson = null)
     {
         var manifest = ManifestParser.Parse(manifestJson);
         await using var connection = await database.OpenAsync(null, ct);
@@ -39,6 +44,21 @@ public static class CohortSeeder
         await using (var end = new NpgsqlCommand("SELECT results.end_seed()", connection, transaction))
         {
             await end.ExecuteNonQueryAsync(ct);
+        }
+
+        if (evaluatingDigest is not null && evaluatingDigest != manifest.ImageDigest)
+        {
+            if (string.IsNullOrWhiteSpace(equivalenceEvidenceJson))
+            {
+                throw new RegistryRejectedException("an equivalence record needs regression evidence");
+            }
+
+            await using var equivalence = new NpgsqlCommand(
+                "INSERT INTO results.release_equivalences (from_digest, to_digest, actor, evidence) VALUES ($1, $2, 'user', $3::jsonb)", connection, transaction);
+            equivalence.Parameters.AddWithValue(manifest.ImageDigest);
+            equivalence.Parameters.AddWithValue(evaluatingDigest);
+            equivalence.Parameters.AddWithValue(equivalenceEvidenceJson);
+            await equivalence.ExecuteNonQueryAsync(ct);
         }
 
         await transaction.CommitAsync(ct);

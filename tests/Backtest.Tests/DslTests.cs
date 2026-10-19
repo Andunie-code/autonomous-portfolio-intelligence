@@ -8,7 +8,7 @@ namespace PortfolioIntelligence.Backtest.Tests;
 /// <summary>DSL v1 (ADR-0016): validation, normalisation and hashes (m3-protocol §8), interpreter semantics and baseline parity.</summary>
 public class DslTests
 {
-    private const string Filtered = """
+    internal const string Filtered = """
         {
           "dsl": "1", "name": "filtered", "interval": "4h",
           "indicators": [

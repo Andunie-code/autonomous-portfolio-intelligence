@@ -1,0 +1,69 @@
+# Holdout side of the local topology (docs/m5-protocol.md §4, §6; ADR-0013 §4): the evaluator and the H-ENV probes.
+# Included by the root docker-compose.yml; paths are relative to this directory. The evaluator is job based
+# (profile "evaluator"), publishes no port, reaches the database only on the holdout network from its static IP,
+# the archive only on the egress network, and is reachable by Research.Host only on the internal eval network.
+secrets:
+  eval_owner:
+    file: ./secrets/eval_owner
+  eval_registry:
+    file: ./secrets/eval_registry
+  eval_diagnostic:
+    file: ./secrets/eval_diagnostic
+  eval_prospective:
+    file: ./secrets/eval_prospective
+  status_relay:
+    file: ./secrets/status_relay
+  submit_token:
+    file: ./secrets/submit_token
+  read_status_token:
+    file: ./secrets/read_status_token
+
+services:
+  holdout-evaluator:
+    profiles: ["evaluator"]
+    build:
+      context: ../..
+      dockerfile: src/HoldoutEvaluator/Dockerfile
+    image: portfolio-intelligence/holdout-evaluator:local
+    environment:
+      ConnectionStrings__HoldoutDb: Host=postgres;Database=${PI_EVAL_DATABASE:-holdout};Username=eval_owner
+      ConnectionStrings__HoldoutRegistry: Host=postgres;Database=${PI_EVAL_DATABASE:-holdout};Username=eval_registry
+      ConnectionStrings__HoldoutDiagnostic: Host=postgres;Database=${PI_EVAL_DATABASE:-holdout};Username=eval_diagnostic
+      ConnectionStrings__HoldoutProspective: Host=postgres;Database=${PI_EVAL_DATABASE:-holdout};Username=eval_prospective
+      ConnectionStrings__StatusRelay: Host=postgres;Database=ops;Username=status_relay
+      Evaluator__SecretsDirectory: /run/secrets
+      Evaluator__ImageDigest: ${PI_EVALUATOR_DIGEST:-unregistered}
+      Evaluator__WindowSource: ${PI_EVALUATOR_WINDOW_SOURCE:-archive}
+      Evaluator__CacheDirectory: /var/lib/evaluator/cache
+    secrets: [eval_owner, eval_registry, eval_diagnostic, eval_prospective, status_relay, submit_token, read_status_token]
+    volumes:
+      - evaluator-cache:/var/lib/evaluator
+    networks:
+      eval:
+        ipv4_address: 172.30.2.20
+      holdout:
+        ipv4_address: 172.30.3.20
+      egress: {}
+    mem_limit: 1536m
+    cpus: 2.0
+
+  # H-ENV probes (one-shot, profile "henv"): the network positions of Research.Host and Trading.Host.
+  henv-probe-research:
+    profiles: ["henv"]
+    image: portfolio-intelligence/holdout-evaluator:local
+    entrypoint: ["dotnet", "/app/probe/PortfolioIntelligence.HoldoutEvaluator.EnvironmentProbe.dll", "research"]
+    secrets: [research_app, eval_registry, eval_prospective, status_relay]
+    networks: [ops, eval]
+    mem_limit: 256m
+    cpus: 0.5
+
+  henv-probe-trading:
+    profiles: ["henv"]
+    image: portfolio-intelligence/holdout-evaluator:local
+    entrypoint: ["dotnet", "/app/probe/PortfolioIntelligence.HoldoutEvaluator.EnvironmentProbe.dll", "trading"]
+    networks: [ops]
+    mem_limit: 256m
+    cpus: 0.5
+
+volumes:
+  evaluator-cache:

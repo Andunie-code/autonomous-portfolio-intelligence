@@ -1,10 +1,14 @@
 <#
 .SYNOPSIS
-  One command to bring up the local development environment: dev PostgreSQL + migrations.
+  Local environment entry point.
 .DESCRIPTION
-  1. Creates .env with a random local-only database password if it does not exist.
-  2. Starts the dev database container and waits until it is healthy.
-  3. Applies the embedded SQL migrations with the DbMigrator tool.
+  M0-M4: started the development PostgreSQL and applied migrations as the superuser over the loopback port.
+  M5 (docs/m5-protocol.md §4): the M5 pg_hba refuses the superuser on the network, so environment set-up is the
+  user's bootstrap. This script now:
+  1. creates .env with a random local-only superuser password if it does not exist (new machine);
+  2. without an M5 environment: stops and points to scripts/m5-bootstrap.ps1 (user);
+  3. with one: starts the PostgreSQL container if it is not running. Ops migrations are applied by the user
+     with scripts/m5-migrate.ps1 (ops_owner); research tools run through scripts/m5-research.ps1 (research_app).
   Works with Windows PowerShell 5.1 and PowerShell 7.
 #>
 $ErrorActionPreference = 'Stop'
@@ -20,25 +24,13 @@ if (-not (Test-Path $envFile)) {
     Write-Host '.env created with a random local database password.'
 }
 
-$settings = @{}
-foreach ($line in Get-Content $envFile) {
-    # -cmatch (case-sensitive): case-insensitive -match follows the current culture, and under tr-TR
-    # the letter I does not fall inside [A-Z], so keys like PI_DEV_DB_PASSWORD would silently not match.
-    if ($line -cmatch '^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$') { $settings[$Matches[1]] = $Matches[2] }
+. "$PSScriptRoot\lib\m5-common.ps1"
+$settings = Read-DotEnv
+if ($settings['PI_OPS_DB'] -ne 'ops') {
+    Write-Host 'No M5 environment yet. The user runs: powershell -ExecutionPolicy Bypass -File scripts/m5-bootstrap.ps1'
+    exit 2
 }
-if (-not $settings['PI_DEV_DB_PASSWORD']) { throw '.env does not define PI_DEV_DB_PASSWORD.' }
-$port = if ($settings['PI_DEV_DB_PORT']) { $settings['PI_DEV_DB_PORT'] } else { '55432' }
 
-docker compose up -d --wait dev-db
+docker compose up -d --wait postgres
 if ($LASTEXITCODE -ne 0) { throw 'docker compose up failed.' }
-
-$env:ConnectionStrings__Ops = "Host=127.0.0.1;Port=$port;Database=portfolio_dev;Username=pi_dev;Password=$($settings['PI_DEV_DB_PASSWORD'])"
-try {
-    dotnet run --project src/Tools/DbMigrator -c Release
-    if ($LASTEXITCODE -ne 0) { throw 'Migrations failed.' }
-}
-finally {
-    Remove-Item Env:ConnectionStrings__Ops -ErrorAction SilentlyContinue
-}
-
-Write-Host "Development environment is up (PostgreSQL on 127.0.0.1:$port, migrations applied)."
+Write-Host 'PostgreSQL is up (127.0.0.1, ops). Migrations: scripts/m5-migrate.ps1 (user). Research tools: scripts/m5-research.ps1.'

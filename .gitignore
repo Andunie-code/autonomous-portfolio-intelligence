@@ -34,3 +34,6 @@ TestResults/
 # --- OS ---
 Thumbs.db
 .DS_Store
+
+# --- M5 local environment (generated; holdout secrets live in src/HoldoutEvaluator/secrets/, matched by secrets/) ---
+deploy/postgres/pg_hba.local.conf

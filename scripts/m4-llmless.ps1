@@ -20,7 +20,8 @@ foreach ($line in Get-Content $envFile) {
     if ($line -cmatch '^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$') { $settings[$Matches[1]] = $Matches[2] }
 }
 $port = if ($settings['PI_DEV_DB_PORT']) { $settings['PI_DEV_DB_PORT'] } else { '55432' }
-$env:ConnectionStrings__Ops = "Host=127.0.0.1;Port=$port;Database=portfolio_dev;Username=pi_dev;Password=$($settings['PI_DEV_DB_PASSWORD'])"
+. "$PSScriptRoot\lib\m5-common.ps1"
+$env:ConnectionStrings__Ops = Get-OpsConnection 'research_app'  # M5: research_app on ops after the bootstrap
 # Engine identity: HEAD plus the git tree hash of src/ as it is now (a temporary index; the real index is untouched).
 # After the code is committed, `git rev-parse <commit>:src` must give the same tree hash.
 $tmpIndex = Join-Path ([System.IO.Path]::GetTempPath()) "pi-m4-index-$PID"

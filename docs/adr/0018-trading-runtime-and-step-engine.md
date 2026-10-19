@@ -2,7 +2,15 @@
 
 - Durum: **Kabul edildi (Kapı A, kullanıcı onayı 2026-10-20)** · Tarih: 2026-10-19
 - Karar türü: **T** (teknik lider). Kullanıcı kararları `m5-protocol.md` §0'da.
-- Uygulama durumu: **Planlandı, uygulanmadı**
+- Uygulama durumu: **Kapı B'de çevrimdışı uygulandı (2026-10-20); gerçek ortam Kapı C'de.**
+- Uygulama notları (Kapı B):
+  - `PortfolioEngine` mutable bir nesnedir: `Step(t, bars, reference, context)` durumu yerinde ilerletir ve olayları biriktirir. Bu, §1'deki `Step(state, …) → (state, events)` biçimine işlevsel olarak eşdeğerdir. Restart'ta durum, `trading.steps`'teki adım girdileriyle (sembol listesi, bağlam, `RiskConfig` sürümü) baştan yeniden üretilir ve her adımın durum hash'i karşılaştırılır.
+  - `BacktestEngine.Run` tek sleeve'li bir `PortfolioReplay` döngüsüdür. M2'nin dört hash'i (`m3-parity.ps1`, gerçek `R`) ve motor değişikliğinden önce yakalanan 36 sentetik senaryo hash'i (`engine-regression.v1.txt`) birebir üretilir.
+  - Ayrı bir `RiskEngine` sınıfı yerine risk ve sizing kararları motorun adımında, L2 olayı olarak kaydedilir. Neden kodları: `max-positions`, `no-volatility`, `total-exposure`, `asset-cap`, `experimental-cap`, `cluster-cap`, `min-notional`, `daily-loss`, `drawdown-halt`, `kill-switch`, `stale-data`, `reconciliation`, `sleeve-disabled`, `close-all`.
+  - "Tümünü kapat" aynı açılıştaki bekleyen girişleri de iptal eder (`close-all`). Aksi halde kapatmanın hemen ardından yeni pozisyon açılabiliyordu.
+  - Operasyonel eylemler, Ops API'ye geliş zamanından bağımsız olarak işlenen bir sonraki adımda uygulanır. Uygulandıkları adım `lastActionId` ile kaydedilir.
+  - Ledger nakdi motor nakdiyle 1e-12 USDT toleransla mutabık tutulur. Motor nominal + ücreti tek işlemde, ledger iki satırda düşer; 28. basamakta yuvarlama farkı oluşabilir.
+  - `PaperTrader`, aynı process içinde adım günlüğü değişmediyse motoru önbellekte tutar (replay yok). Yeni bir örnek restart demektir. Parity replay bellek içi bir store (`InMemoryPaperStore`) ile aynı trader kodunu kullanır.
 - İlgili: ADR-0001, ADR-0002, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015; `architecture.md` §5, §6.4, §7; `risk-model.md` §2–§4; `m5-protocol.md`
 
 ## Bağlam

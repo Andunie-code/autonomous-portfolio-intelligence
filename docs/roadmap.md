@@ -151,7 +151,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Toplam harcama 10 USD'lik başlangıç tavanının altında kaldı; mutabakat raporu üretildi.
 
 ### M5 — Yerel holdout ortamı ve deterministik paper trading (L)
-- **Durum (2026-10-19):** başlatıldı (U). Kapı A onaylandı (2026-10-20, U): [`m5-protocol.md`](m5-protocol.md) v1, ADR-0018, ADR-0013 rev. notu. Kapı B sürüyor.
+- **Durum (2026-10-19):** başlatıldı (U). Kapı A onaylandı (2026-10-20, U; `9dda841`): [`m5-protocol.md`](m5-protocol.md) v1, ADR-0018, ADR-0013 rev. notu. Kapı B (çevrimdışı kod ve testler) kullanıcı kabulüyle tamamlandı (2026-10-20; `verify.ps1` 488/488). Kapı C sürüyor.
 - **Kapılar (U):** **A** = tasarım ve ön kayıt; **B** = çevrimdışı kod ve testler, `verify.ps1` yeşil; **C** = gerçek yerel Docker ortamı (bootstrap, H-ENV ve `HoldoutEnvironmentVerified`, Kohort 0'ın gerçek holdout DB'ye aktarılması, `R` üzerinde parity replay, ≥ 7 gün paper, yedek ve geri yükleme, P1 raporu). Ortam, H-ENV, paper ve yedek adımları kullanıcının etkileşimli koşularıdır.
 - **Ön koşul:** yok (B2 kaldırıldı; D5 rev., VPS yok).
 - **Kapsam (ADR-0013):**

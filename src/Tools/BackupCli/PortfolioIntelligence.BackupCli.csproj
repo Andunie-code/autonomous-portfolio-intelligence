@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- M5 backup encryption (docs/m5-protocol.md §7.4): AES-256-GCM in authenticated chunks. Used by the user's
+       scripts/m5-backup.ps1 and m5-restore-test.ps1; no network, no database. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="PortfolioIntelligence.Infrastructure.Tests" />
+  </ItemGroup>
+</Project>

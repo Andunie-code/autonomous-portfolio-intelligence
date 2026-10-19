@@ -1,37 +1,123 @@
-# Local development. The target single-machine topology (one PostgreSQL instance with separate ops and
-# holdout databases, four networks, resource limits) is described in docs/adr/0013 and arrives with M5.
-# M3: the optional "evaluator" profile runs the holdout evaluator on synthetic data only (holdout_synth);
-# its settings live in src/HoldoutEvaluator/.env.evaluator (git-ignored, see evaluator-up.ps1).
+# Local single-machine topology (docs/m5-protocol.md §4, ADR-0013 rev. 2026-10-19). Started only by the user's
+# scripts (scripts/m5-deploy.ps1, m5-paper-start.ps1). One PostgreSQL instance holds the ops and holdout databases;
+# four networks separate the services; every service has mem_limit and cpus. Only loopback ports are published:
+# PostgreSQL (55432) and the Ops API (55490). The evaluator, its probes and its secrets live in
+# src/HoldoutEvaluator/compose.holdout.yml (holdout secret names stay in that directory).
 name: portfolio-intelligence
 
+include:
+  - src/HoldoutEvaluator/compose.holdout.yml
+
+networks:
+  ops:
+    ipam:
+      config:
+        - subnet: 172.30.1.0/24
+  eval:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.2.0/24
+  holdout:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.3.0/24
+  egress:
+    ipam:
+      config:
+        - subnet: 172.30.4.0/24
+
+secrets:
+  trading_app:
+    file: ./secrets/trading_app
+  ops_api:
+    file: ./secrets/ops_api
+  ops_api_token:
+    file: ./secrets/ops_api_token
+  research_app:
+    file: ./secrets/research_app
+
 services:
-  dev-db:
+  postgres:
     image: postgres:17-alpine
     environment:
       POSTGRES_DB: portfolio_dev
       POSTGRES_USER: pi_dev
-      POSTGRES_PASSWORD: ${PI_DEV_DB_PASSWORD:?PI_DEV_DB_PASSWORD missing; run scripts/dev-up.ps1 to create .env}
+      POSTGRES_PASSWORD: ${PI_DEV_DB_PASSWORD:?PI_DEV_DB_PASSWORD missing}
+    command:
+      - postgres
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+      - -c
+      - listen_addresses=*
+      - -c
+      - password_encryption=scram-sha-256
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - max_connections=40
+      - -c
+      - log_connections=on
+      - -c
+      - timezone=UTC
     ports:
       - "127.0.0.1:${PI_DEV_DB_PORT:-55432}:5432"   # loopback only
     volumes:
       - dev-db-data:/var/lib/postgresql/data
+      - ${PI_PG_HBA_FILE:-./deploy/postgres/pg_hba.conf}:/etc/postgresql/pg_hba.conf:ro
+    networks:
+      ops:
+        ipv4_address: 172.30.1.10
+      holdout:
+        ipv4_address: 172.30.3.10
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pi_dev -d portfolio_dev"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432"]
       interval: 2s
       timeout: 3s
       retries: 30
+    mem_limit: 1g
+    cpus: 1.0
 
-  holdout-evaluator:
-    profiles: ["evaluator"]
+  trading-host:
+    profiles: ["trading"]
     build:
       context: .
-      dockerfile: src/HoldoutEvaluator/Dockerfile
-    env_file:
-      - src/HoldoutEvaluator/.env.evaluator
+      dockerfile: src/Hosts/Trading.Host/Dockerfile
+    environment:
+      ConnectionStrings__Trading: Host=postgres;Database=ops;Username=trading_app
+      ConnectionStrings__OpsApi: Host=postgres;Database=ops;Username=ops_api
+      Trading__SecretsDirectory: /run/secrets
+      Trading__LiveData: ${PI_TRADING_LIVE_DATA:-disabled}
+      OpsApi__TokenFile: /run/secrets/ops_api_token
+    secrets: [trading_app, ops_api, ops_api_token]
     ports:
-      - "127.0.0.1:55480:8080"   # loopback only
+      - "127.0.0.1:55490:8080"   # Ops API, loopback only
+    networks:
+      ops:
+        ipv4_address: 172.30.1.20
     depends_on:
-      dev-db:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
+
+  research-host:
+    profiles: ["research"]
+    build:
+      context: .
+      dockerfile: src/Hosts/Research.Host/Dockerfile
+    environment:
+      ConnectionStrings__Research: Host=postgres;Database=ops;Username=research_app
+    secrets: [research_app]
+    networks:
+      ops:
+        ipv4_address: 172.30.1.30
+      eval:
+        ipv4_address: 172.30.2.30
+    depends_on:
+      postgres:
         condition: service_healthy
     mem_limit: 1536m
     cpus: 2.0

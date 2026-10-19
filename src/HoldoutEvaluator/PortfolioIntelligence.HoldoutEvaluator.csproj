@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <!-- Holdout evaluator (ADR-0009, ADR-0013): authoritative cohort registry, diagnostic and prospective evaluation.
-       M3: synthetic window data only. Runs as its own container; reachable only through its narrow API.
+       M5: archive window source, real role logins, administration commands (docs/m5-protocol.md §10). Runs as its
+       own container; reachable only through its narrow API on the internal eval network.
        Must never reference Research, Execution or the hosts (architecture tests). -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -14,6 +15,12 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Persistence\Migrations\*.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The H-ENV probe is its own project in the same directory (E8). -->
+    <Compile Remove="EnvironmentProbe\**" />
+    <None Remove="EnvironmentProbe\**" />
+    <Content Remove="EnvironmentProbe\**" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="PortfolioIntelligence.HoldoutEvaluator.Tests" />

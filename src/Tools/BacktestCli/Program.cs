@@ -13,6 +13,7 @@ using PortfolioIntelligence.Research.Evaluation;
 // pairs (docs/m2-protocol.md). M3: parity-m3 re-runs them and their DSL equivalents without recording anything and
 // compares the result hashes; calibrate runs the synthetic gate calibration (docs/m3-protocol.md §7, no database).
 // M4: research-m4 runs the pre-registered LLM-less research cycle (docs/m4-protocol.md) through the Researcher tools.
+// M5: freeze-import, parity-m5 (L1/L2 parity replay) and p1-analysis (docs/m5-protocol.md §4.5, §5, §9).
 // Reads market.candles from the local database; no network. Output: metrics only.
 const string ProtocolVersion = "m2-protocol v1";
 const string ProtocolCommit = "296757f";
@@ -41,8 +42,25 @@ switch (command)
         // Uncommitted engine: the script passes HEAD plus the git tree hash of src/ (verifiable after the commit).
         return await ResearchM4.RunAsync(ops, root, Environment.GetEnvironmentVariable("PI_ENGINE_SOURCE") ?? GitHead(root));
     }
+    case "freeze-import" when args.Length >= 3:
+    {
+        var root = FindRepositoryRoot();
+        return await ParityM5.FreezeImportAsync(OpsConnection(), Path.GetFullPath(args[1]), long.Parse(args[2], CultureInfo.InvariantCulture), GitHead(root));
+    }
+    case "parity-m5" when args.Length >= 3:
+    {
+        var root = FindRepositoryRoot();
+        return await ParityM5.ParityAsync(OpsConnection(), Path.GetFullPath(args[1]), long.Parse(args[2], CultureInfo.InvariantCulture), args.Contains("--record"),
+            Environment.GetEnvironmentVariable("PI_ENGINE_SOURCE") ?? GitHead(root));
+    }
+    case "p1-analysis" when args.Length >= 2:
+    {
+        var root = FindRepositoryRoot();
+        return await P1Analysis.RunAsync(OpsConnection(), Path.GetFullPath(args[1]), Environment.GetEnvironmentVariable("PI_ENGINE_SOURCE") ?? GitHead(root));
+    }
     default:
-        Console.Error.WriteLine("Usage: run-baselines | parity-m3 | calibrate [--quick] [--out <path>] | cohort0 | research-m4");
+        Console.Error.WriteLine("Usage: run-baselines | parity-m3 | calibrate [--quick] [--out <path>] | cohort0 | research-m4 | " +
+                                "freeze-import <manifest> <cohortId> | parity-m5 <manifest> <cohortId> [--record] | p1-analysis <manifest>");
         return 1;
 }
 
@@ -225,6 +243,9 @@ static string Markdown(List<(BacktestResult Result, PerformanceMetrics Metrics)>
 
     return s.ToString();
 }
+
+static string OpsConnection() => Environment.GetEnvironmentVariable("ConnectionStrings__Ops")
+    ?? throw new InvalidOperationException("ConnectionStrings__Ops is not set (scripts/m5-research.ps1 sets it).");
 
 static string GitHead(string root)
 {

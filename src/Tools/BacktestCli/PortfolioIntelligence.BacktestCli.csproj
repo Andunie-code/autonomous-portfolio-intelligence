@@ -6,5 +6,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Modules\MarketData\PortfolioIntelligence.MarketData.csproj" />
     <ProjectReference Include="..\..\Modules\Research\PortfolioIntelligence.Research.csproj" />
+    <ProjectReference Include="..\..\Modules\Execution\PortfolioIntelligence.Execution.csproj" />
   </ItemGroup>
 </Project>

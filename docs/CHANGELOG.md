@@ -2,6 +2,76 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-20 — M5 Kapı B: çevrimdışı kod ve testler (kullanıcı kabulü, 2026-10-20)
+Ön kayıt `9dda841`'den sonra. Gerçek ağ erişimi, holdout erişimi, `≥ C` verisi ve AI çağrısı yok (0 USD). Gerçek ortam (bootstrap, H-ENV, seed, paper) Kapı C'de, kullanıcının koşularıyla yapılacak; bu kapıda hiçbir container yeniden oluşturulmadı.
+
+**Eklenenler:**
+- **Kernel:**
+  - `PortfolioEngine`: adım adım, çok sleeve'li motor; L1/L2 olay akışı ve hash'i; durum hash'i; dolum kayıtları.
+  - `RiskConfig` v2 (`ExperimentalPairsMaxExposure` 0,10; `MaxDataLagBars` 2; küme tavanı varsayılan kapalı).
+  - Portföy geneli D7 limitleri sleeve sırasıyla.
+  - `StepContext`: kill switch, devre dışı sleeve, manuel ve tüm kapatma, bayat veri.
+  - `CohortManifestReader`; `CorrelationClusters` (Pearson, ortalama bağlantılı kümeleme, etkin N).
+  - `BacktestEngine.Run` artık `PortfolioReplay` döngüsü.
+- **Migration 0007 (ops):**
+  - `market.live_candles` (`open_time ≥ C` `CHECK`'i) ve anomali tablosu;
+  - `research.frozen_strategies`, `research.lifecycle_events` (geçiş kuralları; `PaperTrading` parity kanıtı ister);
+  - `trading.*` (koşu, adım günlüğü, olaylar, dolumlar, ledger, bakiye, reconciliation, döngü metriği, kill switch, operasyonel eylemler, `RiskConfig` sürümleri, korelasyon); tümü append-only;
+  - `research.candles`, `revealed_cohorts`, `revealed_paper_summary` view'ları;
+  - `market_import` ve `ops_api` rolleri; `CONNECT` yalnızca rollere;
+  - `research_app`'in `market` şemasındaki geniş okuma yetkisi daraltıldı.
+- **MarketData:** `LiveKlineGuardHandler` (yalnızca `data-api.binance.vision/api/v3/klines`, manifesto sembolleri, 1h/4h, sınırlı aralık, redirect reddi, 429/418 tipli hatalar), `LiveKlineClient` (yalnızca kapanmış ve hizalı mum, OHLC, `≥ C`), `LiveCandleStore` (ilk değer korunur, sonradan gelen fark anomali olarak kaydedilir).
+- **Execution:**
+  - `PaperTrader`: adım günlüğünden yeniden kurma ve hash kontrolü, ledger reconciliation, bayat veri, kill switch, devre dışı bırakma, kapatma eylemleri, V14 (`StrategyHashGuard`), korelasyon izleme;
+  - `PaperStore` (Npgsql), `InMemoryPaperStore`, `LiveCandleFeed`, `TradingCycle` (418'de otomatik kill switch), `OpsService`, `ParityReplay` (L1/L2 ve L3).
+- **Trading.Host:** saatlik worker (`HH:00:15` UTC) ve Ops API (bearer token; route listesi sabit; manifesto, sonuç ve doğrulama uç noktası yok); sağlık uç noktaları.
+- **Research.Host:** `job calibrate-quick` (yük testi) ve `job henv-credentials` (H25).
+- **BacktestCli:** `freeze-import`, `parity-m5 [--record]`, `p1-analysis`. P1 öneri kuralı `Research.Evaluation.P1Rule`'da.
+- **BackupCli:** AES-256-GCM, 4 MiB'lık doğrulanmış parçalar; hedef klasör kuralı (mutlak, repo ve OneDrive dışı).
+- **Evaluator (E1–E10, Kapı A listesi):**
+  - E1: komutlar (`migrate`, `register-release`, `release-check`, `henv-selftest`, `henv-mark-verified`, `seed-cohort0`, `export-records`); yapılandırmayla pencere kaynağı (sentetik kaynak yalnızca `holdout_synth*` ve `holdout_henv` DB'lerinde); `CreateDatabase` yolu kaldırıldı;
+  - E2: rol başına gerçek login;
+  - E3: `ArchiveWindowSource` ve guard'ı;
+  - E4: seed'de release eşdeğerliği;
+  - E5: migration 0002 (digest'e bağlı ortam bayrağı, `release_equivalences`, koşu ve sonuç kuralları);
+  - E6: `evaluator-up.ps1` ve `evaluator-seed-cohort0.ps1` kaldırıldı;
+  - E7: `compose.holdout.yml`;
+  - E8: H-ENV probe projesi;
+  - E9: Dockerfile (probe aynı image'da);
+  - E10: testler.
+  - H19 öz testi `SelfTest.cs`'te (E1 kapsamında yeni dosya).
+- **Ortam:**
+  - `docker-compose.yml` yeniden yazıldı: tek `postgres` servisi (eski `dev-db` volume'ü korunur), dört ağ ve statik IP'ler, her serviste `mem_limit`/`cpus`, yalnızca loopback portlar;
+  - `deploy/postgres/pg_hba.conf`; `.dockerignore`;
+  - Trading.Host ve Research.Host Dockerfile'ları.
+- **Script'ler:**
+  - kullanıcıya ait: `m5-bootstrap`, `m5-deploy`, `m5-migrate`, `m5-henv`, `m5-seed-cohort0`, `m5-paper-start`, `m5-paper-report`, `m5-backup`, `m5-restore-test`;
+  - Claude Code'un kullanacağı: `m5-research` (`research_app`); ortak `lib/m5-common.ps1`;
+  - mevcut script'ler bootstrap sonrasında rol bazlı bağlanır; `dev-up.ps1` artık ortam kurmaz.
+- **Korkuluklar:** `.claude/settings.json`'a `m5-seed`, `m5-migrate`, servis adlı `docker compose` kalıpları ve `--profile` için deny kuralları; `CLAUDE.md` güncellendi.
+
+**Doğrulama:**
+- `verify.ps1` yeşil: **488 test** (Architecture 87, MarketData 97, HoldoutEvaluator 46, Infrastructure 19, Backtest 113, Ai 111, Trading 15); build 0 uyarı/0 hata; secret scan geçti.
+- **Regresyon kilidi (gerçek `R`, M0–M4 dev DB):** `m3-parity.ps1`, M2'nin dört hash'ini kodlanmış ve DSL baseline'larıyla birebir üretti. Sentetik kilit: motor değişikliğinden önce yakalanan 36 hash birebir.
+- **Kapsanan kontroller:**
+  - **Risk tablosu:** deneysel tavanın tam sınırı, kırpma, ret, fiyat hareketinde zorunlu satış yok, çıkışlar serbest, çekirdek limitlerin değişmemesi; portföy geneli 5 pozisyon; diğer sleeve'leri sayan varlık tavanı; küme tavanı.
+  - **Operasyonel:** kill switch (bekleyen girişler iptal, stop sürer, yalnızca kullanıcı kapatır); devre dışı bırakma; manuel ve tüm kapatma (`t+1` açılışı); bayat veri (yalnızca çıkış).
+  - **Paper ve parity:** her döngüde yeniden başlatılan paper ile kernel arasında L1/L2 olay akışları, durum hash'i ve ledger birebir; restart'ta kaçırılan mumların sırayla işlenmesi; reconciliation bozulmasının tespiti; duplicate dolum 0; `ParityReplay` sentetik veride geçti.
+  - **V9, V14.**
+  - **Roller (gerçek login'ler):** H6b, H21, H23, H25, H26'nın DB tarafı; lifecycle kuralları.
+  - **Ops API:** route listesi (H24); token; gevşetme onayı; cohort bazında PnL.
+  - **Canlı istemci:** guard, kapanmış mum kuralı, 418/429.
+  - **Evaluator:** digest'e bağlı bayrak, eşdeğerlik, gerçek login'ler, `holdout_henv` öz testi (11/11), arşiv kaynağı (checksum, pencere kesimi, açık pencereye istek atılmaması), kayıt dışa aktarımında mum tablosu olmaması, manifesto hash eşitliği (Trading ve evaluator).
+  - **Yapılandırma:** compose limitleri ve ağları (H27 statik), `pg_hba` kuralları, `.dockerignore`, deny kuralları (H28).
+  - **Yedek:** çok parçalı şifreleme ve her tür bozulmanın tespiti.
+
+**Protokolden sapmalar ve netleştirmeler (T, gerekçeli; kullanıcı tarafından onaylandı, U 2026-10-20):**
+- PostgreSQL ayarları ayrı bir `postgresql.conf` yerine compose'da `-c` bayraklarıyla veriliyor (aynı değerler).
+- `pg_hba`'nın loopback satırı `samenet` kullanır. Bootstrap, bu yol çalışmazsa gözlenen kaynak adresi git-ignored `pg_hba.local.conf`'a yazar (§4.3'teki "ölçülür" adımı). Holdout satırları bundan bağımsızdır.
+- H25'in kimlik bilgisi kısmı Research.Host'un kendi container'ında `job henv-credentials` ile yapılır.
+- H19 öz testi, H16'nın 4. strateji kontrolünde manifesto ayrıştırıcısının reddini (DB'ye ulaşmadan) ret sayar.
+- `docs/m5-protocol.md` §11'deki deny listesi genişletildi: `m5-seed`, `m5-migrate`, servis adlı `docker compose` kalıpları, `--profile`. Önceki `docker compose run*holdout*` kalıbı, `--profile` ile başlayan komutları kapsamıyordu.
+
 ## 2026-10-19 — M5 başlangıcı ve Kapı A (kullanıcı onayı 2026-10-20)
 - **Kullanıcı kararları (U):**
   - M5 başlatıldı; kapılar A, B, C.

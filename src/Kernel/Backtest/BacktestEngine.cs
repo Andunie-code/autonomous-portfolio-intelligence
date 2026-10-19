@@ -64,238 +64,72 @@ public sealed record BacktestInput(
 /// Multi-asset, long-only spot backtest on one interval, following docs/m2-protocol.md §2 and §6–§9 exactly:
 /// open fills (exits, then entries), intrabar protective stop, then close: equity, risk rules, indicator
 /// updates, signals and orders for the next open. Gaps reset indicators (warm-up rule). Deterministic.
+/// Since M5 a single-sleeve loop over <see cref="PortfolioEngine.Step"/> (ADR-0018 §1); results are unchanged.
 /// </summary>
 public sealed class BacktestEngine(IStrategy strategy, CostModel costs, RiskSettings risk)
 {
-    private sealed class SymbolState(IStrategyInstance instance)
-    {
-        public IStrategyInstance Instance { get; } = instance;
-        public int ValidBars { get; set; }
-        public bool Seen { get; set; }
-        public decimal? LastClose { get; set; }
-        public Dictionary<DateOnly, decimal> DayEndCloses { get; } = [];
-    }
-
-    private sealed class Position
-    {
-        public required DateTimeOffset EntryTime { get; init; }
-        public required decimal EntryPrice { get; init; }
-        public required decimal Quantity { get; init; }
-        public required decimal EntryFee { get; init; }
-        public required decimal EntrySlippage { get; init; }
-        public required decimal StrategyStop { get; set; }
-        public required decimal Stop { get; set; }
-    }
-
-    private sealed record PendingEntry(string Symbol, decimal Notional);
-
     public BacktestResult Run(BacktestInput input)
+    {
+        var engine = Engine(input, out var steps, recordEvents: false);
+        steps(engine);
+        return engine.Result(0);
+    }
+
+    /// <summary>Runs the backtest and returns the engine with its L1/L2 event stream (m5-protocol §5.1).</summary>
+    public PortfolioEngine RunWithEvents(BacktestInput input)
+    {
+        var engine = Engine(input, out var steps, recordEvents: true);
+        steps(engine);
+        return engine;
+    }
+
+    private PortfolioEngine Engine(BacktestInput input, out Action<PortfolioEngine> steps, bool recordEvents)
     {
         var interval = input.Candles.Values.SelectMany(c => c).Select(c => c.Interval).Distinct().Single();
         var length = interval.FixedLength ?? throw new ArgumentException("Fixed-length interval required.");
-        var byTime = input.Candles.ToDictionary(kv => kv.Key, kv => kv.Value.ToDictionary(c => c.OpenTime));
-        var symbols = input.Candles.Keys.OrderBy(s => input.CoreRank.GetValueOrDefault(s, int.MaxValue)).ThenBy(s => s, StringComparer.Ordinal).ToList();
-        // Reference series (m3-protocol §2): one tracker per run, fed the candle with the same open time.
-        var consumer = strategy as IReferenceSeriesConsumer;
-        var tracker = consumer?.CreateReferenceTracker();
         if (input.Reference?.Any(c => c.Interval != interval) == true)
         {
             throw new ArgumentException("Reference series must use the same interval.");
         }
 
-        var referenceByTime = input.Reference?.ToDictionary(c => c.OpenTime) ?? [];
-        var states = symbols.ToDictionary(s => s, _ => new SymbolState(tracker is null ? strategy.CreateInstance() : consumer!.CreateInstance(tracker)));
-        var start = input.Candles.Values.SelectMany(c => c).Min(c => c.OpenTime);
+        var symbols = input.Candles.Keys.OrderBy(s => input.CoreRank.GetValueOrDefault(s, int.MaxValue)).ThenBy(s => s, StringComparer.Ordinal).ToList();
+        var engine = new PortfolioEngine(new PortfolioSetup(
+            [new SleeveSpec(strategy.Name, strategy, input.InitialCapital)], costs, new RiskConfig(risk), symbols, interval, input.TradingStart, RecordEvents: recordEvents));
+        steps = e => PortfolioReplay.Run(e, symbols, input.Candles, input.Reference, length, input.End);
+        return engine;
+    }
+}
 
-        var cash = input.InitialCapital;
-        var positions = new Dictionary<string, Position>();
-        var pendingExits = new HashSet<string>();
-        var pendingEntries = new List<PendingEntry>();
-        var trades = new List<Trade>();
-        var equity = new List<EquityPoint>();
-        decimal peak = input.InitialCapital, dayStartEquity = input.InitialCapital;
-        DateTimeOffset noEntriesUntil = DateTimeOffset.MinValue;
-        DateTimeOffset? haltedAt = null;
-
-        for (var t = start; t < input.End; t += length)
+/// <summary>Feeds a <see cref="PortfolioEngine"/> bar by bar from in-memory series (backtest and replay).</summary>
+public static class PortfolioReplay
+{
+    public static void Run(
+        PortfolioEngine engine,
+        IReadOnlyList<string> symbols,
+        IReadOnlyDictionary<string, IReadOnlyList<Candle>> candles,
+        IReadOnlyList<Candle>? reference,
+        TimeSpan length,
+        DateTimeOffset end,
+        Func<DateTimeOffset, StepContext>? context = null,
+        bool final = true)
+    {
+        var byTime = candles.ToDictionary(kv => kv.Key, kv => kv.Value.ToDictionary(c => c.OpenTime));
+        var referenceByTime = reference?.ToDictionary(c => c.OpenTime) ?? [];
+        var start = candles.Values.SelectMany(c => c).Min(c => c.OpenTime);
+        for (var t = start; t < end; t += length)
         {
-            var isLast = t + length >= input.End;
-            var bars = symbols.Where(s => byTime[s].ContainsKey(t)).ToDictionary(s => s, s => byTime[s][t]);
-
-            // Gap rule: a missing expected candle resets the symbol's indicators and cancels its orders.
-            foreach (var symbol in symbols.Where(s => states[s].Seen && !bars.ContainsKey(s)))
+            var bars = new Dictionary<string, Candle>();
+            foreach (var symbol in symbols)
             {
-                states[symbol].Instance.Reset();
-                states[symbol].ValidBars = 0;
-                pendingExits.Remove(symbol);
-                pendingEntries.RemoveAll(e => e.Symbol == symbol);
-            }
-
-            // 1. Open: exits first, then entries.
-            foreach (var symbol in pendingExits.Where(bars.ContainsKey).OrderBy(symbols.IndexOf).ToList())
-            {
-                cash += Close(symbol, bars[symbol].Open, costs.OpenSlippage, t, ExitReason.Signal);
-            }
-
-            pendingExits.Clear();
-            var enteredNow = new HashSet<string>();
-            foreach (var entry in pendingEntries.Where(e => bars.ContainsKey(e.Symbol)))
-            {
-                var fill = costs.BuyPrice(bars[entry.Symbol].Open, costs.OpenSlippage);
-                var notional = Math.Min(entry.Notional, cash / (1 + costs.FeeRate));
-                if (notional < costs.MinimumNotional)
+                if (byTime[symbol].TryGetValue(t, out var bar))
                 {
-                    continue;
-                }
-
-                var quantity = notional / fill;
-                var fee = costs.Fee(notional);
-                cash -= notional + fee;
-                var strategyStop = states[entry.Symbol].Instance.InitialStop(fill);
-                positions[entry.Symbol] = new Position
-                {
-                    EntryTime = t,
-                    EntryPrice = fill,
-                    Quantity = quantity,
-                    EntryFee = fee,
-                    EntrySlippage = quantity * (fill - bars[entry.Symbol].Open),
-                    StrategyStop = strategyStop,
-                    Stop = ProtectiveStop.Effective(strategyStop, fill, risk.MaxPositionLoss),
-                };
-                enteredNow.Add(entry.Symbol);
-            }
-
-            pendingEntries.Clear();
-
-            // 2. Intrabar protective stop.
-            foreach (var symbol in positions.Keys.Where(bars.ContainsKey).OrderBy(symbols.IndexOf).ToList())
-            {
-                if (ProtectiveStop.Trigger(bars[symbol], positions[symbol].Stop, enteredNow.Contains(symbol)) is { } reference)
-                {
-                    cash += Close(symbol, reference, costs.StopSlippage, t, ExitReason.Stop);
+                    bars[symbol] = bar;
                 }
             }
 
-            // 3. Close: indicators, equity, risk, signals.
-            var closeTime = t + length;
-            tracker?.Update(referenceByTime.GetValueOrDefault(t));
-            foreach (var (symbol, bar) in bars)
-            {
-                var state = states[symbol];
-                state.Seen = true;
-                state.LastClose = bar.Close;
-                state.Instance.Update(bar);
-                state.ValidBars++;
-                if (closeTime.TimeOfDay == TimeSpan.Zero)
-                {
-                    state.DayEndCloses[DateOnly.FromDateTime(t.UtcDateTime)] = bar.Close;
-                }
-            }
-
-            if (isLast)
-            {
-                foreach (var symbol in positions.Keys.OrderBy(symbols.IndexOf).ToList())
-                {
-                    cash += Close(symbol, states[symbol].LastClose!.Value, costs.OpenSlippage, closeTime, ExitReason.EndOfTest);
-                }
-            }
-
-            var marketValue = positions.Sum(p => p.Value.Quantity * states[p.Key].LastClose!.Value);
-            var currentEquity = cash + marketValue;
-            if (t < input.TradingStart)
-            {
-                continue;
-            }
-
-            equity.Add(new EquityPoint(closeTime, currentEquity, currentEquity == 0 ? 0 : marketValue / currentEquity));
-            if (isLast)
-            {
-                break;
-            }
-
-            peak = Math.Max(peak, currentEquity);
-            if (risk.DrawdownHaltEnabled && haltedAt is null && currentEquity <= peak * (1 - risk.MaxDrawdown))
-            {
-                haltedAt = closeTime;
-            }
-
-            if (currentEquity <= dayStartEquity * (1 - risk.DailyLossLimit))
-            {
-                noEntriesUntil = closeTime.AddHours(24);
-            }
-
-            if (closeTime.TimeOfDay == TimeSpan.Zero)
-            {
-                dayStartEquity = currentEquity;
-            }
-
-            var ready = bars.Keys.Where(s => states[s].ValidBars >= strategy.WarmupBars).ToList();
-            foreach (var symbol in ready.Where(positions.ContainsKey))
-            {
-                var position = positions[symbol];
-                if (states[symbol].Instance.ExitSignal)
-                {
-                    pendingExits.Add(symbol);
-                }
-                else if (states[symbol].Instance.TrailingStop is { } trailing && trailing > position.StrategyStop)
-                {
-                    position.StrategyStop = trailing;
-                    position.Stop = ProtectiveStop.Effective(trailing, position.EntryPrice, risk.MaxPositionLoss);
-                }
-            }
-
-            if (haltedAt is not null || closeTime < noEntriesUntil)
-            {
-                continue;
-            }
-
-            var remaining = positions.Keys.Where(s => !pendingExits.Contains(s)).ToList();
-            var slots = risk.MaxOpenPositions - remaining.Count;
-            // Latest completed UTC day: its day-end close is the close of its 20:00 candle (≤ closeTime).
-            var asOf = DateOnly.FromDateTime(closeTime.UtcDateTime).AddDays(-1);
-            var candidates = ready
-                .Where(s => !positions.ContainsKey(s) && states[s].Instance.EntrySignal)
-                .Select(s => (Symbol: s, Sigma: InverseVolatilityAllocation.Volatility(states[s].DayEndCloses, asOf)))
-                .Where(c => c.Sigma is not null)
-                .OrderBy(c => symbols.IndexOf(c.Symbol))
-                .Take(Math.Max(slots, 0))
-                .ToList();
-            if (candidates.Count == 0)
-            {
-                continue;
-            }
-
-            var volatilities = candidates.ToDictionary(c => c.Symbol, c => c.Sigma!.Value);
-            foreach (var symbol in remaining)
-            {
-                var sigma = InverseVolatilityAllocation.Volatility(states[symbol].DayEndCloses, asOf);
-                if (sigma is { } value)
-                {
-                    volatilities[symbol] = value;
-                }
-            }
-
-            var weights = InverseVolatilityAllocation.Weights(volatilities, risk);
-            var openValue = remaining.Sum(s => positions[s].Quantity * states[s].LastClose!.Value);
-            var targets = candidates.ToDictionary(c => c.Symbol, c => weights[c.Symbol] * currentEquity);
-            var room = Math.Max(0, risk.MaxTotalExposure * currentEquity - openValue);
-            var requested = targets.Values.Sum();
-            var scale = requested > room && requested > 0 ? room / requested : 1m;
-            pendingEntries.AddRange(candidates.Select(c => new PendingEntry(c.Symbol, targets[c.Symbol] * scale)));
-        }
-
-        return new BacktestResult(strategy.Name, risk.Variant, input.InitialCapital, trades, equity, haltedAt);
-
-        decimal Close(string symbol, decimal reference, decimal slippage, DateTimeOffset time, ExitReason reason)
-        {
-            var position = positions[symbol];
-            var fill = costs.SellPrice(reference, slippage);
-            var proceeds = position.Quantity * fill;
-            var fee = costs.Fee(proceeds);
-            trades.Add(new Trade(symbol, position.EntryTime, position.EntryPrice, position.Quantity, time, fill, reason,
-                position.EntryFee + fee, position.EntrySlippage + position.Quantity * (reference - fill)));
-            positions.Remove(symbol);
-            return proceeds - fee;
+            var isLast = final && t + length >= end;
+            var step = context?.Invoke(t) ?? StepContext.Normal;
+            engine.Step(t, bars, referenceByTime.GetValueOrDefault(t), isLast ? step with { IsFinal = true } : step);
         }
     }
 }

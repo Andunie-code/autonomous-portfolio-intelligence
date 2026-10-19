@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- H-ENV probe (docs/m5-protocol.md §6, §10 E8): connection attempts from the network positions of the real
+       local environment; reports PASS/FAIL only and reads no data. Run only by the user (scripts/m5-henv.ps1). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+</Project>

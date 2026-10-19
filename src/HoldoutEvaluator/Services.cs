@@ -11,14 +11,20 @@ public sealed class RegistryRejectedException(string message, Exception? inner =
 public sealed class EarlyEvaluationException(string message) : Exception(message);
 
 /// <summary>
-/// Database access with role separation. M3 emulates the per-role logins of M5 with SET ROLE on NOLOGIN roles
-/// (eval_registry, eval_diagnostic, eval_prospective, status_relay), so every statement runs with that role's grants.
+/// Database access with role separation. M5 (ADR-0013 §2): each role connects with its own login
+/// (<paramref name="roleConnectionStrings"/>, eval_registry, eval_diagnostic, eval_prospective); the owner connection
+/// (eval_owner) is used for migrations, administration and owner-level audit only. Without a role login (tests,
+/// synthetic databases) the role is emulated with SET ROLE on the owner connection. Every statement runs with that
+/// role's grants either way (SET ROLE to one's own role is a no-op for a real login).
 /// </summary>
-public sealed class HoldoutDatabase(string holdoutConnectionString, string? opsConnectionString)
+public sealed class HoldoutDatabase(string holdoutConnectionString, string? opsConnectionString, IReadOnlyDictionary<string, string>? roleConnectionStrings = null)
 {
     internal string ConnectionString => holdoutConnectionString;
 
-    public async Task<NpgsqlConnection> OpenAsync(string? role, CancellationToken ct) => await Open(holdoutConnectionString, role, ct);
+    public string DatabaseName => new NpgsqlConnectionStringBuilder(holdoutConnectionString).Database ?? string.Empty;
+
+    public async Task<NpgsqlConnection> OpenAsync(string? role, CancellationToken ct) =>
+        await Open(role is not null && roleConnectionStrings?.TryGetValue(role, out var login) == true ? login : holdoutConnectionString, role, ct);
 
     public async Task<NpgsqlConnection> OpenOpsAsync(string role, CancellationToken ct) =>
         await Open(opsConnectionString ?? throw new InvalidOperationException("No ops connection for the status relay."), role, ct);
@@ -187,7 +193,8 @@ public sealed class DiagnosticService(HoldoutDatabase database, IWindowSource so
 /// buffer by the injected clock (application layer of V4; the database trigger is the second layer). There is no
 /// "evaluate now". Re-evaluations need evidence and reuse the same manifest, window, data and digest (V6).
 /// </summary>
-public sealed class ProspectiveService(HoldoutDatabase database, IWindowSource source, IClock clock, StatusRelay? relay)
+/// <paramref name="imageDigest"/> is the running evaluator release (M5); null means the cohort's own release (tests).
+public sealed class ProspectiveService(HoldoutDatabase database, IWindowSource source, IClock clock, StatusRelay? relay, string? imageDigest = null)
 {
     public static readonly TimeSpan PublicationBuffer = TimeSpan.FromDays(3);
 
@@ -253,7 +260,14 @@ public sealed class ProspectiveService(HoldoutDatabase database, IWindowSource s
         var (accepted, _) = WindowQuality.Check(candles.Where(kv => cohort.Manifest.Pairs.Any(p => p.Symbol == kv.Key)).ToDictionary(), cohort.StartsAt, cohort.WindowEnd);
         var metrics = ProspectiveEvaluation.Measure(cohort.Manifest, candles, cohort.StartsAt, cohort.WindowEnd);
         var decisions = ProspectiveEvaluation.Decide(cohort.Manifest, metrics, cohort.Attempts, accepted).ToList();
-        var verified = await ScalarAsync<bool>(connection, "SELECT results.environment_verified()", ct);
+        var digest = imageDigest ?? cohort.Manifest.ImageDigest;
+        bool verified;
+        await using (var flag = new NpgsqlCommand("SELECT results.environment_verified($1)", connection))
+        {
+            flag.Parameters.AddWithValue(digest);
+            verified = (bool)(await flag.ExecuteScalarAsync(ct))!;
+        }
+
         for (var i = 0; i < decisions.Count; i++)
         {
             if (decisions[i].Status == "Validated" && !verified)
@@ -262,7 +276,7 @@ public sealed class ProspectiveService(HoldoutDatabase database, IWindowSource s
             }
         }
 
-        var digest = WindowQuality.Digest(candles);
+        var dataDigest = WindowQuality.Digest(candles);
         var resultHash = ProspectiveEvaluation.ResultHash(metrics, decisions);
         await using var transaction = await connection.BeginTransactionAsync(ct);
         if (rerun != true)
@@ -279,8 +293,8 @@ public sealed class ProspectiveService(HoldoutDatabase database, IWindowSource s
         run.Parameters.AddWithValue(NpgsqlDbType.Bigint, (object?)original ?? DBNull.Value);
         run.Parameters.AddWithValue(NpgsqlDbType.Text, (object?)evidenceJson ?? DBNull.Value);
         run.Parameters.AddWithValue(cohort.Manifest.Hash);
-        run.Parameters.AddWithValue(cohort.Manifest.ImageDigest);
         run.Parameters.AddWithValue(digest);
+        run.Parameters.AddWithValue(dataDigest);
         run.Parameters.AddWithValue(resultHash);
         long runId;
         try
@@ -376,11 +390,5 @@ public sealed class ProspectiveService(HoldoutDatabase database, IWindowSource s
         }
 
         await writer.CompleteAsync(ct);
-    }
-
-    private static async Task<T> ScalarAsync<T>(NpgsqlConnection connection, string sql, CancellationToken ct)
-    {
-        await using var command = new NpgsqlCommand(sql, connection);
-        return (T)(await command.ExecuteScalarAsync(ct))!;
     }
 }

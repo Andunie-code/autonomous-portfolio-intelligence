@@ -76,6 +76,28 @@ public class DependencyRuleTests
         Assert.DoesNotContain(HoldoutEvaluator, Graph.TransitiveReferencesOf(project));
     }
 
+    [Theory]
+    [InlineData(Execution)]
+    [InlineData(TradingHost)]
+    public void Trading_reaches_only_the_kernel_market_data_and_infrastructure(string project)
+    {
+        // ADR-0018 §4, testing §7.3: risk and execution never see research, AI, the evaluator or cohort code.
+        var references = Graph.TransitiveReferencesOf(project);
+        foreach (var forbidden in new[] { Research, ResearchHost, Researcher, Ai, AiGemini, HoldoutEvaluator })
+        {
+            Assert.DoesNotContain(forbidden, references);
+        }
+
+        Assert.Equal(new[] { Kernel, MarketData }, Graph.TransitiveReferencesOf(Execution).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Environment_probe_and_backup_tool_reference_no_project()
+    {
+        Assert.Empty(Graph.DirectReferencesOf("PortfolioIntelligence.HoldoutEvaluator.EnvironmentProbe"));
+        Assert.Empty(Graph.DirectReferencesOf("PortfolioIntelligence.BackupCli"));
+    }
+
     [Fact]
     public void Ai_module_depends_only_on_the_kernel()
     {

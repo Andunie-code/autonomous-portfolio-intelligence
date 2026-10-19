@@ -33,11 +33,30 @@ public sealed record RiskSettings(
     public string Variant => DrawdownHaltEnabled ? "policy" : "no-halt";
 }
 
+/// <summary>
+/// RiskConfig v2 (ADR-0018 §2): the D7/D25 settings plus the experimental-pair cap (D22), the data-freshness rule
+/// (D7) and an optional correlation-cluster cap that is off by default (P1; binding only by user decision).
+/// </summary>
+public sealed record RiskConfig(
+    RiskSettings Settings,
+    decimal ExperimentalPairsMaxExposure = 0.10m,
+    int MaxDataLagBars = 2,
+    ClusterCapSettings? ClusterCap = null)
+{
+    public static RiskConfig Policy { get; } = new(RiskSettings.Policy);
+
+    public string Version => "risk-config v2";
+}
+
+/// <summary>Correlation-cluster exposure cap: clusters at average correlation ≥ <see cref="Threshold"/>, each ≤ <see cref="MaxExposure"/>.</summary>
+public sealed record ClusterCapSettings(double Threshold, decimal MaxExposure);
+
 public enum ExitReason
 {
     Stop,
     Signal,
     EndOfTest,
+    Manual,
 }
 
 /// <summary>Protective stop rules of ADR-0014 and D25.</summary>

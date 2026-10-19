@@ -45,7 +45,7 @@ public class EvaluationTests(EvaluatorDatabase fixture) : IClassFixture<Evaluato
         Assert.Equal(("Invalid", "unverified environment"), await StatusAsync(unverified, id));
 
         var verified = await fixture.NewHoldoutAsync();
-        await EvaluatorDatabase.ExecuteAsync(verified.ConnectionString, "INSERT INTO results.environment_flags (verified, actor) VALUES (true, 'test-user')");
+        await EvaluatorDatabase.ExecuteAsync(verified.ConnectionString, $"INSERT INTO results.environment_flags (verified, actor, image_digest, report_hash) VALUES (true, 'test-user', '{EvaluatorDatabase.Digest}', repeat('e', 64))");
         var validated = await Seeding.SeedAsync(verified, Manifests.Build([Manifests.Trend]));
         await new ProspectiveService(verified, new SyntheticWindowSource(3, drift: 0.003), After, new StatusRelay(verified)).RunDueAsync(default);
 
@@ -62,7 +62,7 @@ public class EvaluationTests(EvaluatorDatabase fixture) : IClassFixture<Evaluato
     public async Task Decision_order_fails_losers_and_keeps_underpowered_or_thin_cohorts_inconclusive(double drift, bool underpowered, int plannedTrades, string expected)
     {
         var db = await fixture.NewHoldoutAsync();
-        await EvaluatorDatabase.ExecuteAsync(db.ConnectionString, "INSERT INTO results.environment_flags (verified, actor) VALUES (true, 'test-user')");
+        await EvaluatorDatabase.ExecuteAsync(db.ConnectionString, $"INSERT INTO results.environment_flags (verified, actor, image_digest, report_hash) VALUES (true, 'test-user', '{EvaluatorDatabase.Digest}', repeat('e', 64))");
         var id = await Seeding.SeedAsync(db, Manifests.Build([Manifests.Trend], underpowered: underpowered, plannedTrades: plannedTrades));
 
         await new ProspectiveService(db, new SyntheticWindowSource(3, drift: drift), After, null).RunDueAsync(default);
@@ -74,7 +74,7 @@ public class EvaluationTests(EvaluatorDatabase fixture) : IClassFixture<Evaluato
     public async Task Incomplete_protocol_is_at_best_inconclusive()
     {
         var db = await fixture.NewHoldoutAsync();
-        await EvaluatorDatabase.ExecuteAsync(db.ConnectionString, "INSERT INTO results.environment_flags (verified, actor) VALUES (true, 'test-user')");
+        await EvaluatorDatabase.ExecuteAsync(db.ConnectionString, $"INSERT INTO results.environment_flags (verified, actor, image_digest, report_hash) VALUES (true, 'test-user', '{EvaluatorDatabase.Digest}', repeat('e', 64))");
         var id = await Seeding.SeedAsync(db, Manifests.Build([Manifests.Trend], edit: m => ((System.Text.Json.Nodes.JsonObject)m["protocol"]!).Remove("maxDrawdown")));
 
         await new ProspectiveService(db, new SyntheticWindowSource(3, drift: 0.003), After, null).RunDueAsync(default);
@@ -86,7 +86,7 @@ public class EvaluationTests(EvaluatorDatabase fixture) : IClassFixture<Evaluato
     public async Task Validated_cannot_be_written_for_underpowered_cohorts_or_by_any_other_role()
     {
         var db = await fixture.NewHoldoutAsync();
-        await EvaluatorDatabase.ExecuteAsync(db.ConnectionString, "INSERT INTO results.environment_flags (verified, actor) VALUES (true, 'test-user')");
+        await EvaluatorDatabase.ExecuteAsync(db.ConnectionString, $"INSERT INTO results.environment_flags (verified, actor, image_digest, report_hash) VALUES (true, 'test-user', '{EvaluatorDatabase.Digest}', repeat('e', 64))");
         var id = await Seeding.SeedAsync(db, Manifests.Build([Manifests.Trend], underpowered: true));
         await new ProspectiveService(db, new SyntheticWindowSource(1), After, null).RunDueAsync(default);
         var insert = $"INSERT INTO results.prospective_results (run_id, cohort_id, member_index, status, summary) SELECT run_id, {id}, 1, 'Validated', '{{}}' FROM results.prospective_runs LIMIT 1";

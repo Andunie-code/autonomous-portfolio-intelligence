@@ -32,7 +32,8 @@ foreach ($line in Get-Content $envFile) {
     if ($line -cmatch '^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$') { $settings[$Matches[1]] = $Matches[2] }
 }
 $port = if ($settings['PI_DEV_DB_PORT']) { $settings['PI_DEV_DB_PORT'] } else { '55432' }
-$env:ConnectionStrings__Ops = "Host=127.0.0.1;Port=$port;Database=portfolio_dev;Username=pi_dev;Password=$($settings['PI_DEV_DB_PASSWORD'])"
+. "$PSScriptRoot\lib\m5-common.ps1"
+$env:ConnectionStrings__Ops = Get-OpsConnection 'market_import'  # M5: market_import on ops after the bootstrap
 try {
     if ($CheckCutoff) {
         dotnet run --project $cli -c Release -- check-cutoff

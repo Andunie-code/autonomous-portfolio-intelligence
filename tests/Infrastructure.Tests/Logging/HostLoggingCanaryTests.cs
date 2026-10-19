@@ -29,8 +29,7 @@ public class HostLoggingCanaryTests
         Console.SetOut(captured);
         try
         {
-            var builder = hostName == "trading" ? TradingHost.CreateBuilder(args) : ResearchHost.CreateBuilder(args);
-            using (var host = builder.Build())
+            using (IHost host = hostName == "trading" ? TradingHost.CreateBuilder(args).Build() : ResearchHost.CreateBuilder(args).Build())
             {
                 var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Canary");
                 logger.LogWarning("Deliberately logging the configured key: {Key}", canary);

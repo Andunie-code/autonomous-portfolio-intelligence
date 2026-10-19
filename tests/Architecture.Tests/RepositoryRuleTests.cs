@@ -12,6 +12,7 @@ public class RepositoryRuleTests
     [InlineData("*.pem")]
     [InlineData("*.zip")]
     [InlineData(".claude/settings.local.json")]
+    [InlineData("deploy/postgres/pg_hba.local.conf")]
     public void Gitignore_excludes_sensitive_paths(string pattern)
     {
         var lines = File.ReadAllLines(Path.Combine(RepositoryRoot.Path, ".gitignore")).Select(l => l.Trim());
@@ -41,6 +42,25 @@ public class RepositoryRuleTests
     [InlineData("PowerShell(*user-secrets*)")]
     [InlineData("Bash(*Gemini__ApiKey*)")]
     [InlineData("PowerShell(*Gemini__ApiKey*)")]
+    [InlineData("WebFetch(domain:data-api.binance.vision)")]
+    [InlineData("WebFetch(domain:api.binance.com)")]
+    [InlineData("PowerShell(*api.binance.com*)")]
+    [InlineData("PowerShell(*-File*m5-bootstrap*)")]
+    [InlineData("PowerShell(*-File*m5-deploy*)")]
+    [InlineData("PowerShell(*-File*m5-henv*)")]
+    [InlineData("PowerShell(*-File*m5-seed*)")]
+    [InlineData("PowerShell(*-File*m5-migrate*)")]
+    [InlineData("PowerShell(*-File*m5-paper-start*)")]
+    [InlineData("PowerShell(*-File*m5-paper-report*)")]
+    [InlineData("PowerShell(*-File*m5-backup*)")]
+    [InlineData("PowerShell(*-File*m5-restore-test*)")]
+    [InlineData("Bash(docker compose exec*)")]
+    [InlineData("PowerShell(docker compose exec*)")]
+    [InlineData("PowerShell(docker compose*holdout-evaluator*)")]
+    [InlineData("PowerShell(docker compose*henv-probe*)")]
+    [InlineData("PowerShell(docker compose*trading-host*)")]
+    [InlineData("PowerShell(docker compose*--profile*)")]
+    [InlineData("PowerShell(*psql*holdout*)")]
     public void Claude_project_settings_deny_holdout_and_secret_access(string rule)
     {
         Assert.Contains(rule, ReadPermissionList("deny"));

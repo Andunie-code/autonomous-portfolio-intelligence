@@ -1,6 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Execution module: exchange adapter, order state machine (M5+). Only Trading.Host may reference it. -->
+  <!-- Execution module (M5, ADR-0018): paper trading on the kernel step engine, ledger, reconciliation, kill
+       switch, operational actions and the Ops service. Only Trading.Host may reference it; no research, AI or
+       evaluator code. -->
   <ItemGroup>
     <ProjectReference Include="..\..\Kernel\PortfolioIntelligence.Kernel.csproj" />
+    <ProjectReference Include="..\MarketData\PortfolioIntelligence.MarketData.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
   </ItemGroup>
 </Project>
