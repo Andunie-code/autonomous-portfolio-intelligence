@@ -2,6 +2,24 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-19 — M5 başlangıcı ve Kapı A (kullanıcı onayı 2026-10-20)
+- **Kullanıcı kararları (U):**
+  - M5 başlatıldı; kapılar A, B, C.
+  - `portfolio_dev` yedeklenip `ops` olarak yeniden adlandırılacak; Claude Code `ops`'a yalnızca `research_app` ile bağlanacak.
+  - Makine dışı yedek harici disk/USB'ye.
+  - Evaluator ve `*Holdout*` değişiklikleri yalnızca Kapı A listesindekiler (`m5-protocol.md` §10).
+  - Paper raporlarında Claude Code yalnızca operasyonel metrikleri görür.
+- **Taslaklar (T):**
+  - `docs/m5-protocol.md` v1: paper döngüsü, sleeve'ler, canlı mum kaynağı, operasyonel eylemler, ledger, Ops API, roller, ağlar ve `pg_hba`, parity replay L1/L2/L3, H-ENV prosedürü ve testleri, Kohort 0 seed'i ve engine eşdeğerliği, yedek, Kapı B test listesi, P1 ön kaydı, evaluator değişiklik listesi, asgari paper süresi yöntemi.
+  - ADR-0018 (adım adım portföy motoru, `RiskConfig` v2, Execution ve Trading.Host).
+  - ADR-0013 revizyon notu.
+- **Kapı A onayı (U, 2026-10-20):** belgeler ve A-1…A-6 (E1–E10 dahil) öneri olarak onaylandı: A-1 sleeve modeli; A-2 Kohort 0'ın engine eşdeğerliği bağı; A-3 canlı mum kaynağı; A-4 P1 öneri kuralı; A-5 `holdout_synth`'in korunması; A-6 evaluator dosya listesi.
+- **`sources.md`:** S-B9 (`/api/v3/klines`) ve S-B10 (`data-api.binance.vision`, zaman birimi, 429/418). Yalnızca belge sayfaları okundu.
+- **Korkuluklar (T17):**
+  - `.claude/settings.json`: canlı veri host'ları, kullanıcıya ait M5 script'leri, evaluator/probe ve Trading.Host compose komutları ile holdout'a `psql` için deny kuralları;
+  - `CLAUDE.md`: M5 kuralları.
+- Kod değişikliği yok.
+
 ## 2026-10-19 — HypothesisGeneration v2 pilotu: `Inconclusive (budget)`
 - **Spike (8192 token):** `dsl-in-neutral-schema` PASS.
 - **Pilot (ön kayıt `13ad935`):** LLM 12/20 (%60), baseline 11/20 (%55); kanıt reddi 1 (v1'de 10); güvenlik ihlali 0; maliyet 0,510653 USD (`docs/m4-hg-pilot-v2-results.md`).

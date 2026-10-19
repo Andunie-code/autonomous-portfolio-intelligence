@@ -4,7 +4,17 @@
 - Karar türü: Kullanıcı kararları D5 (rev.), D17 (rev.), D24; teknik kararlar T1–T3, T17, T19 (rev.)
 - Uygulama durumu: **Planlandı, uygulanmadı**
 - Yerini aldığı: ADR-0009'un topoloji (madde 1–2), deploy (madde 5) ve gerçek ortam doğrulaması (madde 6) kısımları. ADR-0009'un rol, trigger, evaluator API'si ve `Validated` kapısı kararları geçerlidir.
-- İlgili: ADR-0001, ADR-0006, ADR-0009, ADR-0012, `architecture.md` §1, §6.2, §10, §12
+- İlgili: ADR-0001, ADR-0006, ADR-0009, ADR-0012, ADR-0018, `architecture.md` §1, §6.2, §10, §12
+
+## Revizyon notu (2026-10-19, M5 Kapı A; ayrıntı `m5-protocol.md` §4, §6)
+- **`ops` veritabanı (U-M5-2):** `portfolio_dev` yedeklenir ve `ops` olarak yeniden adlandırılır. Kapı C'den sonra Claude Code `ops`'a yalnızca `research_app` login'iyle bağlanır. Owner, migration, trading, import ve yedek işlemleri kullanıcının script'leriyle yapılır.
+- **Ağ adresleri (T):** dört ağın sabit alt ağları ve container'ların statik IP'leri vardır. `pg_hba` holdout satırları evaluator'ın statik IP'sine bağlanır. Böylece holdout koruması, Docker Desktop'ta loopback yayınının hangi kaynak adresle geldiğine bağlı değildir. Bu adres Kapı C'de ölçülür ve yalnızca `ops` satırında kullanılır.
+- **Superuser (T):** yalnızca container içi yerel soketle bağlanabilir. Tüm `host` satırlarında reddedilir.
+- **Evaluator portu (T):** host'a yayınlanmaz (M3'teki `127.0.0.1:55480` kaldırılır; H5). Yönetim komutları kullanıcının `docker compose run` koşularıdır.
+- **Ek roller (T):** `ops_owner` ve `eval_owner` (owner ve migration), `market_import`, `ops_api`. Parolalar migration'da değil, bootstrap'ta secret dosyalarından gelir.
+- **H19 (T):** gerçek evaluator image'ıyla, gerçek login'lerle ve aynı `pg_hba`'yla, geçici `holdout_henv` veritabanında koşar. Gerekçe: yetkili kayıt değiştirilemez ve açık kohort sınırı 2'dir.
+- **`HoldoutEnvironmentVerified` (T):** evaluator image digest'ine bağlanır. Başka bir digest için bayrak geçersizdir; böylece §4'teki "evaluator kodundaki her değişiklik bayrağı sıfırlar" kuralı DB'de uygulanır.
+- **Durum:** Kapı A'da onaylandı (U, 2026-10-20); uygulama Kapı B ve C'de.
 
 ## Bağlam
 - Kullanıcı 2026-10-14'te harici VPS kullanılmamasına karar verdi (D5 rev., B2 kaldırıldı). Tüm sistem kullanıcının Windows + Docker Desktop bilgisayarında çalışacak.

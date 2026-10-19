@@ -28,6 +28,7 @@ Kullanıcıdan açık onay alınmadan yapılmaz:
 - Açığa çıkmamış kohortların paper ve Testnet sonuçları ile tanısal metrikler, kullanıcı paylaşsa bile **araştırma ya da hipotez girdisi olarak kullanılmaz.**
 - Holdout veritabanına ve evaluator'a erişim denenmez. SSH bağlantısı kurulmaz.
 - Holdout koruma kodu (adında `Holdout` geçen dosyalar) ve evaluator kodu, kullanıcının açık isteği olmadan değiştirilmez.
+- **M5 yerel ortamı (m5-protocol §4, §11):** `ops` veritabanına yalnızca `research_app` login'iyle bağlanılır. `market.live_candles`, `trading.*` ve canlı veriden türeyen tablolar (korelasyon, PnL) okunmaz. `scripts/m5-*.ps1` (bootstrap, deploy, henv, paper-start, paper-report, backup, restore-test), evaluator ve probe komutları ile Trading.Host'un başlatılması **yalnızca kullanıcı** tarafından çalıştırılır. Paper raporlarından yalnızca operasyonel alanlar (m5-protocol §7.3) görülür.
 - Holdout ortamına ait sır adları (`tests/Architecture.Tests/HoldoutSecretReferenceTests.cs`) evaluator projesi dışında hiçbir kaynak, config ya da script dosyasında kullanılmaz.
 
 ## Sırlar

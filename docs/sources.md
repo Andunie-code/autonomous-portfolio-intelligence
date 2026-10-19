@@ -1,6 +1,6 @@
 # Doğrulanmış Harici Bilgiler
 
-Son güncelleme: 2026-10-18
+Son güncelleme: 2026-10-19 (S-B9, S-B10)
 
 Bu belgedeki bilgiler, aksi belirtilmedikçe, belirtilen tarihte resmi kaynaktan okunmuştur. Fiyatlar, limitler ve şartlar değişebilir. Her bilgi, ilgili milestone başlamadan önce yeniden doğrulanır.
 
@@ -16,6 +16,14 @@ Bu belgedeki bilgiler, aksi belirtilmedikçe, belirtilen tarihte resmi kaynaktan
 | S-B7 | Spot verisinde 2025-01-01'den itibaren zaman damgaları **mikrosaniye** cinsinden | aynı |
 
 | S-B8 | Arşiv listelemesi: `https://data.binance.vision/?prefix=...` HTML web sayfası döndürür (2026-10-14 M1 Kapı 2 denemesinde gözlendi). Path-style S3 listeleme uç noktası `https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?prefix=...&delimiter=/`; dosyalar `https://data.binance.vision/data/...` üzerinden. **Kaynak: kullanıcı beyanı; S3 uç noktasının yanıtı henüz gözlenmedi** (ilk başarılı listelemede doğrulanır) | Kullanıcı, 2026-10-14 |
+
+### Binance canlı piyasa verisi (doğrulama tarihi: 2026-10-19, M5 Kapı A)
+Yalnızca belge sayfaları okundu; veri uç noktalarına istek atılmadı.
+
+| ID | Bilgi | Kaynak |
+|---|---|---|
+| S-B9 | `GET /api/v3/klines`: parametreler `symbol`, `interval` (`4h` dahil, büyük/küçük harfe duyarlı), `startTime`, `endTime` (ms), `timeZone` (varsayılan 0 = UTC; `startTime`/`endTime` her zaman UTC yorumlanır), `limit` (varsayılan 500, en fazla 1000). Weight 2. Yanıt 12 alanlı dizi: açılış zamanı, O, H, L, C, hacim, kapanış zamanı, quote hacmi, işlem sayısı, taker alış base hacmi, taker alış quote hacmi, kullanılmayan alan. "Klines are uniquely identified by their open time." **Belgelenmeyen:** son mumun kapanmamış olabileceği açıkça yazmıyor. Kural olarak yalnızca `closeTime < now` olan mumlar kabul edilir (`m5-protocol.md` §2.3) | https://developers.binance.com/docs/binance-spot-api-docs/rest-api/market-data-endpoints |
+| S-B10 | "For APIs that only send public market data, please use the base endpoint https://data-api.binance.vision." JSON zaman alanları varsayılan olarak milisaniye; `X-MBX-TIME-UNIT: MICROSECOND` ile mikrosaniye. Limit aşımında 429 ve `Retry-After`; ısrarda 418 (IP ban). Dakika başına weight tavanı sayfada sayı olarak yazmıyor; `exchangeInfo` `rateLimits` içinde | https://developers.binance.com/docs/binance-spot-api-docs/rest-api/general-api-information |
 
 **Doğrulanamayanlar (varsayım):** Testnet'in sıfırlanma sıklığı; Testnet emir defterinin ve likiditesinin gerçek piyasayı temsil etmediği (yaygın bilgi, resmi dokümanda bulunamadı).
 
