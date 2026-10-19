@@ -22,7 +22,8 @@ M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar
     - protokolde `variant` alanı;
     - `hg-baseline` (çevrimdışı; ağ, veritabanı ve model yok).
 - **Baseline kalibrasyonu (çevrimdışı, seed 50000–50049, ilk ve tek deneme):** 17/50 = %34,0, bant içinde. Kurgu ölçümden sonra değiştirilmedi.
-- **Tasarım:** `docs/m4-hg-qualification-design-v2.md`, kullanıcı onayı bekliyor.
+- **Tasarım (U, 2026-10-19):** `docs/m4-hg-qualification-design-v2.md` onaylandı; ön kayıt kanıtı, belgenin eklendiği commit.
+  - Kullanıcının bütçe esnekliği pilottan önce §6'ya işlendi: tahmin 3 USD'yi aşar ve 5 USD'yi geçmezse iş bütçesi 5 USD olur ve yeterlilik iş payı 0,50'ye çıkar; 5 USD'nin üstünde sonuç `Inconclusive` olur.
   - Pilot seed'leri 60000–60019 (set hash'i `91377be7…`); yeterlilik seed'leri 70000'den başlar.
   - δ = 0,15, α = 0,05 (v1 ile aynı).
 - `verify.ps1` yeşil: 416 test.
