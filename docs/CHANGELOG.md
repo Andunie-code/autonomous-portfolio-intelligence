@@ -8,7 +8,7 @@ M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar
 - **Ön kayıtlı kural (tasarım v2 §6, değiştirilmeden):** n = 150; tahmin 150 × 0,02553 × 2 = 7,66 USD > 5,00 USD → yeterlilik koşusu yapılmaz.
   - v2 döngüsünün sonucu `Inconclusive (budget)`. Harness koşmadığı için `TaskQualification` kaydı yok.
   - HypothesisGeneration'da nitelikli model yok; LLM'siz mod sürer.
-- **Harcama:** ekim ayı ledger toplamı 0,671812 USD (aylık tavan 10 USD).
+- **Harcama:** ekim ayı ledger toplamı 0,671812 USD (aylık tavan 10 USD). `docs/m4-ai-reconciliation-2026-10.md` yeniden üretildi (140 çağrı).
 
 ## 2026-10-19 — `gemini-3.8-flash` spike'ı (pilot öncesi)
 - **Kullanıcının koşusu:** 3/5 PASS; `modelVersion` = `gemini-3.8-flash`.

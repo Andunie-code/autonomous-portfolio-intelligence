@@ -1,24 +1,27 @@
-> Kaynak: `scripts/m4-ai.ps1 reconcile --month 2026-10` (2026-10-19). Google faturası ay kapanınca kullanıcı tarafından girilir: `reconcile --month 2026-10 --invoice-try <tutar> --usd-try <kur>`. Fark %10'u aşarsa fiyat tablosu gözden geçirilir ve olay audit'e yazılır (ADR-0010).
+> Kaynak: `scripts/m4-ai.ps1 reconcile --month 2026-10`, son üretim 2026-10-19; M4 ve HypothesisGeneration v2 pilotu dahil. Google faturası ay kapanınca kullanıcı tarafından girilir: `reconcile --month 2026-10 --invoice-try <tutar> --usd-try <kur>`. Fark %10'u aşarsa fiyat tablosu gözden geçirilir ve olay audit'e yazılır (ADR-0010).
 
 # AI harcama mutabakatı — 2026-10
 
 - Fiyat tablosu: `gemini-list-prices 2026-10-19 (sources.md S-G2, S-G9)` (liste fiyatı, USD)
-- Ledger toplamı: **0.146228 USD** · çağrı 102 · girdi token 185285 · çıktı token 36257
+- Ledger toplamı: **0.671812 USD** · çağrı 140 · girdi token 267809 · çıktı token 159908
 - Fatura: girilmedi (mutabakat bekliyor)
 
 | Görev sınıfı | Tutar |
 |---|---|
-| (none) | 0.000856 USD |
-| HypothesisGeneration | 0.145372 USD |
+| (none) | 0.015788 USD |
+| HypothesisGeneration | 0.656024 USD |
 
 | İş | Tutar |
 |---|---|
+| hg-pilot-0f2b043f7786 | 0.510653 USD |
 | hg-pilot-270fe2bf4ac2 | 0.032664 USD |
 | qualification-89075de83cd6 | 0.112708 USD |
 | spike-20261018T215804Z | 0.000000 USD |
 | spike-20261018T221822Z | 0.000856 USD |
+| spike-20261019T145045Z | 0.007146 USD |
+| spike-20261019T150445Z | 0.007786 USD |
 
 | Gün | Tutar |
 |---|---|
 | 2026-10-18 | 0.095625 USD |
-| 2026-10-19 | 0.050603 USD |
+| 2026-10-19 | 0.576187 USD |
