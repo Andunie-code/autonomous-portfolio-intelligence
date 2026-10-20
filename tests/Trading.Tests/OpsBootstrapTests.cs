@@ -20,11 +20,17 @@ public class OpsBootstrapTests : IAsyncLifetime
 
     public Task DisposeAsync() => _postgres.DisposeAsync().AsTask();
 
-    private string Database(string name, string? user = null) => new NpgsqlConnectionStringBuilder(_postgres.GetConnectionString())
+    private string Database(string name, string? user = null)
     {
-        Database = name, Pooling = false, Username = user ?? new NpgsqlConnectionStringBuilder(_postgres.GetConnectionString()).Username,
-        Password = (user is null ? new NpgsqlConnectionStringBuilder(_postgres.GetConnectionString()).Password : LoginSecret),
-    }.ConnectionString;
+        var builder = new NpgsqlConnectionStringBuilder(_postgres.GetConnectionString()) { Database = name, Pooling = false };
+        if (user is not null)
+        {
+            builder.Username = user;
+            builder.Password = (LoginSecret);
+        }
+
+        return builder.ConnectionString;
+    }
 
     private static async Task Execute(string connectionString, string sql)
     {
