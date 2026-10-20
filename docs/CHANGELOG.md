@@ -2,6 +2,18 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-20 — M5 Kapı C: bootstrap düzeltmesi
+- **Gözlem (kullanıcının ilk `m5-bootstrap.ps1` koşusu):**
+  - yedek, yeniden adlandırma ve sahiplik devri tamamlandı;
+  - script `Migrations failed.` ile durdu ve yedek `pg_hba` dosyasını (`172.30.1.1`) yazdı.
+- **Neden (T):** `Invoke-OpsMigrations`, `dotnet run` çıktısını pipeline'da bırakıyordu. PowerShell fonksiyonu çıktı satırlarıyla çıkış kodunu birlikte bir dizi olarak döndürdü ve `-ne 0` karşılaştırması bu diziyi her durumda "başarısız" saydı. Asıl yedek `pg_hba` yolunu tetikleyen de bu yanlış alarmdı.
+- **Düzeltme:**
+  - migrator çıktısı `Out-Host` ile konsola yazılıyor; fonksiyon yalnızca çıkış kodunu döndürüyor;
+  - hata olursa PostgreSQL'in son FATAL/ERROR satırları gösteriliyor (secret içermez);
+  - kaynak adres tespiti `127.0.0.1`'i atlıyor.
+- **Sahiplik devri:** SQL `deploy/postgres/ops-ownership.sql`'e taşındı ve herhangi bir superuser'a ait nesneleri kapsıyor.
+- **Yeni test:** `OpsBootstrapTests`. M0–M4 biçimli veritabanında yeniden adlandırma, login'ler, sahiplik devri ve ardından `ops_owner` ile migration'lar; `research_app` canlı mumları okuyamıyor.
+
 ## 2026-10-20 — M5 Kapı B: çevrimdışı kod ve testler (kullanıcı kabulü, 2026-10-20)
 Ön kayıt `9dda841`'den sonra. Gerçek ağ erişimi, holdout erişimi, `≥ C` verisi ve AI çağrısı yok (0 USD). Gerçek ortam (bootstrap, H-ENV, seed, paper) Kapı C'de, kullanıcının koşularıyla yapılacak; bu kapıda hiçbir container yeniden oluşturulmadı.
 

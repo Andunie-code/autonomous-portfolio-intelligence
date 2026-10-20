@@ -75,31 +75,7 @@ foreach ($role in $script:HoldoutRoles) { $roleSql += "DO `$`$ BEGIN IF NOT EXIS
 Invoke-Psql 'postgres' ($roleSql -join "`n") -Quiet
 
 # 4. Ownership of the ops objects; the holdout database.
-Invoke-Psql 'ops' @'
-ALTER DATABASE ops OWNER TO ops_owner;
-DO $$
-DECLARE r record;
-BEGIN
-    FOR r IN SELECT nspname FROM pg_namespace WHERE nspname IN ('market', 'research', 'trading', 'audit', 'ai') LOOP
-        EXECUTE format('ALTER SCHEMA %I OWNER TO ops_owner', r.nspname);
-    END LOOP;
-    FOR r IN SELECT n.nspname, c.relname, c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-             WHERE n.nspname IN ('market', 'research', 'trading', 'audit', 'ai', 'public') AND c.relkind IN ('r', 'p', 'v', 'm')
-               AND pg_get_userbyid(c.relowner) = 'pi_dev' LOOP
-        EXECUTE format('ALTER %s %I.%I OWNER TO ops_owner', CASE r.relkind WHEN 'v' THEN 'VIEW' WHEN 'm' THEN 'MATERIALIZED VIEW' ELSE 'TABLE' END, r.nspname, r.relname);
-    END LOOP;
-    FOR r IN SELECT n.nspname, c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-             WHERE n.nspname IN ('market', 'research', 'trading', 'audit', 'ai', 'public') AND c.relkind = 'S'
-               AND pg_get_userbyid(c.relowner) = 'pi_dev' LOOP
-        EXECUTE format('ALTER SEQUENCE %I.%I OWNER TO ops_owner', r.nspname, r.relname);
-    END LOOP;
-    FOR r IN SELECT p.oid::regprocedure AS signature FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-             WHERE n.nspname IN ('market', 'research', 'trading', 'audit', 'ai') AND pg_get_userbyid(p.proowner) = 'pi_dev' LOOP
-        EXECUTE format('ALTER FUNCTION %s OWNER TO ops_owner', r.signature);
-    END LOOP;
-END
-$$;
-'@ -Quiet
+Invoke-Psql 'ops' (Get-Content (Join-Path $script:Root 'deploy/postgres/ops-ownership.sql') -Raw) -Quiet
 if ($exists -notmatch 'holdout') { Invoke-Psql 'postgres' 'CREATE DATABASE holdout OWNER eval_owner;' -Quiet }
 Invoke-Psql 'postgres' @'
 REVOKE CONNECT, TEMPORARY ON DATABASE holdout FROM PUBLIC;
@@ -110,13 +86,26 @@ DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_database WHERE datname = 'holdout_synth'
 
 # 5. Ops migrations as ops_owner through the loopback port (pg_hba "samenet"); fallback to the measured source.
 $port = if ($settings['PI_DEV_DB_PORT']) { $settings['PI_DEV_DB_PORT'] } else { '55432' }
+# The migrator's output goes to the console (Out-Host): a PowerShell function returns every uncaptured output line,
+# so returning only the exit code needs the output kept out of the pipeline.
 function Invoke-OpsMigrations {
     $env:ConnectionStrings__Ops = "Host=127.0.0.1;Port=$port;Database=ops;Username=ops_owner;Password=$(Get-Secret $script:OpsSecrets 'ops_owner')"
-    try { dotnet run --project src/Tools/DbMigrator -c Release; return $LASTEXITCODE }
+    try {
+        dotnet run --project src/Tools/DbMigrator -c Release | Out-Host
+        [int] $code = $LASTEXITCODE
+        if ($code -ne 0) {
+            # The server-side reason (no pg_hba entry, failed password, SQL error); these lines carry no secret.
+            Write-Host 'PostgreSQL reported:' -ForegroundColor Yellow
+            docker compose logs postgres --since 3m 2>$null | Select-String 'FATAL|ERROR|DETAIL' | Select-Object -Last 10 | ForEach-Object { Write-Host "  $($_.Line)" }
+        }
+        return $code
+    }
     finally { Remove-Item Env:ConnectionStrings__Ops -ErrorAction SilentlyContinue }
 }
 if ((Invoke-OpsMigrations) -ne 0) {
-    $source = (docker compose logs postgres --since 5m | Select-String 'connection received: host=([0-9.]+)' | Select-Object -Last 1).Matches.Groups[1].Value
+    # Fallback (m5-protocol §4.3): pg_hba "samenet" did not admit the loopback source; use the measured address.
+    $source = (docker compose logs postgres --since 5m | Select-String 'connection received: host=([0-9.]+)' |
+        Where-Object { $_.Matches[0].Groups[1].Value -ne '127.0.0.1' } | Select-Object -Last 1).Matches.Groups[1].Value
     if (-not $source) { throw 'Migrations failed and no loopback source address was observed.' }
     Write-Host "Loopback connections arrive from $source; writing deploy/postgres/pg_hba.local.conf."
     (Get-Content 'deploy/postgres/pg_hba.conf') -replace 'samenet', "$source/32" | Set-Content 'deploy/postgres/pg_hba.local.conf' -Encoding ascii

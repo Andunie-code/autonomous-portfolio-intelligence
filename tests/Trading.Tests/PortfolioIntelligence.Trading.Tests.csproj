@@ -13,6 +13,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\docs\cohorts\cohort-0.json" Link="cohort-0.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\deploy\postgres\ops-ownership.sql" Link="ops-ownership.sql" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
