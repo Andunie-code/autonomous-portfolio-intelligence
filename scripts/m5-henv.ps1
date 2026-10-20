@@ -71,8 +71,12 @@ $token = Get-Secret $script:OpsSecrets 'ops_api_token'
 function Invoke-Ops([string] $Method, [string] $Path, [string] $Body, [bool] $WithToken) {
     $headers = @{}
     if ($WithToken) { $headers['Authorization'] = "Bearer $token" }
+    # Body and content type only with a body: Windows PowerShell 5.1 refuses a body on GET (ProtocolViolationException),
+    # and a [string] parameter turns $null into "", so the check is on the length.
+    $request = @{ UseBasicParsing = $true; Method = $Method; Uri = "http://127.0.0.1:55490$Path"; Headers = $headers; TimeoutSec = 10 }
+    if ($Body.Length -gt 0) { $request['Body'] = $Body; $request['ContentType'] = 'application/json' }
     try {
-        $response = Invoke-WebRequest -UseBasicParsing -Method $Method -Uri "http://127.0.0.1:55490$Path" -Headers $headers -Body $Body -ContentType 'application/json' -TimeoutSec 10
+        $response = Invoke-WebRequest @request
         return [int]$response.StatusCode
     } catch [System.Net.WebException] {
         if ($_.Exception.Response) { return [int]$_.Exception.Response.StatusCode }
