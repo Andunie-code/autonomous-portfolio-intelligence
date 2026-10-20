@@ -45,6 +45,12 @@ public sealed record RiskConfig(
 {
     public static RiskConfig Policy { get; } = new(RiskSettings.Policy);
 
+    /// <summary>P1 (U, 2026-10-20; docs/m5-p1-analysis.md): binding cluster cap of 60 % at ρ* = 0.70 for operations.</summary>
+    public static ClusterCapSettings P1ClusterCap { get; } = new(0.70, 0.60m);
+
+    /// <summary>P1 warning level of the largest cluster share (informational, 0.9 × cap).</summary>
+    public const decimal P1ClusterWarning = 0.54m;
+
     public string Version => "risk-config v2";
 }
 

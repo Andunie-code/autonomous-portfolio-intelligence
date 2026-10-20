@@ -2,7 +2,7 @@
 
 - Durum: Kabul edildi · Tarih: 2026-10-14
 - Karar türü: Teknik kararlar T21 ve T22
-- Uygulama durumu: **Planlandı, uygulanmadı**
+- Uygulama durumu: **Aile temsilcisi M3'te; L1/L2 parity ve L3 raporu M5'te uygulandı (2026-10-20).** Kohort 0 parity replay birebir (`m5-parity-results.md`).
 - İlgili: ADR-0006, ADR-0012, ADR-0013, ADR-0014, `architecture.md` §6.3–§6.5
 
 ## 1. Aile benzerlik kontrolü (T21)

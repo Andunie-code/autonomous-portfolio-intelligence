@@ -2,7 +2,7 @@
 
 - Durum: Kabul edildi · Tarih: 2026-10-14
 - Karar türü: Teknik karar T20; kullanıcı kararları D11 (rev.) ve D25
-- Uygulama durumu: **Planlandı, uygulanmadı**
+- Uygulama durumu: **Backtest'te M2'den, paper'da M5'ten beri uygulanıyor (2026-10-20).** Paper ve backtest aynı motor kodunu kullanıyor (ADR-0018). Testnet'teki borsa stop emri M6'da.
 - İlgili: ADR-0003, ADR-0011, ADR-0015, `architecture.md` §5, `risk-model.md` §2–§4
 
 ## Bağlam

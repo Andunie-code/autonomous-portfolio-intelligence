@@ -24,6 +24,7 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
 {
     public static readonly TimeSpan Warmup = TimeSpan.FromDays(45);
     private (long RunId, int Steps, PortfolioEngine Engine)? _cache;
+    private bool _warned;
     public const double CorrelationThreshold = 0.70;
     public const string ReferenceSymbol = "BTCUSDT";
 
@@ -183,10 +184,21 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
                 return (k, engine.Cash(k), engine.Cash(k) + held.Sum(p => p.Quantity * p.LastClose),
                     (object)held.Select(p => new { p.Symbol, p.EntryTime, p.EntryPrice, p.Quantity, p.Stop, p.LastClose }).ToList());
             }).ToList();
+            var document = riskVersions.TryGetValue(riskVersion, out var stored) ? stored : run.Config.InitialRisk;
+            var threshold = (double?)document.ClusterCapThreshold ?? CorrelationThreshold;
+            var correlation = Correlation(run, byTime, t, t + length, positions, engine.TotalEquity, threshold);
             await store.AddStepAsync(run, new StepWrite(
-                t, inputs, engine.StateHash(), engine.Events.Skip(eventsBefore).ToList(), engine.Fills.Skip(fillsBefore).ToList(), balances,
-                Correlation(run, byTime, t, t + length, positions, engine.TotalEquity)), ct);
+                t, inputs, engine.StateHash(), engine.Events.Skip(eventsBefore).ToList(), engine.Fills.Skip(fillsBefore).ToList(), balances, correlation), ct);
             processed++;
+
+            // P1 warning (informational): the largest cluster share crosses the warning level.
+            var above = correlation is not null && document.ClusterWarningShare is { } warning && correlation.MaxClusterShare >= (double)warning;
+            if (above && !_warned)
+            {
+                await store.AuditAsync("trading", "correlation_warning", new { barTime = t, share = Math.Round(correlation!.MaxClusterShare, 4), warning = document.ClusterWarningShare }, ct);
+            }
+
+            _warned = above;
         }
 
         _cache = reconciliationOk ? (run.Id, steps.Count + processed, engine) : null;
@@ -229,7 +241,7 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
             interval,
             symbols.Contains(ReferenceSymbol) ? ReferenceSymbol : null,
             "cost-model v1",
-            RiskConfigDocument.From(new RiskConfig(members[0].Manifest.Risk)));
+            InitialRisk(members[0].Manifest));
     }
 
     /// <summary>The RiskConfig of a version; version 0 is the manifest risk block with the D22 cap and D7 freshness rule.</summary>
@@ -254,7 +266,14 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
         symbols.Contains(ReferenceSymbol) && byTime.TryGetValue(ReferenceSymbol, out var series) && series.TryGetValue(t, out var bar) ? bar : null;
 
     /// <summary>Correlation monitoring (m5-protocol §2.7): informational; computed from day-end closes up to the close.</summary>
-    private static CorrelationSnapshot? Correlation(PaperRun run, Dictionary<string, Dictionary<DateTimeOffset, Candle>> byTime, DateTimeOffset barTime, DateTimeOffset close, IReadOnlyList<PositionView> positions, decimal equity)
+    /// <summary>
+    /// RiskConfig of a new paper run: the manifest risk block with the D22 cap and D7 freshness rule, and the binding P1
+    /// correlation-cluster cap with its warning level (U, 2026-10-20).
+    /// </summary>
+    public static RiskConfigDocument InitialRisk(OperationalManifest manifest) =>
+        RiskConfigDocument.From(new RiskConfig(manifest.Risk, ClusterCap: RiskConfig.P1ClusterCap), RiskConfig.P1ClusterWarning);
+
+    private static CorrelationSnapshot? Correlation(PaperRun run, Dictionary<string, Dictionary<DateTimeOffset, Candle>> byTime, DateTimeOffset barTime, DateTimeOffset close, IReadOnlyList<PositionView> positions, decimal equity, double threshold)
     {
         var asOf = DateOnly.FromDateTime(close.UtcDateTime).AddDays(-1);
         var dayEnd = run.Config.Symbols.ToDictionary(
@@ -268,10 +287,10 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
             return null;
         }
 
-        var clusters = CorrelationClusters.Assign(run.Config.Symbols, dayEnd, asOf, InverseVolatilityAllocation.VolatilityDays, CorrelationThreshold);
+        var clusters = CorrelationClusters.Assign(run.Config.Symbols, dayEnd, asOf, InverseVolatilityAllocation.VolatilityDays, threshold);
         var exposure = run.Config.Symbols.ToDictionary(s => s, s => (double)(positions.Where(p => p.Symbol == s).Sum(p => p.Quantity * p.LastClose) / equity));
         var weights = symbols.Select(s => exposure[s]).ToList();
         var maxShare = clusters.GroupBy(c => c.Value).Select(g => g.Sum(c => exposure[c.Key])).DefaultIfEmpty(0).Max();
-        return new CorrelationSnapshot(barTime, CorrelationThreshold, clusters, CorrelationClusters.EffectiveCount(weights, matrix), maxShare);
+        return new CorrelationSnapshot(barTime, threshold, clusters, CorrelationClusters.EffectiveCount(weights, matrix), maxShare);
     }
 }

@@ -53,7 +53,7 @@ public class PaperTradingTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
         var symbols = manifest.Pairs.Select(p => p.Symbol).ToList();
         var engine = new PortfolioEngine(new PortfolioSetup(
             manifest.Members.Select(m => new SleeveSpec(m.Name, DslStrategy.FromJson(m.DefinitionJson), 5_000m)).ToList(),
-            CostModel.V1, new RiskConfig(manifest.Risk), symbols, CandleInterval.FourHours, TradingStart, new HashSet<string>(), RecordEvents: true));
+            CostModel.V1, PaperTrader.InitialRisk(manifest).ToConfig(), symbols, CandleInterval.FourHours, TradingStart, new HashSet<string>(), RecordEvents: true));
         PortfolioReplay.Run(engine, symbols, candles, candles["BTCUSDT"], TimeSpan.FromHours(4), end, final: false);
         return engine;
     }

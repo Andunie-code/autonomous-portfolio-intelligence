@@ -1,6 +1,6 @@
 # Yol Haritası
 
-Son güncelleme: 2026-10-16 (rev. 5.2) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-20 (rev. 5.3; M5 tamamlandı) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: **M0 yerelde tamamlandı** (2026-10-13; doğrulama `716a1bd` commit'inde, temiz klonda). Uzak depo: private GitHub deposu `Andunie-code/autonomous-portfolio-intelligence`. M1 ve sonrası başlamadı; her milestone ayrı kullanıcı onayı gerektirir. Bir milestone, kabul kriterlerindeki testler **gerçekten uygulanıp geçtiğinde** tamamlanmış sayılır.
 
@@ -150,8 +150,10 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - LLM'siz modda en az 10 hipotez uçtan uca işlendi (boru hattı kriteri, istatistiksel değil).
   - Toplam harcama 10 USD'lik başlangıç tavanının altında kaldı; mutabakat raporu üretildi.
 
-### M5 — Yerel holdout ortamı ve deterministik paper trading (L)
-- **Durum (2026-10-19):** başlatıldı (U). Kapı A onaylandı (2026-10-20, U; `9dda841`): [`m5-protocol.md`](m5-protocol.md) v1, ADR-0018, ADR-0013 rev. notu. Kapı B (çevrimdışı kod ve testler) kullanıcı kabulüyle tamamlandı (2026-10-20; `verify.ps1` 488/488). Kapı C sürüyor.
+### M5 — Yerel holdout ortamı ve deterministik paper trading (L) — ✅ tamamlandı (2026-10-20; kullanıcı kabulü)
+- **Durum:** Kapı A (`9dda841`), Kapı B (488/488) ve Kapı C tamamlandı. Kabul raporu: [`m5-acceptance-report.md`](m5-acceptance-report.md).
+  - **Kabul edilen sapma (U):** 7 günlük paper kriteri, kullanıcı kararıyla M5 kapanışından sonra arka planda süren operasyonel gözlem olarak devam ediyor. Kapanışta paper yeni başlamıştı.
+  - **Kararlar:** P1 → D29 (%60 küme tavanı, uyarı %54); asgari paper süresi → D30.
 - **Kapılar (U):** **A** = tasarım ve ön kayıt; **B** = çevrimdışı kod ve testler, `verify.ps1` yeşil; **C** = gerçek yerel Docker ortamı (bootstrap, H-ENV ve `HoldoutEnvironmentVerified`, Kohort 0'ın gerçek holdout DB'ye aktarılması, `R` üzerinde parity replay, ≥ 7 gün paper, yedek ve geri yükleme, P1 raporu). Ortam, H-ENV, paper ve yedek adımları kullanıcının etkileşimli koşularıdır.
 - **Ön koşul:** yok (B2 kaldırıldı; D5 rev., VPS yok).
 - **Kapsam (ADR-0013):**

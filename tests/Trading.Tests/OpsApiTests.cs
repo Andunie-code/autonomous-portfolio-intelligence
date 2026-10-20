@@ -85,7 +85,7 @@ public class OpsApiTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
         var (app, http) = await StartAsync(db);
         await using var _ = app;
 
-        var current = RiskConfigDocument.From(new RiskConfig(manifest.Risk));
+        var current = PaperTrader.InitialRisk(manifest);
         var looser = current with { ExperimentalPairsMaxExposure = 0.20m };
         var refused = await Send(http, HttpMethod.Post, "/risk-config", new { config = looser, reason = "test", confirm = false });
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);

@@ -1,8 +1,8 @@
 # Gereksinimler
 
-Son güncelleme: 2026-10-19 (rev. 5.3; B1 kapandı, M4) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-20 (rev. 5.4; M5: P1 → D29, asgari paper süresi → D30) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
 
-> Durum: M0 tamamlandı. M1 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
+> Durum: M0–M5 tamamlandı (roadmap). M6 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
 
 ## Karar durumu etiketleri
 | Etiket | Anlamı |
@@ -48,6 +48,8 @@ Kârlılık varsayılmaz. Sistemin amacı, bir stratejinin avantajı olup olmad�
 | D24 | StatusRelay (2026-10-14) | Ayrı bir StatusRelay container'ı/process'i çalıştırılmaz. HoldoutEvaluator, kısıtlı `status_relay` DB rolüyle `research.cohort_status`'a doğrudan ekleme yapar. Research.Host bu tabloya yazamaz (ADR-0013) |
 | D26 | Protokol v1 bloke edici değerleri (B5, 2026-10-16) | Kohort içi α = **0,05** tek yönlü (aile içinde Bonferroni, kohort içinde Holm); hedef güç **0,80**; δ = min(max(**0,05**; **0,50** × backtest excess); **0,15**); δ biçimi **(a)**: alt sınır > 0 **ve** nokta tahmini ≥ δ; ileriye dönük pencerede maks. drawdown **> 0,25** → `Failed`; birincil metriğin benchmark'ı **nakit** (maliyet sonrası mutlak yıllık getiri). Ayrıntı: `m3-protocol.md` §4 |
 | D27 | DSL indikatör havuzu (2026-10-16) | M2 indikatörlerine ek olarak SMA, MACD, ADX, Bollinger, Donchian, ROC, Volume SMA ve BTCUSDT piyasa rejim filtresi (aynı kapanış anındaki BTC mumu, look-ahead yok). ADR-0016 |
+| D29 | Korelasyon kümesi tavanı (P1, 2026-10-20) | Operasyonda (paper/Testnet) **bağlayıcı** küme maruziyet tavanı: korelasyon kümesi başına portföy değerinin **%60'ı**. Kümeler, son 30 günlük günlük log getirilerinin Pearson korelasyonu, ortalama bağlantılı hiyerarşik kümeleme ve **ρ* = 0,70** kesimiyle oluşturulur. Uyarı eşiği **%54** (bilgilendirme). Tavanı aşacak alım kırpılır ya da reddedilir; zorunlu satış yapılmaz; çıkışlar serbesttir. `RiskConfig`'tedir; yalnızca kullanıcı Ops API üzerinden değiştirir. Araştırma backtest'lerine ve dondurulmuş kohort manifestolarına uygulanmaz. Dayanak ve sınırlamalar: `m5-p1-analysis.md` (kanıt ince) |
+| D30 | Asgari paper süresi (2026-10-20) | `PaperTrading → TestnetActive` için en az **14 gün** ve en az **60 işlenmiş 4h mum** paper; son 7 günde **sıfır kritik hata** (reconciliation tutarsızlığı, invariant ihlali, duplicate dolum, hash uyuşmazlığı, HTTP 418). Geçiş yine kullanıcı onayı gerektirir (D3, V10) |
 | D28 | E1 verisi M3'te (2026-10-16) | Kategori mantığı çevrimdışı ve sentetik testlerle; ayrıca E1 adaylarından hacme göre ilk 5 parite (1h, 4h) kullanıcının etkileşimli Kapı-2 koşusuyla import edilir |
 | D25 | Pozisyon başına hard stop (2026-10-14) | `RiskConfig`'te bağlayıcı bir "pozisyon başına maksimum kayıp" koruyucu stop'u bulunur: giriş fiyatından **%10** (`MaxPositionLossPct = 0.10`, 2026-10-14). Gerekçe: varlık başına %20 tavanla tek bir tam pozisyon portföyde en fazla %2 kaybettirir ve %3 günlük limiti tek başına tüketemez. Strateji stop'u ile birlikte, girişe en yakın olan geçerlidir (ADR-0014) |
 | D11 | Kill switch (rev. 2026-10-14) | Pozisyonları tut, yeni emir açma; açık giriş emirleri iptal edilir. **Koruyucu stop emirleri iptal edilmez** (çıkışlar her zaman çalışır, ADR-0014). "Tümünü kapat" ayrı bir manuel eylem |
@@ -75,7 +77,7 @@ Kârlılık varsayılmaz. Sistemin amacı, bir stratejinin avantajı olup olmad�
 | T9 | **Harcama kontrolü:** aylık tavanın başlangıç değeri **10 USD** (D4 aralığının alt sınırı). İş başına ve çağrı başına tavan, eşzamanlılık sınırı, retry politikası, **LLM acil durdurma** ve otomatik tetikler | ADR-0010 |
 | T10 | Yeterlilik testleri ve runtime kullanımı Gemini'nin **ücretli katmanında** yapılır. Ücretsiz katman yalnızca sentetik içerikli teknik spike için kullanılır | ADR-0010. Gerekçe: ücretsiz katmanda veri kullanımı ve belgelenmemiş limitler |
 | T11 | **Varsayılan allocation politikası:** onaylı tavanlar içinde ters volatilite ağırlıklandırma. Aynı politika backtest'te, paper'da ve LLM fallback'inde kullanılır. Önceki "tavanların yarısı" kuralı kaldırıldı | ADR-0011 |
-| T12 | **Korelasyon:** izlenir ve raporlanır, ama yeni bir bağlayıcı tavan konmaz (P1). Önceki onaysız %40 tavanı kaldırıldı | ADR-0011 |
+| T12 | **Korelasyon:** izlenir ve raporlanır. Bağlayıcı küme tavanı, kullanıcı kararıyla D29'dur (P1, 2026-10-20). Önceki onaysız %40 tavanı kaldırıldı | ADR-0011, `m5-p1-analysis.md` |
 | T13 | Google Search grounding ve URL context otonom hatta **kullanılmaz.** Kendi getiricimiz provenance için zaten gerekli. Etkileşimli grounding modu bir öneri (P2) | ADR-0008 rev. |
 | T14 | **ModelRouter sadeleştirmesi:** sağlayıcılar arası fallback ve görev sınıfı başına aylık bütçe yok. Tek sağlayıcı, nitelikli model listesi, iş ve çağrı bütçesi | ADR-0010 |
 | T15 | **Gözlemlenebilirlik:** correlation ID'li yapılandırılmış JSON loglar, health endpoint'leri, DB yetkileriyle append-only audit. Prometheus/Grafana/ELK yok | architecture §11 |
@@ -113,7 +115,7 @@ Gerçek para ile işlem, futures/margin, birden fazla borsa, haber ve sentiment,
 ## 7. Öneriler: kullanıcı onayı gerektirir (P)
 | # | Öneri | Neden onay gerekiyor | Ne zaman |
 |---|---|---|---|
-| P1 | Korelasyon kümesi başına **bağlayıcı** maruziyet tavanı. Değeri, M5'te yapılacak tarihsel etki analizine göre önerilecek | Onaylı risk limitlerini değiştirir (sıkılaştırır) | M5 sonu |
+| ~~P1~~ | ~~Korelasyon kümesi başına bağlayıcı maruziyet tavanı~~ — **karara bağlandı:** D29 (%60, ρ* 0,70, uyarı %54; 2026-10-20) | — | — |
 | P2 | Etkileşimli "araştırma asistanı" ekranında Google Search grounding: sonuçlar Search Suggestions ile size gösterilir; otonom hafızaya yazılmaz | Ücretli sorgu harcaması ve şartların kabulü | M9 sonrası, isteğe bağlı |
 | P3 | Anthropic/Opus için bir değerlendirme kolu (D19) | Anthropic harcaması | Kanıt toplandığında |
 | ~~P4~~ | ~~VPS SSH erişiminde donanım güvenlik anahtarı (FIDO2)~~ — **Geçersiz** (rev. 5, VPS yok) | — | — |
@@ -126,10 +128,9 @@ Gerçek para ile işlem, futures/margin, birden fazla borsa, haber ve sentiment,
 | ~~Birincil metriğin kesin formülü, bootstrap blok uzunluğu kuralı~~ — **ön kayıtlı:** `m3-protocol.md` §4 (Kapı A onayıyla) | — | — | — |
 | ~~Kapı eşiklerinin değerleri~~ — **kalibre edildi** (Protokol v2): `N_min = 100`, `τ_wf = 0,75`, `τ_nb = 0,80`, `τ_dsr = 0,90` (`m3-calibration-results-v2.md`) | — | — | — |
 | ~~Maliyet ve slippage modeli değerleri~~ — **ön kayıtlı:** `m2-protocol.md` v1 §8 | — | — | — |
-| Docker `mem_limit` ve `cpus` değerleri | Başlangıç değerleri ADR-0013'te; gerçek kullanımla ölçülüp ayarlanır | M3, M5 | Teknik lider |
+| Docker `mem_limit` ve `cpus` değerleri | M5'te paper başında ölçüldü (2026-10-20): Trading.Host ≈ 40 MiB / 384 MiB, PostgreSQL ≈ 293 MiB / 1 GiB. Başlangıç değerleri korundu (T). İş bazlı Research.Host ve evaluator'ın tepe kullanımı ölçülmedi; 30 günlük Testnet provasında yeniden ölçülür | M10 | Teknik lider |
 | Aile benzerlik eşikleri (korelasyon 0,9, Jaccard 0,8) | Mühendislik başlangıç değerleri; veriyle gözden geçirilir | M3 | Teknik lider |
-| `PaperTrading → TestnetActive` için asgari paper süresi | Operasyonel ölçüm | M5 | Teknik lider, kullanıcı onayıyla |
-| Evaluator yayın tamponu (başlangıç: 3 gün) | Arşivin yayın gecikmesine göre | M5 | Teknik lider |
+| Evaluator yayın tamponu (başlangıç: 3 gün) | Arşivin yayın gecikmesine göre. M5'te holdout penceresi verisi import edilmediği için ölçülemedi; ilk gerçek import'ta ölçülür | İlk import (en geç 2027-10, Kohort 0) | Teknik lider |
 | Yeterlilik eşikleri ve örneklem büyüklükleri (görev sınıfı başına) | Ayrı bir pilot sette varyans ölçülür, ardından güç analizi yapılır. α ve minimum anlamlı etki protokolde gerekçelendirilir | Her yeterlilik protokolü öncesi | Teknik lider |
 | Allocator gölge mod süresi (≥ 4 hafta onaylı alt sınır) | Gölge modun ilk haftalarındaki karar sayısı ve varyansla güç analizi | M8 | Teknik lider |
 | ~~Timeout, retry, eşzamanlılık değerleri~~ — **M4'te ölçüldü** (spike, pilot ve yeterlilik koşusu: gecikme 0,6–2,0 sn, retry ya da timeout olayı yok). Başlangıç değerleri (120 sn, en fazla 2 retry, eşzamanlılık 1) korundu (`m4-spike-results.md`) | — | — | — |

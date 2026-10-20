@@ -2,6 +2,29 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-20 — M5 kapanışı (kullanıcı kabulü)
+- **Kullanıcı kararları (U):**
+  - **D29 (P1):** operasyonda bağlayıcı küme maruziyet tavanı %60 (ρ* = 0,70, ortalama bağlantılı kümeleme, 30 günlük getiriler), uyarı %54.
+  - **D30:** `PaperTrading → TestnetActive` için ≥ 14 gün, ≥ 60 işlenmiş 4h mum ve son 7 günde sıfır kritik hata.
+  - **M5 tamamlandı:** 7 günlük paper kriteri, kapanış sonrası arka planda süren operasyonel gözleme bırakıldı (kabul edilmiş sapma).
+- **Kapı C'nin son koşuları (kullanıcı):**
+  - paper başlatıldı; restart, `calibrate-quick` ve kill switch denemeleri yapıldı;
+  - şifreli yedek alındı; geri yükleme 33/33 tablo `MATCH`;
+  - ilk operasyonel rapor: 4 döngü, gecikmeli döngü 0, reconciliation 2/2, duplicate 0, kesinti yok.
+- **Bellek (T):** Trading.Host ≈ 40 MiB / 384 MiB, PostgreSQL ≈ 293 MiB / 1 GiB; limitler korundu.
+- **Kod:**
+  - Kernel'de P1 değerleri (`RiskConfig.P1ClusterCap`, `P1ClusterWarning`).
+  - `RiskConfigDocument`'e isteğe bağlı küme tavanı alanları. Boşken yazılmadıkları için eski belgelerin JSON'u ve hash'i aynı kalıyor. Tavanı kaldırmak ya da yükseltmek gevşetme sayılıyor.
+  - Yeni paper koşuları tavanla başlıyor. Korelasyon uyarısı audit'e yazılıyor (`correlation_warning`).
+  - Parity replay tavanlı yapılandırmayı kullanıyor; L3'ün izole koşusu manifestonun kendi risk bloğunu kullanıyor.
+  - Tavanlı parity tekrarı (`R`, dry run): L1/L2 birebir; tavan hiç bağlamadı.
+  - Yeni testler: `RiskConfigDocumentTests`.
+- **Belgeler:**
+  - yeni: `docs/m5-acceptance-report.md`;
+  - güncellenen: `requirements.md` (D29, D30, §7, §8), `risk-model.md` (§2 küme tavanı, durum), `roadmap.md` (M5 ✅), ADR-0012/0013/0014/0015 uygulama durumları.
+- `verify.ps1` yeşil: **492 test**; secret scan geçti.
+- **Kullanıcıya kalan:** çalışan paper koşusuna tavanı eklemek (Trading.Host'u yeniden derleyip yeni `RiskConfig` sürümü eklemek; kabul raporu §4).
+
 ## 2026-10-20 — M5 Kapı C: H-ENV, Kohort 0 aktarımı, parity replay ve P1
 - **Ortam (kullanıcının koşuları):** bootstrap; deploy (`H20 PASS`); Trading.Host canlı veri olmadan.
 - **H-ENV (kullanıcı):** 79 satırın tamamı PASS (H5, H6, H6b, H14, H19–H28; gerçek DB'de H22 dahil). Rapor SHA-256 `df3b9fb0…`. **`HoldoutEnvironmentVerified`** bu rapor hash'i ve çalışan evaluator digest'iyle set edildi ve audit'e yazıldı.

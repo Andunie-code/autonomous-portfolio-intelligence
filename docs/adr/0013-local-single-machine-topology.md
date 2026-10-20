@@ -2,7 +2,7 @@
 
 - Durum: Kabul edildi · Tarih: 2026-10-14
 - Karar türü: Kullanıcı kararları D5 (rev.), D17 (rev.), D24; teknik kararlar T1–T3, T17, T19 (rev.)
-- Uygulama durumu: **Planlandı, uygulanmadı**
+- Uygulama durumu: **M5'te uygulandı ve gerçek ortamda doğrulandı (2026-10-20):** H-ENV 79/79 PASS; `HoldoutEnvironmentVerified` evaluator digest'ine bağlı olarak set edildi. Ayrıntı: revizyon notu ve `m5-acceptance-report.md`.
 - Yerini aldığı: ADR-0009'un topoloji (madde 1–2), deploy (madde 5) ve gerçek ortam doğrulaması (madde 6) kısımları. ADR-0009'un rol, trigger, evaluator API'si ve `Validated` kapısı kararları geçerlidir.
 - İlgili: ADR-0001, ADR-0006, ADR-0009, ADR-0012, ADR-0018, `architecture.md` §1, §6.2, §10, §12
 

@@ -90,7 +90,7 @@ public static class ParityReplay
         var lastBar = store.Written.Count == 0 ? tradingStart : store.Written[^1].BarTime;
 
         // (a) Kernel batch run with the same configuration.
-        var risk = new RiskConfig(manifest.Risk);
+        var risk = PaperTrader.InitialRisk(manifest).ToConfig();
         var capital = Math.Round(PaperRunConfig.NominalCapital / manifest.Members.Count, 8);
         var kernel = new PortfolioEngine(new PortfolioSetup(
             manifest.Members.Select(m => new SleeveSpec(m.Name, DslStrategy.FromJson(m.DefinitionJson), capital)).ToList(),
@@ -103,12 +103,13 @@ public static class ParityReplay
         var kernelL2 = EngineEvents.Canonical(kernel.Events, true);
         var paperL2 = EngineEvents.Canonical(paperEvents, true);
 
-        // L3: each sleeve against its isolated single-strategy run (evaluator-style, fixed initial capital).
+        // L3: each sleeve against its isolated single-strategy run (evaluator-style: fixed initial capital and the
+        // manifest's own risk block, without the operational P1 cluster cap).
         var l3 = manifest.Members.Select((m, k) =>
         {
             var isolated = new PortfolioEngine(new PortfolioSetup(
                 [new SleeveSpec(m.Name, DslStrategy.FromJson(m.DefinitionJson), manifest.InitialCapital)],
-                CostModel.V1, risk, symbols, interval, tradingStart, manifest.ExperimentalSymbols, RecordEvents: true));
+                CostModel.V1, new RiskConfig(manifest.Risk), symbols, interval, tradingStart, manifest.ExperimentalSymbols, RecordEvents: true));
             PortfolioReplay.Run(isolated, symbols, candles, reference, length, lastBar + length, final: false);
             return Difference(m.Name, isolated, 0, kernel, k);
         }).ToList();

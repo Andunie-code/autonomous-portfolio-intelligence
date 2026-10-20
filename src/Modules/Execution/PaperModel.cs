@@ -58,7 +58,10 @@ public sealed record ManualClose(int Sleeve, string Symbol);
 
 public sealed record StepRecord(DateTimeOffset BarTime, StepInputs Inputs, string StateHash);
 
-/// <summary>RiskConfig v2 as stored in trading.risk_config_versions.config.</summary>
+/// <summary>
+/// RiskConfig v2 as stored in trading.risk_config_versions.config. The correlation-cluster fields (P1) are optional and
+/// are not written when absent, so documents stored before P1 keep their exact JSON and hash.
+/// </summary>
 public sealed record RiskConfigDocument(
     int MaxOpenPositions,
     decimal MaxAssetWeight,
@@ -68,16 +71,21 @@ public sealed record RiskConfigDocument(
     bool DrawdownHaltEnabled,
     decimal MaxPositionLoss,
     decimal ExperimentalPairsMaxExposure,
-    int MaxDataLagBars)
+    int MaxDataLagBars,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] decimal? ClusterCapThreshold = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] decimal? ClusterCapMaxExposure = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] decimal? ClusterWarningShare = null)
 {
-    public static RiskConfigDocument From(RiskConfig config) => new(
+    public static RiskConfigDocument From(RiskConfig config, decimal? clusterWarning = null) => new(
         config.Settings.MaxOpenPositions, config.Settings.MaxAssetWeight, config.Settings.MaxTotalExposure, config.Settings.DailyLossLimit,
         config.Settings.MaxDrawdown, config.Settings.DrawdownHaltEnabled, config.Settings.MaxPositionLoss,
-        config.ExperimentalPairsMaxExposure, config.MaxDataLagBars);
+        config.ExperimentalPairsMaxExposure, config.MaxDataLagBars,
+        config.ClusterCap is { } cap ? (decimal)cap.Threshold : null, config.ClusterCap?.MaxExposure, clusterWarning);
 
     public RiskConfig ToConfig() => new(
         new RiskSettings(MaxOpenPositions, MaxAssetWeight, MaxTotalExposure, DailyLossLimit, MaxDrawdown, DrawdownHaltEnabled, MaxPositionLoss),
-        ExperimentalPairsMaxExposure, MaxDataLagBars);
+        ExperimentalPairsMaxExposure, MaxDataLagBars,
+        ClusterCapThreshold is { } threshold && ClusterCapMaxExposure is { } max ? new ClusterCapSettings((double)threshold, max) : null);
 
     public string Json() => JsonSerializer.Serialize(this, PaperJson.Options);
 
@@ -109,6 +117,19 @@ public sealed record RiskConfigDocument(
             errors.Add("maxDataLagBars must be ≥ 0");
         }
 
+        if (ClusterCapThreshold.HasValue != ClusterCapMaxExposure.HasValue)
+        {
+            errors.Add("clusterCapThreshold and clusterCapMaxExposure go together");
+        }
+
+        foreach (var (name, value) in new[] { ("clusterCapThreshold", ClusterCapThreshold), ("clusterCapMaxExposure", ClusterCapMaxExposure), ("clusterWarningShare", ClusterWarningShare) })
+        {
+            if (value is < 0 or > 1)
+            {
+                errors.Add($"{name} must be within [0, 1]");
+            }
+        }
+
         return errors;
     }
 
@@ -117,7 +138,10 @@ public sealed record RiskConfigDocument(
         next.MaxOpenPositions > MaxOpenPositions || next.MaxAssetWeight > MaxAssetWeight || next.MaxTotalExposure > MaxTotalExposure
         || next.DailyLossLimit > DailyLossLimit || next.MaxDrawdown > MaxDrawdown || (DrawdownHaltEnabled && !next.DrawdownHaltEnabled)
         || next.MaxPositionLoss > MaxPositionLoss || next.ExperimentalPairsMaxExposure > ExperimentalPairsMaxExposure
-        || next.MaxDataLagBars > MaxDataLagBars;
+        || next.MaxDataLagBars > MaxDataLagBars
+        // Removing the cluster cap, raising it, or raising the correlation threshold (smaller clusters) relaxes it.
+        || (ClusterCapMaxExposure is { } cap && (next.ClusterCapMaxExposure is not { } nextCap || nextCap > cap))
+        || (ClusterCapThreshold is { } threshold && next.ClusterCapThreshold is { } nextThreshold && nextThreshold > threshold);
 }
 
 internal static class PaperJson

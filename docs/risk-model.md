@@ -1,8 +1,8 @@
 # Risk Modeli
 
-Son güncelleme: 2026-10-14 (rev. 5) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-20 (rev. 5.1; M5, D29) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
-> Durum: Buradaki kontroller **planlanmıştır, uygulanmamıştır**. Etiketler (U/T/P/TBD) için bkz. `requirements.md`.
+> Durum: Paper için M5'te **uygulandı ve test edildi** (`m5-protocol.md` §8, CHANGELOG 2026-10-20): §2'deki limitler, koruyucu stop, deneysel parite tavanı, küme tavanı, veri tazeliği ve trading kill switch. Testnet'e özgü kontroller (borsadaki stop emri, emir hataları) M6'da. Etiketler (U/T/P/TBD) için bkz. `requirements.md`.
 
 ## 1. İlkeler
 - Risk motoru deterministiktir ve AI'dan bağımsızdır. LLM `RiskConfig`'i okuyamaz ve yazamaz; yalnızca kalan limitlerin özetini görür.
@@ -23,7 +23,7 @@ Son güncelleme: 2026-10-14 (rev. 5) · Değişiklikler: [CHANGELOG.md](CHANGELO
 | Minimum emir | Exchange `NOTIONAL`/`MIN_NOTIONAL` değeri ve fee'ye göre anlamsız küçük emirlerin engellenmesi | T (exchange kuralı) |
 | Emir tipleri | Limit ve koruma bantlı market; Testnet'te koruyucu stop emri (uygun tip M6 öncesi doğrulanacak) | T |
 | **Deneysel parite toplam maruziyeti** (`ExperimentalPairsMaxExposure`) | Portföy değerinin **%10'u** (E1 ve E2 paritelerinin toplamı). Mevcut limitlere **ek olarak** uygulanır; en kısıtlayıcı limit geçerlidir. Tavanı aşacak alım kırpılır ya da reddedilir. Fiyat hareketiyle aşılırsa zorunlu satış yapılmaz, yalnızca yeni deneysel girişler durur. Çıkışlar her zaman serbesttir. Yalnızca kullanıcı, kimliği doğrulanmış Ops API üzerinden ve versiyonlu `RiskConfig` ile değiştirebilir; LLM, Research ve evaluator erişemez | U (U5, 2026-10-13) |
-| Korelasyon | **Bağlayıcı değil.** Korelasyon kümeleri ve etkin bağımsız pozisyon sayısı her döngüde hesaplanır, raporlanır ve eşik aşımında uyarı üretilir (uyarı eşiği TBD, M5'teki analizle; yalnızca bilgilendirme amaçlı). Bağlayıcı bir küme tavanı **P1** olarak bekliyor (M5'te tarihsel etki analiziyle önerilecek). Önceki onaysız %40 değeri kaldırıldı | T12 / P1 |
+| **Korelasyon kümesi tavanı** | Korelasyon kümesi başına toplam maruziyet portföy değerinin **%60'ı**. Kümeler; son 30 günlük günlük log getirileri, Pearson korelasyonu, ortalama bağlantılı hiyerarşik kümeleme ve **ρ* = 0,70** kesimiyle, yalnızca o güne kadarki veriden oluşturulur. Deneysel tavanla aynı kural uygulanır: aşan alım kırpılır, kırpılmış tutar `MIN_NOTIONAL`'ın altındaysa reddedilir; fiyat hareketiyle aşımda zorunlu satış yapılmaz; çıkışlar serbesttir. Etkin bağımsız pozisyon sayısı her döngüde hesaplanır ve raporlanır. En büyük küme payı **%54**'ü aşınca uyarı üretilir (audit `correlation_warning`). Operasyon `RiskConfig`'indedir; araştırma backtest'lerine ve kohort manifestolarına uygulanmaz. Dayanak: `m5-p1-analysis.md` (tarihsel kanıt ince) | U (D29, 2026-10-20) |
 
 ## 3. Kill switch'ler
 ### 3.1 Trading kill switch (D11, rev. 2026-10-14)
