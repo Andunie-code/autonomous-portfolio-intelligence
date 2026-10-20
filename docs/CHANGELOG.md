@@ -2,6 +2,23 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-20 — M5 Kapı C: H-ENV, Kohort 0 aktarımı, parity replay ve P1
+- **Ortam (kullanıcının koşuları):** bootstrap; deploy (`H20 PASS`); Trading.Host canlı veri olmadan.
+- **H-ENV (kullanıcı):** 79 satırın tamamı PASS (H5, H6, H6b, H14, H19–H28; gerçek DB'de H22 dahil). Rapor SHA-256 `df3b9fb0…`. **`HoldoutEnvironmentVerified`** bu rapor hash'i ve çalışan evaluator digest'iyle set edildi ve audit'e yazıldı.
+- **Kohort 0 (kullanıcı):** gerçek holdout DB'ye cohort 1 olarak, seed istisnasıyla aktarıldı.
+  - `registered_at` 2026-10-15T22:52:33Z, `A_0` 2026-10-17, pencere sonu 2027-10-17;
+  - üyeler `ProspectiveSealed` (deneme 1);
+  - engine eşdeğerliği kaydı yazıldı (A-2).
+- **Parity replay (Claude Code, `research_app`, `R`):** `freeze-import` ve `parity-m5 --record` geçti.
+  - L1 `f870c0a6…` ve L2 `b078ebaa…` birebir; 9.844 adım, 16 yeniden başlatma, reconciliation temiz;
+  - iki strateji için `Frozen → PaperTrading` yazıldı;
+  - L3 farkları ortak sermaye ve portföy drawdown halt'ından kaynaklanıyor.
+  - Ayrıntı: `docs/m5-parity-results.md`.
+- **P1 (ön kayıtlı, bir kez):** kural, ρ* = 0,70'te **%60 bağlayıcı küme tavanı ve %54 uyarı** öneriyor.
+  - Kanıt ince: `policy` koşusunda erken halt, maruziyet %1'in altında, 10–20 işlem.
+  - Karar kullanıcıda (P1). Ayrıntı: `docs/m5-p1-analysis.md`.
+- **Kalan (Kapı C):** ≥ 7 gün paper, operasyonel raporlar, restart, ağır iş ve kill switch denemeleri, yedek ve geri yükleme, M5 kabul raporu.
+
 ## 2026-10-20 — M5 Kapı C: bootstrap düzeltmesi
 - **Gözlem (kullanıcının ilk `m5-bootstrap.ps1` koşusu):**
   - yedek, yeniden adlandırma ve sahiplik devri tamamlandı;
