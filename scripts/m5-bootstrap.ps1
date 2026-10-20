@@ -96,7 +96,7 @@ function Invoke-OpsMigrations {
         if ($code -ne 0) {
             # The server-side reason (no pg_hba entry, failed password, SQL error); these lines carry no secret.
             Write-Host 'PostgreSQL reported:' -ForegroundColor Yellow
-            docker compose logs postgres --since 3m 2>$null | Select-String 'FATAL|ERROR|DETAIL' | Select-Object -Last 10 | ForEach-Object { Write-Host "  $($_.Line)" }
+            Invoke-Native docker @('compose', 'logs', 'postgres', '--since', '3m') | Select-String 'FATAL|ERROR|DETAIL' | Select-Object -Last 10 | ForEach-Object { Write-Host "  $($_.Line)" }
         }
         return $code
     }

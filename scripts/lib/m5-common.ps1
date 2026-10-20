@@ -95,3 +95,19 @@ function Get-OpsConnection([string] $Role) {
     }
     return "Host=127.0.0.1;Port=$port;Database=portfolio_dev;Username=pi_dev;Password=$($settings['PI_DEV_DB_PASSWORD'])"
 }
+
+# Runs a native command and returns its stdout lines. Its stderr lines (docker "Creating ...", psql NOTICE, library
+# warnings) are shown on the console and never stop the script: under Windows PowerShell 5.1 a redirected native
+# stderr becomes ErrorRecords, which $ErrorActionPreference = 'Stop' would turn into a terminating error.
+# Failure is decided by the exit code, which stays in $LASTEXITCODE for the caller.
+function Invoke-Native([string] $Command, [string[]] $Arguments) {
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $Command @Arguments 2>&1 | ForEach-Object {
+            if ($_ -is [System.Management.Automation.ErrorRecord]) { Write-Host "  $($_.ToString())" -ForegroundColor DarkGray } else { "$_" }
+        }
+    } finally {
+        $ErrorActionPreference = $previous
+    }
+}

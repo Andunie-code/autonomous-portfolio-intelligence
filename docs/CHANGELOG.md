@@ -12,6 +12,9 @@ M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar
   - hata olursa PostgreSQL'in son FATAL/ERROR satırları gösteriliyor (secret içermez);
   - kaynak adres tespiti `127.0.0.1`'i atlıyor.
 - **Sahiplik devri:** SQL `deploy/postgres/ops-ownership.sql`'e taşındı ve herhangi bir superuser'a ait nesneleri kapsıyor.
+- **H-ENV koşusu (kullanıcı):** `m5-henv.ps1`, `docker compose run`'ın stderr bilgi satırında (`Container … Creating`) durdu. Windows PowerShell 5.1'de yönlendirilen native stderr `ErrorRecord`'a dönüşüyor ve `ErrorActionPreference = Stop` onu sonlandırıcı hataya çeviriyordu.
+  - Düzeltme: `lib/m5-common.ps1`'e `Invoke-Native` eklendi. stdout'u döndürür, stderr'i konsolda gösterir, başarısızlığı çıkış koduna bırakır.
+  - Kapsam: `m5-henv`, `m5-bootstrap` ve `m5-paper-report`'taki tüm `2>$null` kullanımları.
 - **Yeni test:** `OpsBootstrapTests`. M0–M4 biçimli veritabanında yeniden adlandırma, login'ler, sahiplik devri ve ardından `ops_owner` ile migration'lar; `research_app` canlı mumları okuyamıyor.
 
 ## 2026-10-20 — M5 Kapı B: çevrimdışı kod ve testler (kullanıcı kabulü, 2026-10-20)

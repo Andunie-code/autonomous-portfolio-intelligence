@@ -33,23 +33,23 @@ GRANT CONNECT ON DATABASE holdout_henv TO eval_registry, eval_diagnostic, eval_p
 $env:PI_EVAL_DATABASE = 'holdout_henv'
 $env:PI_EVALUATOR_WINDOW_SOURCE = 'synthetic'
 try {
-    Add-Lines (docker compose --profile evaluator run --rm holdout-evaluator henv-selftest 2>$null)
+    Add-Lines (Invoke-Native docker @('compose', '--profile', 'evaluator', 'run', '--rm', 'holdout-evaluator', 'henv-selftest'))
 } finally {
     Remove-Item Env:PI_EVAL_DATABASE, Env:PI_EVALUATOR_WINDOW_SOURCE -ErrorAction SilentlyContinue
 }
 
 # H20: the running image digest has its release record.
-Add-Lines (docker compose --profile evaluator run --rm holdout-evaluator release-check $digest 2>$null)
+Add-Lines (Invoke-Native docker @('compose', '--profile', 'evaluator', 'run', '--rm', 'holdout-evaluator', 'release-check', $digest))
 
 # H6, H6b, H21 (outside position), H25 (database part): Research.Host position. H14: Trading.Host position.
-Add-Lines (docker compose --profile henv run --rm henv-probe-research --ops-db ops --holdout-dbs holdout,holdout_henv 2>$null)
-Add-Lines (docker compose --profile henv run --rm henv-probe-trading 2>$null)
+Add-Lines (Invoke-Native docker @('compose', '--profile', 'henv', 'run', '--rm', 'henv-probe-research', '--ops-db', 'ops', '--holdout-dbs', 'holdout,holdout_henv'))
+Add-Lines (Invoke-Native docker @('compose', '--profile', 'henv', 'run', '--rm', 'henv-probe-trading'))
 # H21, H22 (real database, optional), H26: the evaluator's own position.
 $probe = @('compose', '--profile', 'evaluator', 'run', '--rm', '--entrypoint', 'dotnet', 'holdout-evaluator', '/app/probe/PortfolioIntelligence.HoldoutEvaluator.EnvironmentProbe.dll', 'evaluator', '--ops-db', 'ops', '--holdout-dbs', 'holdout')
 if ($Cohort) { $probe += @('--cohort', $Cohort) }
-Add-Lines (& docker @probe 2>$null)
+Add-Lines (Invoke-Native docker $probe)
 # H25: no status_relay credential inside the Research.Host container.
-Add-Lines (docker compose --profile research run --rm research-host job henv-credentials 2>$null)
+Add-Lines (Invoke-Native docker @('compose', '--profile', 'research', 'run', '--rm', 'research-host', 'job', 'henv-credentials'))
 
 Invoke-Psql 'postgres' 'DROP DATABASE IF EXISTS holdout_henv;' -Quiet
 
@@ -61,7 +61,7 @@ try {
     foreach ($role in @('eval_registry', 'eval_owner')) { Copy-Item (Join-Path $script:HoldoutSecrets $role) $hostSecrets }
     [System.IO.File]::WriteAllText((Join-Path $hostSecrets 'pi_dev'), (Get-SuperuserPassword))
     $port = if ($settings['PI_DEV_DB_PORT']) { $settings['PI_DEV_DB_PORT'] } else { '55432' }
-    Add-Lines (dotnet run --project src/HoldoutEvaluator/EnvironmentProbe -c Release -- host --host 127.0.0.1 --port $port --secrets $hostSecrets --ops-db ops --holdout-dbs holdout,holdout_henv,holdout_synth 2>$null)
+    Add-Lines (Invoke-Native dotnet @('run', '--project', 'src/HoldoutEvaluator/EnvironmentProbe', '-c', 'Release', '--', 'host', '--host', '127.0.0.1', '--port', $port, '--secrets', $hostSecrets, '--ops-db', 'ops', '--holdout-dbs', 'holdout,holdout_henv,holdout_synth'))
 } finally {
     Remove-Item $hostSecrets -Recurse -Force
 }

@@ -33,7 +33,7 @@ SELECT 'audit=' || coalesce(string_agg(event || ':' || n, ','), '-') FROM (SELEC
 SELECT 'live_candle_anomalies=' || count(*) FROM market.live_candle_anomalies;
 '@
 $lines = @(Invoke-Psql 'ops' $sql)
-$stats = docker stats --no-stream --format '{{.Name}} mem={{.MemUsage}} cpu={{.CPUPerc}}' 2>$null | Where-Object { $_ -match '^portfolio-intelligence' }
+$stats = Invoke-Native docker @('stats', '--no-stream', '--format', '{{.Name}} mem={{.MemUsage}} cpu={{.CPUPerc}}') | Where-Object { $_ -match '^portfolio-intelligence' }
 $lines += @($stats | ForEach-Object { "resources $_" })
 $report = ($lines -join "`n") + "`n"
 $path = Join-Path (Get-ReportDirectory) ("m5-paper-report-" + (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ') + '.txt')
