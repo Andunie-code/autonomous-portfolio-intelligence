@@ -14,7 +14,8 @@ public sealed record FeedOutcome(int Requests, int Inserted, int Anomalies, IRea
 
 /// <summary>
 /// Fetches newly closed candles for every symbol (backfill from the warm-up start on first use, m5-protocol §2.1)
-/// and stores them. A failing symbol does not stop the others; 418 and 429 propagate to the host.
+/// and stores them. When a later cohort needs a longer warm-up than the stored history (ADR-0019 §4), the missing
+/// earlier candles are backfilled too. A failing symbol does not stop the others; 418 and 429 propagate to the host.
 /// </summary>
 public sealed class LiveCandleFeed(LiveKlineClient client, LiveCandleStore store)
 {
@@ -25,16 +26,45 @@ public sealed class LiveCandleFeed(LiveKlineClient client, LiveCandleStore store
         var failed = new List<string>();
         foreach (var symbol in symbols)
         {
+            var first = await store.FirstOpenAsync(symbol, interval, ct);
             var last = await store.LastOpenAsync(symbol, interval, ct);
-            var from = last is { } l ? l + length : warmupStart;
-            if (from + length > now)
+            try
+            {
+                // Earlier history: from the warm-up start up to the first stored candle (stored candles are not re-added).
+                for (var from = warmupStart; first is { } f && from + length <= f;)
+                {
+                    requests++;
+                    var batch = await client.FetchClosedAsync(symbol, interval, from, f, ct);
+                    if (batch.Count == 0)
+                    {
+                        break;
+                    }
+
+                    var (added, changed) = await store.AddAsync(batch, ct);
+                    inserted += added;
+                    anomalies += changed;
+                    from = batch[^1].OpenTime + length;
+                    if (batch.Count < LiveKlineClient.MaxLimit)
+                    {
+                        break;
+                    }
+                }
+            }
+            catch (Exception e) when (e is LiveDataException or HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+            {
+                failed.Add(symbol);
+                continue;
+            }
+
+            var next = last is { } l ? l + length : warmupStart;
+            if (next + length > now)
             {
                 continue;
             }
 
             try
             {
-                while (from + length <= now)
+                for (var from = next; from + length <= now;)
                 {
                     requests++;
                     var batch = await client.FetchClosedAsync(symbol, interval, from, now, ct);

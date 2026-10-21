@@ -7,8 +7,8 @@ namespace PortfolioIntelligence.Execution;
 public sealed class InMemoryPaperStore(IReadOnlyList<FrozenRecord> frozen, IReadOnlyDictionary<string, string> definitions) : IPaperStore
 {
     private readonly List<PaperRun> _runs = [];
-    private readonly List<StepRecord> _steps = [];
-    private readonly Dictionary<int, (long Fills, decimal Cash)> _ledger = [];
+    private readonly Dictionary<long, List<StepRecord>> _steps = [];
+    private readonly Dictionary<(long Run, int Sleeve), (long Fills, decimal Cash)> _ledger = [];
 
     public List<StepWrite> Written { get; } = [];
 
@@ -20,7 +20,7 @@ public sealed class InMemoryPaperStore(IReadOnlyList<FrozenRecord> frozen, IRead
 
     public Task<string?> DefinitionAsync(string definitionHash, CancellationToken ct) => Task.FromResult(definitions.GetValueOrDefault(definitionHash));
 
-    public Task<PaperRun?> LatestRunAsync(CancellationToken ct) => Task.FromResult(_runs.LastOrDefault());
+    public Task<IReadOnlyList<PaperRun>> RunsAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<PaperRun>>([.. _runs]);
 
     public Task<PaperRun> CreateRunAsync(DateTimeOffset tradingStart, DateTimeOffset warmupStart, PaperRunConfig config, CancellationToken ct)
     {
@@ -29,27 +29,29 @@ public sealed class InMemoryPaperStore(IReadOnlyList<FrozenRecord> frozen, IRead
         return Task.FromResult(run);
     }
 
-    public Task<IReadOnlyList<StepRecord>> StepsAsync(long runId, CancellationToken ct) => Task.FromResult<IReadOnlyList<StepRecord>>([.. _steps]);
+    public Task<IReadOnlyList<StepRecord>> StepsAsync(long runId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<StepRecord>>([.. _steps.GetValueOrDefault(runId) ?? []]);
 
     public Task<IReadOnlyDictionary<int, (long Fills, decimal Cash)>> LedgerAsync(long runId, CancellationToken ct) =>
-        Task.FromResult<IReadOnlyDictionary<int, (long, decimal)>>(new Dictionary<int, (long, decimal)>(_ledger));
+        Task.FromResult<IReadOnlyDictionary<int, (long, decimal)>>(_ledger.Where(kv => kv.Key.Run == runId).ToDictionary(kv => kv.Key.Sleeve, kv => kv.Value));
 
     public Task<bool> KillSwitchEngagedAsync(CancellationToken ct) => Task.FromResult(false);
 
-    public Task<IReadOnlyList<(long Id, string Action, int? Sleeve, string? Symbol)>> ActionsAfterAsync(long lastId, CancellationToken ct) =>
-        Task.FromResult<IReadOnlyList<(long, string, int?, string?)>>([]);
+    public Task<IReadOnlyList<OpsAction>> ActionsAfterAsync(long lastId, CancellationToken ct) => Task.FromResult<IReadOnlyList<OpsAction>>([]);
+
+    public Task<long> LastActionIdAsync(CancellationToken ct) => Task.FromResult(0L);
 
     public Task<IReadOnlyDictionary<long, RiskConfigDocument>> RiskVersionsAsync(CancellationToken ct) =>
         Task.FromResult<IReadOnlyDictionary<long, RiskConfigDocument>>(new Dictionary<long, RiskConfigDocument>());
 
     public Task AddStepAsync(PaperRun run, StepWrite step, CancellationToken ct)
     {
-        _steps.Add(new StepRecord(step.BarTime, step.Inputs, step.StateHash));
+        (_steps.TryGetValue(run.Id, out var steps) ? steps : _steps[run.Id] = []).Add(new StepRecord(step.BarTime, step.Inputs, step.StateHash));
         Written.Add(step);
         foreach (var fill in step.Fills)
         {
-            var (fills, cash) = _ledger.GetValueOrDefault(fill.Sleeve);
-            _ledger[fill.Sleeve] = (fills + 1, cash + (fill.Buy ? -fill.Notional : fill.Notional) - fill.Fee);
+            var (fills, cash) = _ledger.GetValueOrDefault((run.Id, fill.Sleeve));
+            _ledger[(run.Id, fill.Sleeve)] = (fills + 1, cash + (fill.Buy ? -fill.Notional : fill.Notional) - fill.Fee);
         }
 
         return Task.CompletedTask;

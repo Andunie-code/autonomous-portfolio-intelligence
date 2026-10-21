@@ -14,17 +14,19 @@ public interface ICandleSource
 public sealed record CycleOutcome(int BarsProcessed, bool CatchUp, bool Stale, bool ReconciliationOk, IReadOnlyList<string> Degraded);
 
 /// <summary>
-/// Deterministic paper trading (m5-protocol §2, ADR-0018 §4). Each cycle: load the run, rebuild the engine by
-/// replaying the recorded steps (the state hash of every step must match: restart and reconciliation), check the
-/// ledger, then process every newly closed bar in order with its operational inputs and persist it atomically.
-/// Within one process the engine is kept between cycles (no replay when the step log is unchanged); a new instance
-/// is a restart. <paramref name="warmup"/> is the indicator warm-up before the trading start (45 days by default).
+/// Deterministic paper trading (m5-protocol §2, ADR-0018 §4, ADR-0019 §3). One run per cohort: a cohort whose
+/// members reach PaperTrading gets its own run; existing runs never change. Each cycle, for every run: rebuild the
+/// engine by replaying the recorded steps (the state hash of every step must match: restart and reconciliation),
+/// check the ledger, then process every newly closed bar in order with its operational inputs and persist it
+/// atomically. Within one process each run's engine is kept between cycles (no replay when the step log is
+/// unchanged); a new instance is a restart. <paramref name="warmup"/> overrides the indicator warm-up before the
+/// trading start (by default <see cref="WarmupFor"/>: at least 45 days).
 /// </summary>
 public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostModel costs, TimeSpan? warmup = null)
 {
     public static readonly TimeSpan Warmup = TimeSpan.FromDays(45);
-    private (long RunId, int Steps, PortfolioEngine Engine)? _cache;
-    private bool _warned;
+    private readonly Dictionary<long, (int Steps, PortfolioEngine Engine)> _cache = [];
+    private readonly HashSet<long> _warned = [];
     public const double CorrelationThreshold = 0.70;
     public const string ReferenceSymbol = "BTCUSDT";
 
@@ -63,20 +65,64 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
     public async Task<CycleOutcome> ProcessAsync(DateTimeOffset now, CancellationToken ct)
     {
         var degraded = new List<string>();
-        var run = await store.LatestRunAsync(ct);
-        if (run is null)
-        {
-            var (members, rejected) = await LoadMembersAsync(r => r.State == "PaperTrading", ct);
-            degraded.AddRange(rejected.Select(r => $"strategy-hash-mismatch:{r}"));
-            if (members.Count == 0)
-            {
-                return new CycleOutcome(0, false, false, true, [.. degraded, "no-paper-strategies"]);
-            }
+        var runs = (await store.RunsAsync(ct)).ToList();
 
-            run = await store.CreateRunAsync(NextBoundary(now), NextBoundary(now) - (warmup ?? Warmup), Config(members), ct);
-            await store.AuditAsync("trading", "paper_run_created", new { run.Id, run.TradingStart, run.WarmupStart, configHash = run.Config.Hash() }, ct);
+        // A cohort in PaperTrading without a run gets its own (ADR-0019 §3); members that join later are not added.
+        var covered = runs.SelectMany(r => r.Config.Sleeves.Select(s => s.CohortId)).ToHashSet();
+        var (members, rejected) = await LoadMembersAsync(r => r.State == "PaperTrading" && !covered.Contains(r.CohortId), ct);
+        degraded.AddRange(rejected.Select(r => $"strategy-hash-mismatch:{r}"));
+        foreach (var cohort in members.GroupBy(m => m.Record.CohortId).OrderBy(g => g.Key))
+        {
+            var group = cohort.ToList();
+            var start = NextBoundary(now);
+            var lastAction = await store.LastActionIdAsync(ct);
+            var run = await store.CreateRunAsync(start, start - (warmup ?? WarmupFor(group.Select(m => m.Strategy))), Config(group, lastAction == 0 ? null : lastAction), ct);
+            await store.AuditAsync("trading", "paper_run_created", new { run.Id, cohortId = cohort.Key, run.TradingStart, run.WarmupStart, configHash = run.Config.Hash() }, ct);
+            runs.Add(run);
         }
 
+        if (runs.Count == 0)
+        {
+            return new CycleOutcome(0, false, false, true, [.. degraded, "no-paper-strategies"]);
+        }
+
+        var bars = new HashSet<DateTimeOffset>();
+        bool catchUp = false, stale = false, reconciliationOk = true;
+        foreach (var run in runs)
+        {
+            var outcome = await ProcessRunAsync(run, now, degraded, bars, ct);
+            catchUp |= outcome.CatchUp;
+            stale |= outcome.Stale;
+            reconciliationOk &= outcome.ReconciliationOk;
+        }
+
+        if (stale)
+        {
+            degraded.Add("stale-data");
+        }
+
+        if (await store.KillSwitchEngagedAsync(ct))
+        {
+            degraded.Add("kill-switch");
+        }
+
+        return new CycleOutcome(bars.Count, catchUp, stale, reconciliationOk, degraded.Distinct().ToList());
+    }
+
+    /// <summary>
+    /// Indicator warm-up of a new run: the longest indicator warm-up of its strategies (BTC-sourced ones included)
+    /// plus one bar and one day, in whole days, and never less than <see cref="Warmup"/> (ADR-0019 §4).
+    /// </summary>
+    public static TimeSpan WarmupFor(IEnumerable<DslStrategy> strategies)
+    {
+        var bars = strategies.SelectMany(s => s.Source.Indicators).Select(DslStrategy.Warmup).DefaultIfEmpty(0).Max() + 1;
+        var needed = TimeSpan.FromDays(Math.Ceiling((CandleInterval.FourHours.FixedLength!.Value * bars + TimeSpan.FromDays(1)).TotalDays));
+        return needed > Warmup ? needed : Warmup;
+    }
+
+    /// <summary>One run's cycle; <paramref name="bars"/> collects the bar times processed by any run.</summary>
+    private async Task<CycleOutcome> ProcessRunAsync(PaperRun run, DateTimeOffset now, List<string> degraded, HashSet<DateTimeOffset> bars, CancellationToken ct)
+    {
         var strategies = new List<IStrategy>();
         foreach (var sleeve in run.Config.Sleeves)
         {
@@ -84,7 +130,8 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
             if (rejected.Count > 0 || loaded.Count != 1 || loaded[0].Strategy.DefinitionHash != sleeve.DefinitionHash)
             {
                 // The run cannot be rebuilt without every sleeve: nothing is processed and the alarm is raised.
-                return new CycleOutcome(0, false, false, false, [.. degraded, $"strategy-hash-mismatch:{sleeve.Name}"]);
+                degraded.Add($"strategy-hash-mismatch:{sleeve.Name}");
+                return new CycleOutcome(0, false, false, false, []);
             }
 
             strategies.Add(loaded[0].Strategy);
@@ -95,12 +142,12 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
         var riskVersions = await store.RiskVersionsAsync(ct);
         var steps = await store.StepsAsync(run.Id, ct);
         var reconciliationOk = true;
-        var cached = _cache is { } c && c.RunId == run.Id && c.Steps == steps.Count && (steps.Count == 0 || c.Engine.StateHash() == steps[^1].StateHash);
+        var cached = _cache.TryGetValue(run.Id, out var c) && c.Steps == steps.Count && (steps.Count == 0 || c.Engine.StateHash() == steps[^1].StateHash);
         // A rebuild needs every candle since the warm-up start; a cached engine only the new bars and the correlation window.
         var from = cached && steps.Count > 0 ? Max(run.WarmupStart, steps[^1].BarTime - CorrelationLookback) : run.WarmupStart;
         var series = await candles.ReadAsync(run.Config.Symbols, interval, from, now, ct);
         var byTime = series.ToDictionary(kv => kv.Key, kv => kv.Value.ToDictionary(c => c.OpenTime));
-        var engine = cached ? _cache!.Value.Engine : new PortfolioEngine(new PortfolioSetup(
+        var engine = cached ? c.Engine : new PortfolioEngine(new PortfolioSetup(
             run.Config.Sleeves.Select((s, i) => new SleeveSpec(s.Name, strategies[i], s.Capital)).ToList(),
             costs, Risk(riskVersions, 0, run), run.Config.Symbols, interval, run.TradingStart, run.Config.Experimental.ToHashSet(), RecordEvents: true));
 
@@ -141,7 +188,7 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
         // 3. New closed bars, in order.
         var processed = 0;
         var stale = false;
-        var lastActionId = steps.LastOrDefault()?.Inputs.LastActionId ?? 0;
+        var lastActionId = steps.LastOrDefault()?.Inputs.LastActionId ?? run.Config.ActionsAfter ?? 0;
         var maxLag = TimeSpan.FromTicks(length.Ticks * Risk(riskVersions, riskVersions.Keys.DefaultIfEmpty(0).Max(), run).MaxDataLagBars);
         var frozen = await store.FrozenAsync(ct);
         for (var t = steps.Count > 0 ? steps[^1].BarTime + length : run.WarmupStart; t + length <= now; t += length)
@@ -167,7 +214,8 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
             var inputs = new StepInputs(
                 blocked,
                 disabled,
-                actions.Where(a => a is { Action: "close-position", Sleeve: not null, Symbol: not null }).Select(a => new ManualClose(a.Sleeve!.Value, a.Symbol!)).ToList(),
+                actions.Where(a => a is { Action: "close-position", Sleeve: not null, Symbol: not null } && (a.RunId is null || a.RunId == run.Id))
+                    .Select(a => new ManualClose(a.Sleeve!.Value, a.Symbol!)).ToList(),
                 actions.Any(a => a.Action == "close-all"),
                 present,
                 lastActionId,
@@ -190,29 +238,35 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
             await store.AddStepAsync(run, new StepWrite(
                 t, inputs, engine.StateHash(), engine.Events.Skip(eventsBefore).ToList(), engine.Fills.Skip(fillsBefore).ToList(), balances, correlation), ct);
             processed++;
+            bars.Add(t);
 
             // P1 warning (informational): the largest cluster share crosses the warning level.
             var above = correlation is not null && document.ClusterWarningShare is { } warning && correlation.MaxClusterShare >= (double)warning;
-            if (above && !_warned)
+            if (above && !_warned.Contains(run.Id))
             {
-                await store.AuditAsync("trading", "correlation_warning", new { barTime = t, share = Math.Round(correlation!.MaxClusterShare, 4), warning = document.ClusterWarningShare }, ct);
+                await store.AuditAsync("trading", "correlation_warning", new { runId = run.Id, barTime = t, share = Math.Round(correlation!.MaxClusterShare, 4), warning = document.ClusterWarningShare }, ct);
             }
 
-            _warned = above;
+            if (above)
+            {
+                _warned.Add(run.Id);
+            }
+            else
+            {
+                _warned.Remove(run.Id);
+            }
         }
 
-        _cache = reconciliationOk ? (run.Id, steps.Count + processed, engine) : null;
-        if (stale)
+        if (reconciliationOk)
         {
-            degraded.Add("stale-data");
+            _cache[run.Id] = (steps.Count + processed, engine);
         }
-
-        if (await store.KillSwitchEngagedAsync(ct))
+        else
         {
-            degraded.Add("kill-switch");
+            _cache.Remove(run.Id);
         }
 
-        return new CycleOutcome(processed, processed > 1, stale, reconciliationOk, degraded);
+        return new CycleOutcome(processed, processed > 1, stale, reconciliationOk, []);
     }
 
     private static readonly TimeSpan CorrelationLookback = TimeSpan.FromDays(40);
@@ -227,7 +281,8 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
         return new DateTimeOffset(ticks, TimeSpan.Zero);
     }
 
-    private static PaperRunConfig Config(IReadOnlyList<(FrozenRecord Record, DslStrategy Strategy, OperationalManifest Manifest)> members)
+    /// <summary>Configuration of a new run for the members of one cohort (they share the manifest).</summary>
+    private static PaperRunConfig Config(IReadOnlyList<(FrozenRecord Record, DslStrategy Strategy, OperationalManifest Manifest)> members, long? actionsAfter)
     {
         var symbols = members.SelectMany(m => m.Manifest.Pairs.Select(p => p.Symbol)).Distinct().ToList();
         var experimental = members.SelectMany(m => m.Manifest.ExperimentalSymbols).Distinct().Order(StringComparer.Ordinal).ToList();
@@ -241,7 +296,38 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
             interval,
             symbols.Contains(ReferenceSymbol) ? ReferenceSymbol : null,
             "cost-model v1",
-            InitialRisk(members[0].Manifest));
+            InitialRisk(members[0].Manifest),
+            actionsAfter);
+    }
+
+    /// <summary>
+    /// What the live feed must cover (m5-protocol §2.1): the symbols of every run and of every cohort in
+    /// PaperTrading still waiting for its run, from the earliest warm-up start. Reads the manifests only (no audit).
+    /// </summary>
+    public async Task<(IReadOnlyList<string> Symbols, DateTimeOffset WarmupStart)?> FeedPlanAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        var runs = await store.RunsAsync(ct);
+        var covered = runs.SelectMany(r => r.Config.Sleeves.Select(s => s.CohortId)).ToHashSet();
+        var symbols = runs.SelectMany(r => r.Config.Symbols).ToList();
+        var starts = runs.Select(r => r.WarmupStart).ToList();
+        foreach (var cohort in (await store.FrozenAsync(ct)).Where(f => f.State == "PaperTrading" && !covered.Contains(f.CohortId)).GroupBy(f => f.CohortId))
+        {
+            OperationalManifest manifest;
+            try
+            {
+                manifest = CohortManifestReader.Read(cohort.First().Manifest);
+            }
+            catch (FormatException)
+            {
+                continue; // the cycle's member load raises the hash alarm
+            }
+
+            var strategies = manifest.Members.Where(m => cohort.Any(f => f.MemberIndex == m.Index)).Select(m => DslStrategy.FromJson(m.DefinitionJson));
+            symbols.AddRange(manifest.Pairs.Select(p => p.Symbol));
+            starts.Add(NextBoundary(now) - (warmup ?? WarmupFor(strategies)));
+        }
+
+        return starts.Count == 0 ? null : (symbols.Distinct().ToList(), starts.Min());
     }
 
     /// <summary>The RiskConfig of a version; version 0 is the manifest risk block with the D22 cap and D7 freshness rule.</summary>

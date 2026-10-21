@@ -8,7 +8,11 @@ namespace PortfolioIntelligence.Execution;
 /// <summary>One sleeve of a paper run: a frozen cohort member and its share of the nominal capital (m5-protocol §2.2).</summary>
 public sealed record SleeveConfig(long CohortId, int MemberIndex, string Name, string DefinitionHash, decimal Capital);
 
-/// <summary>Immutable configuration of a paper run; its hash is stored with the run (trading.paper_runs).</summary>
+/// <summary>
+/// Immutable configuration of a paper run; its hash is stored with the run (trading.paper_runs). Since ADR-0019 a
+/// new run holds one cohort. <see cref="ActionsAfter"/> is the last operational action before the run was created:
+/// the run applies only later ones. It is not written when absent, so runs created before M5b keep their JSON and hash.
+/// </summary>
 public sealed record PaperRunConfig(
     string ManifestHash,
     IReadOnlyList<SleeveConfig> Sleeves,
@@ -17,7 +21,8 @@ public sealed record PaperRunConfig(
     string Interval,
     string? ReferenceSymbol,
     string CostModel,
-    RiskConfigDocument InitialRisk)
+    RiskConfigDocument InitialRisk,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] long? ActionsAfter = null)
 {
     public const decimal NominalCapital = 10_000m;
 

@@ -82,9 +82,11 @@ public sealed class OpsDatabase : IAsyncLifetime
         }
 
         /// <summary>Kohort 0 (docs/cohorts/cohort-0.json) as cohort <paramref name="cohortId"/>, frozen and in PaperTrading.</summary>
-        public async Task<OperationalManifest> SeedKohort0Async(long cohortId = 1, bool paper = true)
+        public Task<OperationalManifest> SeedKohort0Async(long cohortId = 1, bool paper = true) => SeedCohortAsync(TestCohorts.Kohort0Json(), cohortId, paper);
+
+        /// <summary>A manifest as cohort <paramref name="cohortId"/>, frozen and (optionally) in PaperTrading.</summary>
+        public async Task<OperationalManifest> SeedCohortAsync(string json, long cohortId, bool paper = true)
         {
-            var json = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "cohort-0.json"));
             var manifest = CohortManifestReader.Read(json);
             foreach (var member in manifest.Members)
             {

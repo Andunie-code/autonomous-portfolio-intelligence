@@ -152,7 +152,7 @@ public class PaperTradingTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
         await Trader(db).ProcessAsync(Now0.AddDays(15).AddHours(4), default);
         const string HeldNow = "SELECT coalesce(sum(jsonb_array_length(positions)), 0)::bigint FROM trading.balance_snapshots WHERE bar_time = (SELECT max(bar_time) FROM trading.steps)";
         var held = await db.ScalarAsync<long>(HeldNow);
-        await ops.ClosePositionsAsync(null, null, "test", default);
+        await ops.ClosePositionsAsync(null, null, null, "test", default);
         await Trader(db).ProcessAsync(Now0.AddDays(15).AddHours(8), default);
 
         Assert.Equal(0L, await db.ScalarAsync<long>(HeldNow));

@@ -41,14 +41,18 @@ public sealed class OpsService(string connectionString)
                (SELECT row_to_json(r) FROM (SELECT checked_at, ok, detail FROM trading.reconciliation_runs ORDER BY id DESC LIMIT 1) r) AS last_reconciliation
         """, ct);
 
+    /// <summary>Latest balances of every run (one per cohort, ADR-0019); a position close names run_id and sleeve.</summary>
     public Task<string> PositionsAsync(CancellationToken ct) => JsonQueryAsync("""
-        SELECT b.sleeve, b.cash, b.equity, b.positions, b.bar_time
+        SELECT b.run_id, b.sleeve, s.value ->> 'name' AS strategy, (s.value ->> 'cohortId')::bigint AS cohort_id,
+               b.cash, b.equity, b.positions, b.bar_time
         FROM trading.balance_snapshots b
-        WHERE b.run_id = (SELECT max(id) FROM trading.paper_runs) AND b.bar_time = (SELECT max(bar_time) FROM trading.balance_snapshots WHERE run_id = b.run_id)
-        ORDER BY b.sleeve
+        JOIN trading.paper_runs r ON r.id = b.run_id
+        CROSS JOIN LATERAL jsonb_array_elements(r.config -> 'sleeves') WITH ORDINALITY AS s(value, ordinality)
+        WHERE s.ordinality - 1 = b.sleeve AND b.bar_time = (SELECT max(bar_time) FROM trading.balance_snapshots WHERE run_id = b.run_id)
+        ORDER BY b.run_id, b.sleeve
         """, ct);
 
-    /// <summary>PnL by strategy or cohort: latest equity minus the sleeve capital from the run configuration.</summary>
+    /// <summary>PnL by strategy or cohort over every run: latest equity minus the sleeve capital from the run configuration.</summary>
     public Task<string> PnlAsync(string by, CancellationToken ct)
     {
         var key = by switch
@@ -64,7 +68,6 @@ public sealed class OpsService(string connectionString)
             CROSS JOIN LATERAL jsonb_array_elements(r.config -> 'sleeves') WITH ORDINALITY AS s(value, ordinality)
             JOIN trading.balance_snapshots b ON b.run_id = r.id AND b.sleeve = s.ordinality - 1
                  AND b.bar_time = (SELECT max(bar_time) FROM trading.balance_snapshots WHERE run_id = r.id)
-            WHERE r.id = (SELECT max(id) FROM trading.paper_runs)
             GROUP BY 1 ORDER BY 1
             """, ct);
     }
@@ -72,8 +75,11 @@ public sealed class OpsService(string connectionString)
     public Task<string> RiskConfigAsync(CancellationToken ct) => JsonQueryAsync(
         "SELECT id, created_at, actor, reason, config, config_hash FROM trading.risk_config_versions ORDER BY id DESC LIMIT 1", ct);
 
-    public Task<string> CorrelationAsync(CancellationToken ct) => JsonQueryAsync(
-        "SELECT bar_time, threshold, clusters, effective_count, max_cluster_share FROM trading.correlation_snapshots ORDER BY run_id DESC, bar_time DESC LIMIT 1", ct);
+    /// <summary>The latest correlation snapshot of every run.</summary>
+    public Task<string> CorrelationAsync(CancellationToken ct) => JsonQueryAsync("""
+        SELECT DISTINCT ON (run_id) run_id, bar_time, threshold, clusters, effective_count, max_cluster_share
+        FROM trading.correlation_snapshots ORDER BY run_id, bar_time DESC
+        """, ct);
 
     public Task<string> LifecycleAsync(CancellationToken ct) => JsonQueryAsync("""
         SELECT f.cohort_id, f.member_index, f.name, l.from_state, l.to_state, l.actor, l.recorded_at
@@ -125,7 +131,11 @@ public sealed class OpsService(string connectionString)
         await transaction.CommitAsync(ct);
     }
 
-    public async Task ClosePositionsAsync(int? sleeve, string? symbol, string reason, CancellationToken ct)
+    /// <summary>
+    /// Close one position (run, sleeve, symbol) or everything in every run. Sleeve indices are per run: with more
+    /// than one run the run id is required; with exactly one it defaults to that run (ADR-0019 §3).
+    /// </summary>
+    public async Task ClosePositionsAsync(long? runId, int? sleeve, string? symbol, string reason, CancellationToken ct)
     {
         Require(reason);
         if ((sleeve is null) != (symbol is null))
@@ -135,9 +145,32 @@ public sealed class OpsService(string connectionString)
 
         await using var connection = await OpenAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
-        await Execute(connection, transaction, "INSERT INTO trading.ops_actions (actor, action, sleeve, symbol, reason) VALUES ('user', $1, $2, $3, $4)",
-            ct, sleeve is null ? "close-all" : "close-position", (object?)sleeve ?? DBNull.Value, (object?)symbol ?? DBNull.Value, reason);
-        await Audit(connection, transaction, sleeve is null ? "close_all_requested" : "close_position_requested", new { sleeve, symbol, reason }, ct);
+        if (sleeve is not null)
+        {
+            var runs = new List<(long Id, int Sleeves)>();
+            await using (var find = new NpgsqlCommand("SELECT id, jsonb_array_length(config -> 'sleeves') FROM trading.paper_runs ORDER BY id", connection, transaction))
+            await using (var reader = await find.ExecuteReaderAsync(ct))
+            {
+                while (await reader.ReadAsync(ct))
+                {
+                    runs.Add((reader.GetInt64(0), reader.GetInt32(1)));
+                }
+            }
+
+            runId ??= runs.Count == 1 ? runs[0].Id : throw new OpsRequestException("runId is required: there is more than one paper run");
+            if (!runs.Any(r => r.Id == runId && sleeve >= 0 && sleeve < r.Sleeves))
+            {
+                throw new OpsRequestException($"run {runId} has no sleeve {sleeve}");
+            }
+        }
+        else
+        {
+            runId = null;
+        }
+
+        await Execute(connection, transaction, "INSERT INTO trading.ops_actions (actor, action, run_id, sleeve, symbol, reason) VALUES ('user', $1, $2, $3, $4, $5)",
+            ct, sleeve is null ? "close-all" : "close-position", (object?)runId ?? DBNull.Value, (object?)sleeve ?? DBNull.Value, (object?)symbol ?? DBNull.Value, reason);
+        await Audit(connection, transaction, sleeve is null ? "close_all_requested" : "close_position_requested", new { runId, sleeve, symbol, reason }, ct);
         await transaction.CommitAsync(ct);
     }
 

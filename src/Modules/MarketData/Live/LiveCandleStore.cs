@@ -97,11 +97,15 @@ public sealed class LiveCandleStore(string connectionString)
         return result.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<Candle>)kv.Value);
     }
 
-    public async Task<DateTimeOffset?> LastOpenAsync(string symbol, CandleInterval interval, CancellationToken ct)
+    public Task<DateTimeOffset?> FirstOpenAsync(string symbol, CandleInterval interval, CancellationToken ct) => OpenTimeAsync("min", symbol, interval, ct);
+
+    public Task<DateTimeOffset?> LastOpenAsync(string symbol, CandleInterval interval, CancellationToken ct) => OpenTimeAsync("max", symbol, interval, ct);
+
+    private async Task<DateTimeOffset?> OpenTimeAsync(string aggregate, string symbol, CandleInterval interval, CancellationToken ct)
     {
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync(ct);
-        await using var command = new NpgsqlCommand("SELECT max(open_time) FROM market.live_candles WHERE symbol = $1 AND candle_interval = $2", connection);
+        await using var command = new NpgsqlCommand($"SELECT {aggregate}(open_time) FROM market.live_candles WHERE symbol = $1 AND candle_interval = $2", connection);
         command.Parameters.AddWithValue(symbol);
         command.Parameters.AddWithValue(interval.Code);
         return await command.ExecuteScalarAsync(ct) is DateTime value ? new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Utc)) : null;

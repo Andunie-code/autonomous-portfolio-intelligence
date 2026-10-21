@@ -13,6 +13,15 @@ public enum Tri : byte
 }
 
 /// <summary>
+/// One comparison atom of the entry or exit condition after the last update (signal radar, ADR-0020 §5):
+/// operand labels, their values at lag 0 and lag 1 (the previous bar, used by crosses) and the atom's truth value.
+/// </summary>
+public sealed record DslAtomState(string Side, string Op, string Left, string Right, decimal? Left0, decimal? Right0, decimal? Left1, decimal? Right1, Tri Value);
+
+/// <summary>Read-only view of an instance after its last update: entry and exit truth values and every atom.</summary>
+public sealed record DslInspection(Tri Entry, Tri Exit, IReadOnlyList<DslAtomState> Atoms);
+
+/// <summary>
 /// Interpreter for a validated DSL v1 definition. One instance per symbol; BTC-sourced indicators live in a
 /// single reference tracker per run, fed by the engine with the BTC candle of the same open time (m3-protocol §2).
 /// </summary>
@@ -60,6 +69,13 @@ public sealed class DslStrategy : IStrategy, IReferenceSeriesConsumer
 
     public IStrategyInstance CreateInstance(IReferenceTracker tracker) =>
         new Instance(_definition, _self, tracker as Tracker ?? throw new ArgumentException("Tracker of another strategy.", nameof(tracker)));
+
+    /// <summary>
+    /// Inspection of an instance of this strategy (ADR-0020 §5). It only reads the instance's state; the atom
+    /// evaluators are compiled on first use, so <see cref="IStrategyInstance.Update"/> is unchanged.
+    /// </summary>
+    public static DslInspection Inspect(IStrategyInstance instance) =>
+        (instance as Instance ?? throw new ArgumentException("Not a DSL instance.", nameof(instance))).Inspect();
 
     public static int Warmup(DslIndicator indicator) => DslCatalog.Indicators[indicator.Type].Warmup(indicator.Params);
 
@@ -255,6 +271,9 @@ public sealed class DslStrategy : IStrategy, IReferenceSeriesConsumer
         private readonly Func<Tri> _exit;
         private readonly DslStop? _stop;
         private readonly Func<decimal?>? _stopLevel;
+        private readonly DslDefinition _definition;
+        private readonly Dictionary<string, (Slot Slot, IReadOnlyList<string> Outputs)> _lookup;
+        private List<(string Side, DslCondition Atom, Func<decimal?>[] Operands, Func<Tri> Value)>? _atoms;
         private Candle? _current;
         private Candle? _previous;
         private Candle? _previous2;
@@ -263,7 +282,8 @@ public sealed class DslStrategy : IStrategy, IReferenceSeriesConsumer
         {
             _slots = self.Select(i => new Slot(i)).ToArray();
             _tracker = tracker;
-            var lookup = new Dictionary<string, (Slot Slot, IReadOnlyList<string> Outputs)>(StringComparer.Ordinal);
+            _definition = definition;
+            var lookup = _lookup = new Dictionary<string, (Slot Slot, IReadOnlyList<string> Outputs)>(StringComparer.Ordinal);
             for (var i = 0; i < self.Length; i++)
             {
                 lookup[self[i].Id] = (_slots[i], _slots[i].OutputNames);
@@ -315,6 +335,40 @@ public sealed class DslStrategy : IStrategy, IReferenceSeriesConsumer
             { Type: "indicator" } => _stopLevel!() ?? 0m,
             _ => throw new InvalidOperationException("Unknown stop type."),
         };
+
+        public DslInspection Inspect()
+        {
+            _atoms ??= [.. Atoms("entry", _definition.Entry), .. Atoms("exit", _definition.Exit)];
+            return new DslInspection(_entry(), _exit(), _atoms.Select(a => new DslAtomState(
+                a.Side, a.Atom.Op, Label((DslOperand)a.Atom.Args[0]), Label((DslOperand)a.Atom.Args[1]),
+                a.Operands[0](), a.Operands[1](), a.Operands[2](), a.Operands[3](), a.Value())).ToList());
+        }
+
+        /// <summary>The comparison atoms under the logical operators, in definition order.</summary>
+        private IEnumerable<(string, DslCondition, Func<decimal?>[], Func<Tri>)> Atoms(string side, DslCondition condition)
+        {
+            if (condition.Op is "and" or "or" or "not")
+            {
+                return condition.Args.SelectMany(a => Atoms(side, (DslCondition)a));
+            }
+
+            var a = (DslOperand)condition.Args[0];
+            var b = (DslOperand)condition.Args[1];
+            Func<decimal?>[] operands = [CompileOperand(a, _lookup), CompileOperand(b, _lookup), CompileOperand(Lagged(a), _lookup), CompileOperand(Lagged(b), _lookup)];
+            return [(side, condition, operands, CompileCondition(condition, _lookup))];
+        }
+
+        private static string Label(DslOperand operand)
+        {
+            static string Suffix(int lag, decimal mult) => (lag > 0 ? $"[{lag}]" : "") + (mult != 1m ? $"×{mult.ToString(System.Globalization.CultureInfo.InvariantCulture)}" : "");
+            return operand switch
+            {
+                DslRef r => $"{r.Indicator}.{r.Output}{Suffix(r.Lag, r.Mult)}",
+                DslPrice p => (p.Source == DslSource.Btc ? "btc." : "") + p.Field + Suffix(p.Lag, p.Mult),
+                DslConst k => k.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                _ => "?",
+            };
+        }
 
         public void Reset()
         {

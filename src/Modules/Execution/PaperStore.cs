@@ -9,6 +9,9 @@ public sealed record FrozenRecord(long Id, long CohortId, int MemberIndex, strin
 
 public sealed record CycleMetric(DateTimeOffset ScheduledFor, DateTimeOffset StartedAt, DateTimeOffset FinishedAt, int BarsProcessed, bool CatchUp, bool Stale, string Outcome, object Detail);
 
+/// <summary>An operational action; a position close names its run (sleeve indices are per run, ADR-0019 §3).</summary>
+public sealed record OpsAction(long Id, string Action, long? RunId, int? Sleeve, string? Symbol);
+
 public sealed record CorrelationSnapshot(DateTimeOffset BarTime, double Threshold, IReadOnlyDictionary<string, int> Clusters, double EffectiveCount, double MaxClusterShare);
 
 /// <summary>A step to persist: inputs, resulting state hash, its events and fills, balances and correlation.</summary>
@@ -28,7 +31,8 @@ public interface IPaperStore
 
     Task<string?> DefinitionAsync(string definitionHash, CancellationToken ct);
 
-    Task<PaperRun?> LatestRunAsync(CancellationToken ct);
+    /// <summary>Every paper run, oldest first (one per cohort since ADR-0019).</summary>
+    Task<IReadOnlyList<PaperRun>> RunsAsync(CancellationToken ct);
 
     Task<PaperRun> CreateRunAsync(DateTimeOffset tradingStart, DateTimeOffset warmupStart, PaperRunConfig config, CancellationToken ct);
 
@@ -38,7 +42,10 @@ public interface IPaperStore
 
     Task<bool> KillSwitchEngagedAsync(CancellationToken ct);
 
-    Task<IReadOnlyList<(long Id, string Action, int? Sleeve, string? Symbol)>> ActionsAfterAsync(long lastId, CancellationToken ct);
+    Task<IReadOnlyList<OpsAction>> ActionsAfterAsync(long lastId, CancellationToken ct);
+
+    /// <summary>The id of the latest operational action (0 if none): a new run applies only later ones.</summary>
+    Task<long> LastActionIdAsync(CancellationToken ct);
 
     Task<IReadOnlyDictionary<long, RiskConfigDocument>> RiskVersionsAsync(CancellationToken ct);
 
@@ -88,23 +95,24 @@ public sealed class PaperStore(string connectionString) : IPaperStore
         return await command.ExecuteScalarAsync(ct) as string;
     }
 
-    public async Task<PaperRun?> LatestRunAsync(CancellationToken ct)
+    public async Task<IReadOnlyList<PaperRun>> RunsAsync(CancellationToken ct)
     {
         await using var connection = await OpenAsync(ct);
-        await using var command = new NpgsqlCommand("SELECT id, trading_start, warmup_start, config::text, config_hash FROM trading.paper_runs ORDER BY id DESC LIMIT 1", connection);
+        await using var command = new NpgsqlCommand("SELECT id, trading_start, warmup_start, config::text, config_hash FROM trading.paper_runs ORDER BY id", connection);
         await using var reader = await command.ExecuteReaderAsync(ct);
-        if (!await reader.ReadAsync(ct))
+        var result = new List<PaperRun>();
+        while (await reader.ReadAsync(ct))
         {
-            return null;
+            var config = PaperRunConfig.Parse(reader.GetString(3));
+            if (config.Hash() != reader.GetString(4))
+            {
+                throw new InvalidOperationException($"Paper run {reader.GetInt64(0)} configuration does not match its stored hash.");
+            }
+
+            result.Add(new PaperRun(reader.GetInt64(0), reader.GetFieldValue<DateTimeOffset>(1), reader.GetFieldValue<DateTimeOffset>(2), config));
         }
 
-        var config = PaperRunConfig.Parse(reader.GetString(3));
-        if (config.Hash() != reader.GetString(4))
-        {
-            throw new InvalidOperationException("Paper run configuration does not match its stored hash.");
-        }
-
-        return new PaperRun(reader.GetInt64(0), reader.GetFieldValue<DateTimeOffset>(1), reader.GetFieldValue<DateTimeOffset>(2), config);
+        return result;
     }
 
     public async Task<PaperRun> CreateRunAsync(DateTimeOffset tradingStart, DateTimeOffset warmupStart, PaperRunConfig config, CancellationToken ct)
@@ -174,19 +182,27 @@ public sealed class PaperStore(string connectionString) : IPaperStore
     }
 
     /// <summary>Operational actions not yet applied; the next processed step applies them (m5-protocol §2.4).</summary>
-    public async Task<IReadOnlyList<(long Id, string Action, int? Sleeve, string? Symbol)>> ActionsAfterAsync(long lastId, CancellationToken ct)
+    public async Task<IReadOnlyList<OpsAction>> ActionsAfterAsync(long lastId, CancellationToken ct)
     {
         await using var connection = await OpenAsync(ct);
-        await using var command = new NpgsqlCommand("SELECT id, action, sleeve, symbol FROM trading.ops_actions WHERE id > $1 ORDER BY id", connection);
+        await using var command = new NpgsqlCommand("SELECT id, action, run_id, sleeve, symbol FROM trading.ops_actions WHERE id > $1 ORDER BY id", connection);
         command.Parameters.AddWithValue(lastId);
-        var result = new List<(long, string, int?, string?)>();
+        var result = new List<OpsAction>();
         await using var reader = await command.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
         {
-            result.Add((reader.GetInt64(0), reader.GetString(1), reader.IsDBNull(2) ? null : reader.GetInt32(2), reader.IsDBNull(3) ? null : reader.GetString(3)));
+            result.Add(new OpsAction(reader.GetInt64(0), reader.GetString(1), reader.IsDBNull(2) ? null : reader.GetInt64(2),
+                reader.IsDBNull(3) ? null : reader.GetInt32(3), reader.IsDBNull(4) ? null : reader.GetString(4)));
         }
 
         return result;
+    }
+
+    public async Task<long> LastActionIdAsync(CancellationToken ct)
+    {
+        await using var connection = await OpenAsync(ct);
+        await using var command = new NpgsqlCommand("SELECT coalesce(max(id), 0) FROM trading.ops_actions", connection);
+        return (long)(await command.ExecuteScalarAsync(ct))!;
     }
 
     /// <summary>All RiskConfig versions by id (replay needs the version in force at each step).</summary>

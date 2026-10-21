@@ -61,7 +61,7 @@ public static class OpsApi
 
     public sealed record ReasonRequest(string Reason);
 
-    public sealed record CloseRequest(int Sleeve, string Symbol, string Reason);
+    public sealed record CloseRequest(int Sleeve, string Symbol, string Reason, long? RunId = null);
 
     public sealed record RiskConfigRequest(RiskConfigDocument Config, string Reason, bool Confirm);
 
@@ -84,8 +84,8 @@ public static class OpsApi
 
         Post<KillSwitchRequest>(app, "/kill-switch", (ops, r, _, ct) => ops.SetKillSwitchAsync(r.Engaged, r.Reason, ct));
         Post<ReasonRequest>(app, "/strategies/{name}/disable", (ops, r, request, ct) => ops.DisableStrategyAsync((string)request.RouteValues["name"]!, r.Reason, ct));
-        Post<CloseRequest>(app, "/positions/close", (ops, r, _, ct) => ops.ClosePositionsAsync(r.Sleeve, r.Symbol, r.Reason, ct));
-        Post<ReasonRequest>(app, "/positions/close-all", (ops, r, _, ct) => ops.ClosePositionsAsync(null, null, r.Reason, ct));
+        Post<CloseRequest>(app, "/positions/close", (ops, r, _, ct) => ops.ClosePositionsAsync(r.RunId, r.Sleeve, r.Symbol, r.Reason, ct));
+        Post<ReasonRequest>(app, "/positions/close-all", (ops, r, _, ct) => ops.ClosePositionsAsync(null, null, null, r.Reason, ct));
         Post<RiskConfigRequest>(app, "/risk-config", async (ops, r, _, ct) =>
         {
             var current = await ops.CurrentRiskAsync(ct) ?? throw new OpsRequestException("no paper run yet");

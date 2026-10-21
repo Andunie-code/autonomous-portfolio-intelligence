@@ -17,11 +17,15 @@ public sealed class TradingHealth
 
 /// <summary>
 /// One hourly cycle (m5-protocol §2.1): fetch newly closed candles (when live data is enabled), process the paper
-/// run, record the cycle metric. HTTP 418 engages the trading kill switch automatically (risk-model §3.1); 429
-/// and per-symbol failures leave the bar to the gap rule or to the next cycle.
+/// runs, record the cycle metric. HTTP 418 engages the trading kill switch automatically (risk-model §3.1); 429
+/// and per-symbol failures leave the bar to the gap rule or to the next cycle. <paramref name="watchSymbols"/> are
+/// fetched for the signal radar only (ADR-0020 §5): they enter no run and produce no order.
 /// </summary>
-public sealed class TradingCycle(PaperStore store, PaperTrader trader, LiveCandleFeed? feed, TradingHealth health, TimeProvider clock)
+public sealed class TradingCycle(PaperStore store, PaperTrader trader, LiveCandleFeed? feed, TradingHealth health, TimeProvider clock, IReadOnlyList<string>? watchSymbols = null)
 {
+    /// <summary>History fetched for a watch-only symbol: the radar's longest indicator (SMA 300) plus margin.</summary>
+    public static readonly TimeSpan WatchLookback = TimeSpan.FromDays(56);
+
     public async Task<CycleOutcome> RunAsync(DateTimeOffset scheduledFor, CancellationToken ct)
     {
         var started = clock.GetUtcNow();
@@ -32,17 +36,25 @@ public sealed class TradingCycle(PaperStore store, PaperTrader trader, LiveCandl
         {
             if (feed is not null)
             {
-                var run = await store.LatestRunAsync(ct);
-                var symbols = run?.Config.Symbols ?? (await trader.LoadMembersAsync(r => r.State == "PaperTrading", ct)).Members
-                    .SelectMany(m => m.Manifest.Pairs.Select(p => p.Symbol)).Distinct().ToList();
-                var warmup = run?.WarmupStart ?? PaperTrader.NextBoundary(started) - PaperTrader.Warmup;
                 try
                 {
-                    var fetched = await feed.FetchAsync(symbols, CandleInterval.FourHours, warmup, clock.GetUtcNow(), ct);
-                    detail["requests"] = fetched.Requests;
-                    detail["inserted"] = fetched.Inserted;
-                    detail["anomalies"] = fetched.Anomalies;
-                    detail["failedSymbols"] = fetched.Failed.Count;
+                    var plan = await trader.FeedPlanAsync(started, ct);
+                    var fetches = new List<FeedOutcome>();
+                    if (plan is { } p)
+                    {
+                        fetches.Add(await feed.FetchAsync(p.Symbols, CandleInterval.FourHours, p.WarmupStart, clock.GetUtcNow(), ct));
+                    }
+
+                    var watch = (watchSymbols ?? []).Except(plan?.Symbols ?? [], StringComparer.Ordinal).ToList();
+                    if (watch.Count > 0)
+                    {
+                        fetches.Add(await feed.FetchAsync(watch, CandleInterval.FourHours, PaperTrader.NextBoundary(started) - WatchLookback, clock.GetUtcNow(), ct));
+                    }
+
+                    detail["requests"] = fetches.Sum(f => f.Requests);
+                    detail["inserted"] = fetches.Sum(f => f.Inserted);
+                    detail["anomalies"] = fetches.Sum(f => f.Anomalies);
+                    detail["failedSymbols"] = fetches.Sum(f => f.Failed.Count);
                 }
                 catch (LiveIpBannedException)
                 {
