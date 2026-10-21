@@ -16,8 +16,11 @@
        current version already carries it.
     7. Checks: lifecycle (three PaperTrading members of the new cohort), status, risk config. A report with operational
        and registration fields only (no price, PnL or position) is written to the report directory with its SHA-256.
+  -CohortId <id>: the manifest is already registered (registration is append-only and is never sent twice). Step 3
+  is replaced by a check of the server's own record of that cohort (member definition hashes, release, kind) and
+  its server-assigned fields are reported; the run continues with steps 4-7.
 #>
-param([string] $Manifest = 'docs/cohorts/cohort-1.json')
+param([string] $Manifest = 'docs/cohorts/cohort-1.json', [long] $CohortId = 0)
 . "$PSScriptRoot\lib\m5-common.ps1"
 Set-Location $script:Root
 
@@ -38,7 +41,11 @@ if ($document.imageDigest -ne $digest) { throw "The manifest names $($document.i
 $commit = (git log -1 --format=%H -- $Manifest).Trim()
 Note "manifest=$Manifest commit=$commit sha256=$(Get-Sha256Text (Get-Content $Manifest -Raw))"
 Note "members=$(@($document.strategies | ForEach-Object { $_.definition.name }) -join ',') underpowered=$($document.power.underpowered)"
-Confirm-Interactive 'Register this manifest as a new cohort (append-only, cannot be withdrawn) and activate it?'
+if ($CohortId -gt 0) {
+    Confirm-Interactive "Continue the activation of the already registered cohort $CohortId (no new registration)?"
+} else {
+    Confirm-Interactive 'Register this manifest as a new cohort (append-only, cannot be withdrawn) and activate it?'
+}
 
 # 2. Trading.Host without live data -------------------------------------------------------------------------------
 Step '2/7 Trading.Host without live data'
@@ -47,6 +54,27 @@ Invoke-Native docker @('compose', '--profile', 'trading', 'up', '-d', 'trading-h
 if ($LASTEXITCODE -ne 0) { throw 'Trading.Host did not restart.' }
 
 # 3. Registration ---------------------------------------------------------------------------------------------------
+# Note: PowerShell variables are case-insensitive; $cohortId below is the -CohortId parameter.
+if ($CohortId -gt 0) {
+    Step "3/7 Registration already done: checking the server's record of cohort $CohortId (nothing is sent)"
+    $sql = "SELECT manifest_hash, kind, engine_sha, image_digest, registered_at, a_c, window_end, protocol_complete, underpowered, " +
+           "(SELECT string_agg(s ->> 'definitionHash', ',' ORDER BY o) FROM jsonb_array_elements(manifest -> 'strategies') WITH ORDINALITY AS t(s, o)) " +
+           "FROM results.cohort_manifests WHERE cohort_id = $CohortId;"
+    $row = @(Invoke-Psql 'holdout' $sql)
+    if ($row.Count -ne 1 -or -not $row[0]) { throw "The holdout registry has no cohort $CohortId." }
+    $r = $row[0].Trim().Split('|')
+    $expected = @($document.strategies | ForEach-Object { $_.definitionHash }) -join ','
+    if ($r[9] -ne $expected) { throw "Cohort $CohortId has other members than $Manifest." }
+    if ($r[2] -ne $document.engineSha -or $r[3] -ne $document.imageDigest) { throw "Cohort $CohortId names another evaluator release." }
+    if ($r[1] -ne 'normal') { throw "Cohort $CohortId is not a normally registered cohort ($($r[1]))." }
+    Note "cohortId=$CohortId"
+    Note 'registration=earlier run of this script (server record checked; not sent again)'
+    Note "manifestHash=$($r[0])"
+    Note "registeredAt=$($r[4])"
+    Note "startsAt=$($r[5])"
+    Note "windowEnd=$($r[6])"
+    Note "protocolComplete=$($r[7]) underpowered=$($r[8])"
+} else {
 Step '3/7 Registration (POST /cohorts, submit-only token)'
 $env:PI_EVALUATOR_DIGEST = $digest
 Invoke-Native docker @('compose', '--profile', 'research', 'build', 'research-host')
@@ -67,17 +95,23 @@ try {
 } finally {
     Invoke-Native docker @('compose', '--profile', 'evaluator', 'stop', 'holdout-evaluator') | Out-Null
 }
-if ($exit -ne 0) { throw "Registration failed (exit $exit); nothing else was changed." }
-foreach ($line in $lines) { if ($line -match '^([A-Za-z]+)=(.*)$') { $fields[$Matches[1]] = $Matches[2] } }
-$cohortId = $fields['cohortId']
-if ($cohortId -notmatch '^\d+$') { throw 'The evaluator returned no cohort id.' }
+if ($exit -ne 0) { throw "Registration failed (exit $exit); nothing else was changed. If the registry rejected a manifest that is already registered (409), rerun with -CohortId <id>." }
+# Output lines may carry leading spaces or a trailing carriage return (docker compose run). -cmatch: the case-insensitive
+# -match fails on 'cohortId' under tr-TR ('I' folds to the dotless 'ı', outside [A-Za-z]).
+foreach ($line in $lines) { if ("$line" -cmatch '^\s*([A-Za-z]+)=(.*?)\s*$') { $fields[$Matches[1]] = $Matches[2] } }
+if ($fields['cohortId'] -cnotmatch '^\d+$') {
+    throw 'The evaluator returned no readable cohort id. The cohort may be registered: rerun with -CohortId <id> (see the output above).'
+}
+$cohortId = [long]$fields['cohortId']
 foreach ($name in 'cohortId', 'status', 'registeredAt', 'startsAt', 'windowEnd', 'eligibleForValidation', 'manifestHash') { Note "$name=$($fields[$name])" }
+}
 
 # 4. Freeze and parity ----------------------------------------------------------------------------------------------
 Step "4/7 freeze-import and parity replay on R (cohort $cohortId)"
 $research = Join-Path $PSScriptRoot 'm5-research.ps1'
 & powershell -NoProfile -ExecutionPolicy Bypass -File $research freeze-import $Manifest $cohortId
-if ($LASTEXITCODE -ne 0) { throw 'freeze-import failed.' }
+if ($LASTEXITCODE -eq 3) { Note "freeze=already frozen (cohort $cohortId; earlier run)" }   # freeze-import refuses a second import
+elseif ($LASTEXITCODE -ne 0) { throw 'freeze-import failed.' }
 & powershell -NoProfile -ExecutionPolicy Bypass -File $research parity-m5 $Manifest $cohortId
 if ($LASTEXITCODE -ne 0) { throw 'Parity replay failed: the cohort stays Frozen and is not paper traded.' }
 Confirm-Interactive 'Parity passed. Record Frozen -> PaperTrading?'

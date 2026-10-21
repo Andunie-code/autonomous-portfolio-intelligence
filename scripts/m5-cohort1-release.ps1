@@ -15,7 +15,7 @@ Set-Location $script:Root
 $settings = Read-DotEnv
 $digest = $settings['PI_EVALUATOR_DIGEST']
 if (-not $digest) { throw '.env has no PI_EVALUATOR_DIGEST (scripts/m5-deploy.ps1 sets it).' }
-if ($digest -notmatch '^sha256:[0-9a-f]{64}$') { throw 'PI_EVALUATOR_DIGEST is not an image digest.' }
+if ($digest -cnotmatch '^sha256:[0-9a-f]{64}$') { throw 'PI_EVALUATOR_DIGEST is not an image digest.' }
 
 $sql = "SELECT engine_sha, results.environment_verified('$digest') FROM results.evaluator_releases WHERE image_digest = '$digest';"
 $row = @(Invoke-Psql 'holdout' $sql)
