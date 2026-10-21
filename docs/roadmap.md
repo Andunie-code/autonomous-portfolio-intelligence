@@ -1,6 +1,6 @@
 # Yol Haritası
 
-Son güncelleme: 2026-10-21 (rev. 5.4; M5b Kapı A) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-21 (rev. 5.5; M5b Kapı C aktivasyonu) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: **M0 yerelde tamamlandı** (2026-10-13; doğrulama `716a1bd` commit'inde, temiz klonda). Uzak depo: private GitHub deposu `Andunie-code/autonomous-portfolio-intelligence`. M1 ve sonrası başlamadı; her milestone ayrı kullanıcı onayı gerektirir. Bir milestone, kabul kriterlerindeki testler **gerçekten uygulanıp geçtiğinde** tamamlanmış sayılır.
 
@@ -176,7 +176,11 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - 7 gün paper çalışması; makinenin kapalı kaldığı süreler raporlanıyor ve sonrasında reconciliation ile tutarlı devam ediliyor (yerel çalışmada kesintisizlik garanti edilmez, ADR-0013); yedekten geri yükleme denendi.
   - P1 analiz raporu kullanıcıya sunuldu.
 
-### M5b — Kohort 1 ve M9a dashboard (M) — Kapı A onaylandı; Kapı B tamam (2026-10-21, 518 test)
+### M5b — Kohort 1 ve M9a dashboard (M) — Kapı A onaylandı; Kapı B tamam (518 test); Kapı C: Kohort 1 aktive edildi (2026-10-21), kullanıcı kontrolleri bekleniyor
+- **Kapı C durumu:** [`cohort-1-activation-report.md`](cohort-1-activation-report.md).
+  - Kayıt: holdout cohort 2; `A_1` 2026-10-23, pencere sonu 2027-10-23; `underpowered`.
+  - Parity: L1/L2 birebir. D29 `RiskConfig`'te.
+  - Açık kalanlar: `-ChecksOnly` kontrolü (ayrı run, 3/3 `PaperTrading`), tarayıcı kontrolü, ilk operasyonel rapor.
 - **Kararlar (U):** D31 (Kohort 1, yalnızca operasyonel; ADR-0019, [`cohort-1-preregistration.md`](cohort-1-preregistration.md)) ve D32 (M9a; ADR-0020).
 - **Kapılar (U):** **A** = ADR-0019/0020 ve Kohort 1 ön kaydı; **B** = çevrimdışı kod ve testler (kohort başına paper run, manifest üretici, kayıt istemcisi, Kernel `Inspect()`, radar, dashboard, migration 0008, etkileşimli script'ler), `verify.ps1` yeşil; **C** = kullanıcının koşuları (release bilgisi, manifestonun üretilip onayla commit'lenmesi, `m5-cohort1-activate.ps1`, tarayıcı kontrolü) ve aktivasyon raporu.
 - **Kabul kriterleri:**

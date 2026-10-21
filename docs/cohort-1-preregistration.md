@@ -1,6 +1,6 @@
 # Kohort 1 — ön kayıt (operasyonel kohort)
 
-- Durum: **Kapı A onaylandı (U, 2026-10-21).**
+- Durum: **Kapı A onaylandı (U, 2026-10-21).** Kayıtlı (holdout cohort 2, 2026-10-21) ve paper'a alındı: [`cohort-1-activation-report.md`](cohort-1-activation-report.md).
 - Karar: **D31 (U, 2026-10-21)**; ayrıntılı gerekçe ADR-0019.
 - Bu belge manifestodan önce yazılır. Manifesto (`docs/cohorts/cohort-1.json`) Kapı C'de, buradaki değerlerle üretilir ve değiştirilemez.
 

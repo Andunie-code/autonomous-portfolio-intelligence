@@ -19,14 +19,42 @@
   -CohortId <id>: the manifest is already registered (registration is append-only and is never sent twice). Step 3
   is replaced by a check of the server's own record of that cohort (member definition hashes, release, kind) and
   its server-assigned fields are reported; the run continues with steps 4-7.
+  -ChecksOnly -CohortId <id>: only the preflight and step 7 (read-only Ops API calls); nothing is restarted or changed.
 #>
-param([string] $Manifest = 'docs/cohorts/cohort-1.json', [long] $CohortId = 0)
+param([string] $Manifest = 'docs/cohorts/cohort-1.json', [long] $CohortId = 0, [switch] $ChecksOnly)
 . "$PSScriptRoot\lib\m5-common.ps1"
 Set-Location $script:Root
 
 $report = [System.Collections.Generic.List[string]]::new()
 function Note([string] $Line) { $report.Add($Line); Write-Host $Line }
 function Step([string] $Title) { Write-Host ''; Write-Host "==> $Title" -ForegroundColor Cyan }
+$api = 'http://127.0.0.1:55490'
+if ($ChecksOnly -and $CohortId -le 0) { throw '-ChecksOnly needs -CohortId <id>.' }
+
+# 7. Checks (also -ChecksOnly) ---------------------------------------------------------------------------------------
+function Invoke-Checks([long] $Id) {
+    Step '7/7 Checks'
+    $headers = @{ Authorization = "Bearer $(Get-Secret $script:OpsSecrets 'ops_api_token')" }
+    # Windows PowerShell returns a JSON array as one object: assigned first, the pipeline enumerates its rows.
+    $lifecycle = Invoke-RestMethod "$api/lifecycle" -Headers $headers
+    $members = @($lifecycle | Where-Object { $_.cohort_id -eq $Id } | Group-Object member_index | ForEach-Object { $_.Group[-1] })
+    $paper = @($members | Where-Object { $_.to_state -eq 'PaperTrading' }).Count
+    Note "lifecycle cohort=$Id members=$($members.Count) paperTrading=$paper/$($document.strategies.Count)"
+    $status = Invoke-RestMethod "$api/status" -Headers $headers
+    Note "killSwitch=$($status[0].kill_switch) lastCycleOutcome=$($status[0].last_cycle.outcome) reconciliationOk=$($status[0].last_reconciliation.ok)"
+    $risk = @(Invoke-RestMethod "$api/risk-config" -Headers $headers)[0].config
+    Note "clusterCap=$($risk.clusterCapThreshold)/$($risk.clusterCapMaxExposure) warning=$($risk.clusterWarningShare)"
+
+    $stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $path = Join-Path (Get-ReportDirectory) "m5-cohort1-activation-$stamp.txt"
+    $text = ($report -join "`n") + "`n"
+    [System.IO.File]::WriteAllText($path, $text)
+    Write-Host ''
+    Write-Host "Report: $path" -ForegroundColor Green
+    Write-Host "SHA-256: $(Get-Sha256Text $text)"
+    Write-Host 'Dashboard: http://127.0.0.1:55490/dashboard (token: secrets\ops_api_token).'
+    if ($paper -ne $document.strategies.Count) { Write-Host 'Warning: not every member is in PaperTrading.' -ForegroundColor Yellow; exit 1 }
+}
 
 # 1. Preflight -------------------------------------------------------------------------------------------------
 Step '1/7 Preflight'
@@ -41,6 +69,7 @@ if ($document.imageDigest -ne $digest) { throw "The manifest names $($document.i
 $commit = (git log -1 --format=%H -- $Manifest).Trim()
 Note "manifest=$Manifest commit=$commit sha256=$(Get-Sha256Text (Get-Content $Manifest -Raw))"
 Note "members=$(@($document.strategies | ForEach-Object { $_.definition.name }) -join ',') underpowered=$($document.power.underpowered)"
+if ($ChecksOnly) { Note "checksOnly=true cohortId=$CohortId"; Invoke-Checks $CohortId; exit 0 }
 if ($CohortId -gt 0) {
     Confirm-Interactive "Continue the activation of the already registered cohort $CohortId (no new registration)?"
 } else {
@@ -127,7 +156,6 @@ if ($LASTEXITCODE -ne 0) { throw 'Trading.Host did not start with live data.' }
 # 6. D29 RiskConfig -------------------------------------------------------------------------------------------------
 Step '6/7 D29 cluster cap (RiskConfig version)'
 $headers = @{ Authorization = "Bearer $(Get-Secret $script:OpsSecrets 'ops_api_token')" }
-$api = 'http://127.0.0.1:55490'
 for ($i = 0; $i -lt 30; $i++) {
     try { Invoke-RestMethod "$api/health/live" -TimeoutSec 5 | Out-Null; break } catch { Start-Sleep -Seconds 2 }
 }
@@ -146,23 +174,4 @@ if ($config.clusterCapMaxExposure -eq 0.60 -and $config.clusterCapThreshold -eq 
     Note 'riskConfig=D29 version added'
 }
 
-# 7. Checks ---------------------------------------------------------------------------------------------------------
-Step '7/7 Checks'
-$lifecycle = @(Invoke-RestMethod "$api/lifecycle" -Headers $headers)
-$members = @($lifecycle | Where-Object { $_.cohort_id -eq [long]$cohortId } | Group-Object member_index | ForEach-Object { $_.Group[-1] })
-$paper = @($members | Where-Object { $_.to_state -eq 'PaperTrading' }).Count
-Note "lifecycle cohort=$cohortId paperTrading=$paper/$($document.strategies.Count)"
-$status = Invoke-RestMethod "$api/status" -Headers $headers
-Note "killSwitch=$($status[0].kill_switch) lastCycleOutcome=$($status[0].last_cycle.outcome) reconciliationOk=$($status[0].last_reconciliation.ok)"
-$risk = @(Invoke-RestMethod "$api/risk-config" -Headers $headers)[0].config
-Note "clusterCap=$($risk.clusterCapThreshold)/$($risk.clusterCapMaxExposure) warning=$($risk.clusterWarningShare)"
-
-$stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
-$path = Join-Path (Get-ReportDirectory) "m5-cohort1-activation-$stamp.txt"
-$text = ($report -join "`n") + "`n"
-[System.IO.File]::WriteAllText($path, $text)
-Write-Host ''
-Write-Host "Report: $path" -ForegroundColor Green
-Write-Host "SHA-256: $(Get-Sha256Text $text)"
-Write-Host 'Dashboard: http://127.0.0.1:55490/dashboard (token: secrets\ops_api_token).'
-if ($paper -ne $document.strategies.Count) { Write-Host 'Warning: not every member is in PaperTrading.' -ForegroundColor Yellow; exit 1 }
+Invoke-Checks $cohortId

@@ -2,6 +2,27 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-21 — M5b Kapı C: Kohort 1 aktivasyonu
+- **Kayıt (kullanıcı koşusu):**
+  - Kohort 1 holdout'ta cohort 2 olarak kaydedildi: `registered_at` 2026-10-21 17:41:45 UTC, `A_1` 2026-10-23, pencere sonu 2027-10-23.
+  - Manifesto hash'i `3d5f7c95…`; `protocol_complete = t`, `underpowered = t` (en iyi sonuç `Inconclusive`).
+- **Parity (`R`):**
+  - L1 `8dccb8f86868` ve L2 `3bcc41534577` birebir; reconciliation temiz.
+  - Rapor SHA-256 `2f234be0…6717e`, kuru koşuyla aynı.
+  - Ardından `Frozen → PaperTrading`.
+- **Paper ve risk:** Trading.Host canlı veriyle yeniden başladı. D29 `RiskConfig`'te: 0,70 / 0,60 / 0,54.
+- **Yeni belge:** `docs/cohort-1-activation-report.md`.
+- **Güncellenen belgeler:** `cohort-1-preregistration.md`, ADR-0019 durumu, `roadmap.md` (M5b).
+- **Script düzeltmeleri (`m5-cohort1-activate.ps1`):**
+  - tr-TR'de `-match` ile anahtar ayrıştırma hatası düzeltildi (`decc1b2`).
+  - `-CohortId` ile kayıttan sonra devam edilebiliyor.
+  - Windows PowerShell'in JSON dizisini tek nesne döndürmesi yüzünden yaşam döngüsü sayımı tüm kohortları topluyordu (`5/3`); düzeltildi.
+  - Yeni salt-okunur `-ChecksOnly`.
+- **Açık kalanlar (kullanıcı):**
+  - `-ChecksOnly` kontrolü;
+  - dashboard'un tarayıcıda kontrolü;
+  - ilk operasyonel raporda gecikmeli döngü, reconciliation ve bellek.
+
 ## 2026-10-21 — M5b Kapı B: çevrimdışı kod ve testler
 - **Kohort başına paper run (ADR-0019):** `PaperTrader`, `PaperTrading`'e geçen ve run'ı olmayan her kohort için ayrı run açar; mevcut run'lar değişmez. Isınma `max(45 gün, en uzun gösterge + 1 bar + 1 gün)` (H08: 52 gün). Pozisyon kapatma run'a özgü (`ops_actions.run_id`). Canlı veri, daha uzun ısınma için önceki mumları da tamamlar.
 - **Kohort 1 hazırlığı:** `cohort-manifest` üretici ve `docs/cohort-1.spec.json`. Yeni deneme açılmaz; no-halt koşusu M4 sonuç hash'ini yeniden üretmelidir. Research.Host `job submit-cohort` (yalnızca submit token). Evaluator kodu değişmedi.

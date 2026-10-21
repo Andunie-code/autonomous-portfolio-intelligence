@@ -2,7 +2,7 @@
 
 - Durum: **Kabul edildi (Kapı A, kullanıcı onayı 2026-10-21)** · Tarih: 2026-10-21
 - Karar türü: **U** (operasyonel kohort, üye seçimi, doğrulama ekseni, D29'un yeri; D31) ve **T** (run modeli, kayıt istemcisi, ısınma).
-- Uygulama durumu: **Kapı B'de çevrimdışı uygulandı (2026-10-21); gerçek ortam Kapı C'de, kullanıcının koşularıyla.**
+- Uygulama durumu: **Kapı B'de çevrimdışı uygulandı (2026-10-21). Kapı C'de Kohort 1 kaydedildi ve paper'a alındı (2026-10-21; `cohort-1-activation-report.md`); ayrı run'ın gerçek ortamda kontrolü kullanıcıda.**
 - Uygulama notları (Kapı B):
   - Run'ın kohortu `paper_runs.config` içindeki sleeve'lerin `cohortId`'sinden okunur. `PaperRunConfig`'e isteğe bağlı `actionsAfter` eklendi: yeni bir run yalnızca kendisinden sonra istenen operasyonel eylemleri uygular. Boşken yazılmadığı için mevcut run'ların JSON'u ve hash'i değişmez.
   - Sleeve indeksleri run'a özgü olduğu için `trading.ops_actions`'a `run_id` eklendi (migration 0008). Birden fazla run varken `POST /positions/close` `runId` ister; tek run varken ona varsayılır. "Tümünü kapat" tüm run'lara uygulanır.
