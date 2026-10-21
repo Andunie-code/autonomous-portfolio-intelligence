@@ -1,6 +1,6 @@
 # Kohort 1 — aktivasyon raporu (M5b Kapı C)
 
-- Durum: **Aktive edildi ve doğrulandı (kullanıcı koşuları, 2026-10-21).** Altı kabul kriteri karşılandı. Tek açık nokta: migration 0008'den sonraki ilk döngünün `ok` olduğunun teyidi (§7).
+- Durum: **Aktive edildi ve doğrulandı (kullanıcı koşuları, 2026-10-21).** Altı kabul kriteri karşılandı. Migration sonrası ilk döngü `error` değil, `degraded` (§8). Açık kalanlar: neden kodunun `stale-data` olduğunun teyidi ve M5b'nin kullanıcı kabulü (§9).
 - Ön kayıt: [`cohort-1-preregistration.md`](cohort-1-preregistration.md) (D31, ADR-0019). Manifesto: `docs/cohorts/cohort-1.json`, commit `6b6f912`.
 - Bu rapor yalnızca kayıt ve operasyonel alanları içerir. Fiyat, PnL ve pozisyon yoktur. Açığa çıkmamış Kohort 1'in paper sonuçları araştırma ya da hipotez girdisi değildir (CLAUDE.md).
 
@@ -81,9 +81,28 @@ Raporlar:
   - `m5-update.ps1` artık kontrollerden önce, yeniden başlatmadan sonra biten ilk döngüyü bekliyor. O döngü `error` ise kontrolleri çalıştırmadan duruyor.
   - **Teyit gerekiyor:** migration sonrası ilk döngünün `ok` olduğu. Kontrol yöntemi: `-ChecksOnly`'yi yeniden çalıştırmak ya da 20:00:15 UTC döngüsünden sonra paper raporunu almak. Beklenen sonuç: `lastCycleOutcome=ok` ve `cycle_error` sayısının 2'de kalması.
 
-## 8. Kullanıcıya kalan kontroller
-1. `powershell -ExecutionPolicy Bypass -File scripts/m5-cohort1-activate.ps1 -CohortId 2 -ChecksOnly`. Beklenen: `lastCycleOutcome=ok`. İstersen 20:00:15 UTC'den sonra `m5-paper-report.ps1` de çalıştırılabilir; beklenen `cycle_error:2`.
+## 8. Migration sonrası ilk döngü (`-ChecksOnly`, kullanıcı)
+- Rapor SHA-256 `aa3c880c62f10f12a458e1a6af45e1dded4c68dce66d89cef52a3aacf9236fd3`.
+- Sonuç: `lifecycle cohort=2 members=3 paperTrading=3/3`, `killSwitch=False`, **`lastCycleOutcome=degraded`**, `reconciliationOk=True`, D29 0,70 / 0,60 / 0,54.
+- Döngü artık `error` değil: migration 0008 sorunu giderildi.
+- **`degraded`'ın olası nedenleri:** kill switch kapalı ve reconciliation temiz. Kodda kalan iki neden şunlar:
+  - `stale-data`: maksimum veri gecikmesinden daha eski bir barın işlenmesi;
+  - `strategy-hash-mismatch:<ad>`: run'ın yeniden kurulamaması (alarm).
+- **Beklenen neden `stale-data`:**
+  - Kohort 1'in run'ı ilk adımlarını şimdi işliyor ve ısınma başlangıcından (52 gün) itibaren geçmiş mumları sırayla tamamlıyor. Bu mumlar gecikmiş sayılıyor.
+  - Isınma barları işlem başlangıcından önce olduğu için girişleri etkilemez.
+  - Kohort 0'ın ilk açılışında da aynı durum yaşandı (`m5-acceptance-report.md` §2: `degraded:2`, ısınmadaki bayat veri).
+  - Bu çıkarımdır; neden kodu bu raporda yoktu.
+- **Script güncellemesi:** `-ChecksOnly` artık `lastCycleDegraded=<neden kodları>` satırını, `m5-update.ps1` ise ilk döngünün neden kodlarını yazıyor. Bunlar yalnızca operasyonel alanlardır.
+
+## 9. Kullanıcıya kalan kontroller
+1. 20:00:15 UTC döngüsünden sonra `-ChecksOnly`'yi yeniden çalıştır. Beklenen:
+   - `lastCycleOutcome=ok`, ya da `degraded` ise `lastCycleDegraded=stale-data`;
+   - `strategy-hash-mismatch` görünmemeli (görünürse alarm).
+
+   Aynı neden kodları dashboard'da "Sistem ve AI → Saatlik döngüler → Degraded nedeni" sütununda da görünür.
 2. Tarayıcıda yeni dashboard. Dikkat edilecekler:
    - Run 2'nin "İlk 4h mum kapanışı bekleniyor" durumundan çıkması;
    - `/system`'in hatasız açılması;
    - radar metinleri.
+3. M5b'nin kullanıcı kabulü.

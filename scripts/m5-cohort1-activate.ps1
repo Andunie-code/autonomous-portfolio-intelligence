@@ -42,6 +42,8 @@ function Invoke-Checks([long] $Id) {
     Note "lifecycle cohort=$Id members=$($members.Count) paperTrading=$paper/$($document.strategies.Count)"
     $status = Invoke-RestMethod "$api/status" -Headers $headers
     Note "killSwitch=$($status[0].kill_switch) lastCycleOutcome=$($status[0].last_cycle.outcome) reconciliationOk=$($status[0].last_reconciliation.ok)"
+    # Reason codes only (stale-data, kill-switch, reconciliation, strategy-hash-mismatch:<name>): operational fields.
+    Note "lastCycleDegraded=$(@($status[0].last_cycle.detail.degraded) -join ',') lastCycleAt=$($status[0].last_cycle.finished_at) bars=$($status[0].last_cycle.bars_processed)"
     $risk = @(Invoke-RestMethod "$api/risk-config" -Headers $headers)[0].config
     Note "clusterCap=$($risk.clusterCapThreshold)/$($risk.clusterCapMaxExposure) warning=$($risk.clusterWarningShare)"
 

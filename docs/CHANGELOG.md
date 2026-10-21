@@ -2,6 +2,13 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-21 — M5b Kapı C: migration sonrası ilk döngü
+- **Kullanıcının `-ChecksOnly` koşusu:**
+  - `paperTrading=3/3`, reconciliation temiz;
+  - son döngü `degraded` (önceki `error` giderildi).
+- **Beklenen neden `stale-data`:** Kohort 1'in run'ı 52 günlük ısınma mumlarını sırayla tamamlıyor; Kohort 0'ın ilk açılışında da aynısı oldu. Bu bir çıkarım; teyit bir sonraki kontrolle yapılacak.
+- **Script'ler:** `-ChecksOnly` ve `m5-update.ps1` artık döngünün `degraded` neden kodlarını da yazıyor.
+
 ## 2026-10-21 — M5b Kapı C: güncelleme sonrası doğrulama
 - **`m5-update.ps1` (kullanıcı koşusu):**
   - migration 0008 uygulandı;

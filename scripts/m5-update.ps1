@@ -53,7 +53,7 @@ for ($i = 0; $i -lt 60; $i++) {
     Start-Sleep -Seconds 3
 }
 if (-not $cycle) { throw 'No cycle finished within three minutes of the restart (see docker compose logs trading-host).' }
-Write-Host "firstCycleAfterRestart outcome=$($cycle.outcome) bars=$($cycle.bars_processed)"
+Write-Host "firstCycleAfterRestart outcome=$($cycle.outcome) degraded=$(@($cycle.detail.degraded) -join ',') bars=$($cycle.bars_processed)"
 if ($cycle.outcome -eq 'error') { throw 'The first cycle after the restart failed: the checks are not run.' }
 
 Step "4/5 Activation checks (cohort $CohortId, read-only)"
