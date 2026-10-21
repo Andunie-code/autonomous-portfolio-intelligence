@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Portfolio Intelligence</title>
+  <link rel="stylesheet" href="/dashboard/app.css">
+  <script src="/dashboard/app.js" defer></script>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">Portfolio Intelligence <span class="muted">· paper · yerel</span></div>
+    <nav id="tabs" class="tabs" hidden>
+      <button data-tab="overview" class="active">Özet</button>
+      <button data-tab="sleeves">Kohortlar ve pozisyonlar</button>
+      <button data-tab="radar">Sinyal radarı</button>
+      <button data-tab="trace">İzlenebilirlik</button>
+      <button data-tab="system">Sistem ve AI</button>
+    </nav>
+    <div class="session">
+      <span id="updated" class="muted" role="status"></span>
+      <button id="refresh" hidden>Yenile</button>
+      <button id="logout" hidden>Oturumu kapat</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="login" class="card login">
+      <h1>Ops API oturumu</h1>
+      <p class="muted">Token yalnızca bu sekmenin oturum belleğinde tutulur ve yalnızca <code>Authorization</code> başlığıyla gönderilir.</p>
+      <form id="login-form" autocomplete="off">
+        <label for="token">Bearer token</label>
+        <input id="token" type="password" spellcheck="false" required>
+        <button type="submit">Bağlan</button>
+      </form>
+      <p id="login-error" class="error" hidden></p>
+    </section>
+
+    <section id="view-overview" class="view" hidden></section>
+    <section id="view-sleeves" class="view" hidden></section>
+    <section id="view-radar" class="view" hidden></section>
+    <section id="view-trace" class="view" hidden></section>
+    <section id="view-system" class="view" hidden></section>
+  </main>
+
+  <footer class="muted">Salt okunur görünüm (ADR-0020). Operasyonel eylemler Ops API üzerinden yapılır. Açığa çıkmamış kohortların sonuçları araştırma girdisi değildir.</footer>
+</body>
+</html>

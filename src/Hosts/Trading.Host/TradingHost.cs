@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PortfolioIntelligence.Execution;
+using PortfolioIntelligence.Execution.Radar;
 using PortfolioIntelligence.Infrastructure.Logging;
 using PortfolioIntelligence.Kernel.Backtest;
 using PortfolioIntelligence.MarketData.Live;
@@ -18,6 +19,8 @@ namespace PortfolioIntelligence.Trading.Host;
 ///   Trading:LiveData = enabled  fetch live candles (set only by the user's m5-paper-start.ps1; off by default)
 ///   Trading:SecretsDirectory    Docker secret files: login passwords by user name (connection strings carry none)
 ///   Trading:Worker = disabled   Ops API only (tests)
+///   Radar:WatchSymbols          comma-separated watch-only symbols of the signal radar (ADR-0020 §5; no run, no order)
+///   OpsApi:AllowedHosts         loopback host names accepted by the Ops API (default 127.0.0.1;localhost;[::1])
 /// </summary>
 public static class TradingHost
 {
@@ -26,10 +29,13 @@ public static class TradingHost
         var builder = WebApplication.CreateBuilder(args);
         builder.Logging.AddPortfolioLogging(builder.Configuration);
         var configuration = builder.Configuration;
+        var watch = WatchSymbols(configuration);
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<TradingHealth>();
         builder.Services.AddSingleton(_ => new PaperStore(Required(configuration, "Trading")));
         builder.Services.AddSingleton(_ => new OpsService(Required(configuration, "OpsApi")));
+        builder.Services.AddSingleton(_ => new DashboardQueries(Required(configuration, "OpsApi")));
+        builder.Services.AddSingleton(_ => new RadarService(Required(configuration, "OpsApi"), watch));
         builder.Services.AddSingleton(sp => new LiveCandleStore(Required(configuration, "Trading")));
         builder.Services.AddSingleton(sp =>
         {
@@ -41,14 +47,15 @@ public static class TradingHost
             LiveCandleFeed? feed = null;
             if (string.Equals(configuration["Trading:LiveData"], "enabled", StringComparison.Ordinal))
             {
-                // The guard allows only the pairs of the frozen strategies (read once at start; a new cohort needs a restart).
+                // The guard allows only the pairs of the frozen strategies and the configured radar watch list (read once
+                // at start; a new cohort needs a restart).
                 var symbols = sp.GetRequiredService<PaperStore>().FrozenAsync(CancellationToken.None).GetAwaiter().GetResult()
-                    .SelectMany(f => CohortManifestReader.Read(f.Manifest).Pairs.Select(p => p.Symbol)).ToHashSet(StringComparer.Ordinal);
+                    .SelectMany(f => CohortManifestReader.Read(f.Manifest).Pairs.Select(p => p.Symbol)).Concat(watch).ToHashSet(StringComparer.Ordinal);
                 var http = new HttpClient(new LiveKlineGuardHandler(symbols.ToHashSet(), LiveKlineGuardHandler.CreateNetworkHandler())) { Timeout = TimeSpan.FromSeconds(30) };
                 feed = new LiveCandleFeed(new LiveKlineClient(http), sp.GetRequiredService<LiveCandleStore>());
             }
 
-            return new TradingCycle(sp.GetRequiredService<PaperStore>(), sp.GetRequiredService<PaperTrader>(), feed, sp.GetRequiredService<TradingHealth>(), sp.GetRequiredService<TimeProvider>());
+            return new TradingCycle(sp.GetRequiredService<PaperStore>(), sp.GetRequiredService<PaperTrader>(), feed, sp.GetRequiredService<TradingHealth>(), sp.GetRequiredService<TimeProvider>(), watch);
         });
         builder.Services.AddSingleton(_ => OpsToken.Load(configuration));
         if (!string.Equals(configuration["Trading:Worker"], "disabled", StringComparison.Ordinal))
@@ -65,6 +72,12 @@ public static class TradingHost
         OpsApi.Map(app);
         return app;
     }
+
+    /// <summary>Watch-only radar symbols: upper-case USDT spot symbols only (anything else is ignored).</summary>
+    public static IReadOnlyList<string> WatchSymbols(IConfiguration configuration) =>
+        (configuration["Radar:WatchSymbols"] ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(s => s.Length is > 4 and <= 20 && s.EndsWith("USDT", StringComparison.Ordinal) && s.All(ch => ch is >= 'A' and <= 'Z' or >= '0' and <= '9'))
+            .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
 
     private static string Required(IConfiguration configuration, string name)
     {
