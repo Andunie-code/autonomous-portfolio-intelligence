@@ -1,0 +1,533 @@
+{
+  "manifestVersion": "1",
+  "cohort": "Kohort 1",
+  "kind": "operational",
+  "protocol": {
+    "version": "m3-protocol v2",
+    "commit": "5668d12",
+    "alpha": 0.05,
+    "power": 0.8,
+    "deltaFloor": 0.05,
+    "deltaShrink": 0.5,
+    "deltaCap": 0.15,
+    "deltaMode": "a",
+    "maxDrawdown": 0.25,
+    "bootstrapReplicates": 10000,
+    "bootstrapSeed": 20261016,
+    "primaryMetric": "annualised-log-return (mean 4h log return x 2190)",
+    "benchmark": "cash",
+    "test": "one-sided stationary block bootstrap",
+    "correction": "Bonferroni within family, Holm within cohort",
+    "evaluatedRun": "policy"
+  },
+  "strategies": [
+    {
+      "definition": {
+        "dsl": "1",
+        "name": "h08-smabtc-n150-b300",
+        "interval": "4h",
+        "indicators": [
+          {
+            "id": "trend",
+            "type": "sma",
+            "params": {
+              "period": 150
+            }
+          },
+          {
+            "id": "btc_trend",
+            "type": "sma",
+            "params": {
+              "period": 300
+            },
+            "source": "btc"
+          },
+          {
+            "id": "atr",
+            "type": "atr",
+            "params": {
+              "period": 14
+            }
+          }
+        ],
+        "entry": {
+          "op": "and",
+          "args": [
+            {
+              "op": "cross_above",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "trend.value"
+                }
+              ]
+            },
+            {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close",
+                  "source": "btc"
+                },
+                {
+                  "ref": "btc_trend.value"
+                }
+              ]
+            }
+          ]
+        },
+        "exit": {
+          "op": "cross_below",
+          "args": [
+            {
+              "price": "close"
+            },
+            {
+              "ref": "trend.value"
+            }
+          ]
+        },
+        "stop": {
+          "type": "atr",
+          "ref": "atr.value",
+          "multiple": 3,
+          "trailing": false
+        }
+      },
+      "definitionHash": "e34a7b626331a6e34885109ab2901c8211ec8272b9d4bd0f55cec5d0dfe90a8a",
+      "structureHash": "069d64c8cb20bbb77b3fa54259bb5badd3e69acfd70dd2d499e5c79c78b5237c",
+      "researchMetric": -0.04169,
+      "delta": 0.05,
+      "policyResultHash": "ebf5ed4e6c1838052d33a16ecc026a8c2fce6a99fe4b987591489cb0a526d29b",
+      "noHaltResultHash": "7712412fe9b4ad51d96a70c4c21442c01cf702229dee7b47be28a1592a237c76",
+      "power": {
+        "regimes": [
+          {
+            "regime": "down-vol1",
+            "days": 173,
+            "longRunSigma": 0.01546014,
+            "tradesPerDay": 0.387283
+          },
+          {
+            "regime": "down-vol2",
+            "days": 153,
+            "longRunSigma": 0.00991833,
+            "tradesPerDay": 0.333333
+          },
+          {
+            "regime": "down-vol3",
+            "days": 335,
+            "longRunSigma": 0.01390707,
+            "tradesPerDay": 0.256716
+          },
+          {
+            "regime": "up-vol1",
+            "days": 314,
+            "longRunSigma": 0.01592364,
+            "tradesPerDay": 0.595541
+          },
+          {
+            "regime": "up-vol2",
+            "days": 334,
+            "longRunSigma": 0.02473558,
+            "tradesPerDay": 0.712575
+          },
+          {
+            "regime": "up-vol3",
+            "days": 152,
+            "longRunSigma": 0.0304372,
+            "tradesPerDay": 0.644737
+          }
+        ],
+        "worstSigma": 0.0304372,
+        "worstTradesPerDay": 0.256716,
+        "powerMonths": null,
+        "requiredMonths": null,
+        "cohortMonths": 12,
+        "plannedTrades": 47,
+        "underpowered": true
+      }
+    },
+    {
+      "definition": {
+        "dsl": "1",
+        "name": "h04-macd-f12-s26-g12",
+        "interval": "4h",
+        "indicators": [
+          {
+            "id": "macd",
+            "type": "macd",
+            "params": {
+              "fast": 12,
+              "slow": 26,
+              "signal": 12
+            }
+          },
+          {
+            "id": "atr",
+            "type": "atr",
+            "params": {
+              "period": 14
+            }
+          }
+        ],
+        "entry": {
+          "op": "and",
+          "args": [
+            {
+              "op": "cross_above",
+              "args": [
+                {
+                  "ref": "macd.line"
+                },
+                {
+                  "ref": "macd.signal"
+                }
+              ]
+            },
+            {
+              "op": "gt",
+              "args": [
+                {
+                  "ref": "macd.line"
+                },
+                {
+                  "const": 0
+                }
+              ]
+            }
+          ]
+        },
+        "exit": {
+          "op": "cross_below",
+          "args": [
+            {
+              "ref": "macd.line"
+            },
+            {
+              "ref": "macd.signal"
+            }
+          ]
+        },
+        "stop": {
+          "type": "atr",
+          "ref": "atr.value",
+          "multiple": 3,
+          "trailing": false
+        }
+      },
+      "definitionHash": "44382f29b407f29406ca27dd53e5025fd9b2748269e150d937657b92c4047aad",
+      "structureHash": "3f28291e2f958b27a50bfd2a81b24d62c95b6c18e8e16ef1403248e1f8f4ac2d",
+      "researchMetric": 0.002267,
+      "delta": 0.05,
+      "policyResultHash": "29be42ad953d98b8ce980485b44bf6dcfa87cc62d20b78ca185f6575e88d3639",
+      "noHaltResultHash": "eb7bda877eabb46ef7e19b69f4f506c2a23026a14c3c89b0743b1d15d44e3e46",
+      "power": {
+        "regimes": [
+          {
+            "regime": "down-vol1",
+            "days": 173,
+            "longRunSigma": 0.0212103,
+            "tradesPerDay": 0.693642
+          },
+          {
+            "regime": "down-vol2",
+            "days": 153,
+            "longRunSigma": 0.00600959,
+            "tradesPerDay": 0.457516
+          },
+          {
+            "regime": "down-vol3",
+            "days": 335,
+            "longRunSigma": 0.01034575,
+            "tradesPerDay": 0.695522
+          },
+          {
+            "regime": "up-vol1",
+            "days": 314,
+            "longRunSigma": 0.01733025,
+            "tradesPerDay": 0.894904
+          },
+          {
+            "regime": "up-vol2",
+            "days": 334,
+            "longRunSigma": 0.01410647,
+            "tradesPerDay": 0.859281
+          },
+          {
+            "regime": "up-vol3",
+            "days": 152,
+            "longRunSigma": 0.02344235,
+            "tradesPerDay": 1.157895
+          }
+        ],
+        "worstSigma": 0.02344235,
+        "worstTradesPerDay": 0.457516,
+        "powerMonths": null,
+        "requiredMonths": null,
+        "cohortMonths": 12,
+        "plannedTrades": 84,
+        "underpowered": true
+      }
+    },
+    {
+      "definition": {
+        "dsl": "1",
+        "name": "h07-volbo-n50-v2p5",
+        "interval": "4h",
+        "indicators": [
+          {
+            "id": "dc",
+            "type": "donchian",
+            "params": {
+              "period": 50
+            }
+          },
+          {
+            "id": "vol",
+            "type": "volume_sma",
+            "params": {
+              "period": 20
+            }
+          },
+          {
+            "id": "fast",
+            "type": "ema",
+            "params": {
+              "period": 20
+            }
+          },
+          {
+            "id": "atr",
+            "type": "atr",
+            "params": {
+              "period": 14
+            }
+          }
+        ],
+        "entry": {
+          "op": "and",
+          "args": [
+            {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "close"
+                },
+                {
+                  "ref": "dc.upper"
+                }
+              ]
+            },
+            {
+              "op": "gt",
+              "args": [
+                {
+                  "price": "volume"
+                },
+                {
+                  "ref": "vol.value",
+                  "mult": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        "exit": {
+          "op": "lt",
+          "args": [
+            {
+              "price": "close"
+            },
+            {
+              "ref": "fast.value"
+            }
+          ]
+        },
+        "stop": {
+          "type": "atr",
+          "ref": "atr.value",
+          "multiple": 2.5,
+          "trailing": false
+        }
+      },
+      "definitionHash": "a262a80048f9b32eb9cd143acf738b358b8bb91ed71d8be26fb38ba2bf3cc0e5",
+      "structureHash": "c748433bded858287b5368dd982f6c35e1973e290e7d5a21d04e6c480c82f3df",
+      "researchMetric": -0.012375,
+      "delta": 0.05,
+      "policyResultHash": "5d08b4f1604d10cf4cb3e8079cca4d89ccabb7c1fdbd89273276c981c030b4c2",
+      "noHaltResultHash": "d3ff1713478a561e5e8c75fce573833f7c14b813ee611cbcb90615302882b29b",
+      "power": {
+        "regimes": [
+          {
+            "regime": "down-vol1",
+            "days": 173,
+            "longRunSigma": 0.01453536,
+            "tradesPerDay": 0.277457
+          },
+          {
+            "regime": "down-vol2",
+            "days": 153,
+            "longRunSigma": 0.0087216,
+            "tradesPerDay": 0.215686
+          },
+          {
+            "regime": "down-vol3",
+            "days": 335,
+            "longRunSigma": 0.01358003,
+            "tradesPerDay": 0.322388
+          },
+          {
+            "regime": "up-vol1",
+            "days": 314,
+            "longRunSigma": 0.01526774,
+            "tradesPerDay": 0.477707
+          },
+          {
+            "regime": "up-vol2",
+            "days": 334,
+            "longRunSigma": 0.01551028,
+            "tradesPerDay": 0.404192
+          },
+          {
+            "regime": "up-vol3",
+            "days": 152,
+            "longRunSigma": 0.0217276,
+            "tradesPerDay": 0.526316
+          }
+        ],
+        "worstSigma": 0.0217276,
+        "worstTradesPerDay": 0.215686,
+        "powerMonths": null,
+        "requiredMonths": null,
+        "cohortMonths": 12,
+        "plannedTrades": 40,
+        "underpowered": true
+      }
+    }
+  ],
+  "pairs": [
+    {
+      "symbol": "BTCUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "SOLUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "DOTUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "ADAUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "AVAXUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "SHIBUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "FILUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "GALAUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "AXSUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "LINKUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "TRXUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "LTCUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "VETUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "SANDUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "THETAUSDT",
+      "category": "core"
+    },
+    {
+      "symbol": "DYDXUSDT",
+      "category": "core"
+    }
+  ],
+  "universe": "core-universe.v1",
+  "datasetSnapshot": "a6c4e89b98364a2e2b3479e81a9e7188ffb27e08a4d444723523e413f7509e82",
+  "interval": "4h",
+  "dataSource": "binance-spot-archive (data.binance.vision), monthly klines",
+  "checksumPolicy": "sha256-required",
+  "engineSha": "91851b634f7d451665a18a34cdb211b5c1c577a8",
+  "imageDigest": "sha256:0a16540e2ba2ee036f324da1a4b05734249b2bd257282841c9c29bf80ed9f739",
+  "costModel": "cost-model v1",
+  "allocation": "allocation v1 (inverse volatility, 30 days)",
+  "risk": {
+    "maxOpenPositions": 5,
+    "maxAssetWeight": 0.2,
+    "maxTotalExposure": 0.8,
+    "dailyLossLimit": 0.03,
+    "maxDrawdownHalt": 0.15,
+    "maxPositionLoss": 0.1
+  },
+  "initialCapital": 10000,
+  "power": {
+    "months": 12,
+    "plannedTrades": 84,
+    "underpowered": true
+  },
+  "dataQuality": "m1-data-policy v1.2 \u00A76 applied to the window",
+  "secondaryMetrics": [
+    "excess vs BTC buy-and-hold",
+    "excess vs equal-weight basket",
+    "total return",
+    "CAGR",
+    "max drawdown",
+    "Sharpe",
+    "trades",
+    "win rate",
+    "exposure",
+    "turnover"
+  ],
+  "exemptions": [
+    "operational-override (U, 2026-10-21): research gates G2, G3, G6 not passed (m4-llmless-results); never eligible for Validated"
+  ],
+  "notes": "Operational cohort (D31, ADR-0019; docs/cohort-1-preregistration.md). registered_at and A_c are assigned by the evaluator. The D29 cluster cap is operational (RiskConfig) and not part of this manifest."
+}
