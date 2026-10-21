@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using PortfolioIntelligence.Execution;
 using PortfolioIntelligence.Execution.Radar;
 
@@ -187,6 +188,10 @@ public static class OpsApi
             catch (OpsRequestException e)
             {
                 return Results.BadRequest(new { error = e.Message });
+            }
+            catch (PostgresException e) when (DashboardQueries.IsSchemaBehind(e))
+            {
+                return Results.Json(new { error = DashboardQueries.SchemaBehindMessage }, statusCode: StatusCodes.Status503ServiceUnavailable);
             }
         });
 

@@ -118,6 +118,44 @@ public class DashboardTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
     }
 
     [Fact]
+    public async Task A_run_before_its_first_candle_holds_its_capital_in_cash()
+    {
+        var db = await fixture.NewAsync();
+        await db.SeedKohort0Async();
+        var config = new PaperRunConfig("m", [new SleeveConfig(1, 0, "ema-trend", "x", 5_000m), new SleeveConfig(1, 1, "supertrend", "y", 5_000m)],
+            ["BTCUSDT"], [], "4h", null, "v1", RiskConfigDocument.From(RiskConfig.Policy));
+        // A run that was just opened: no step, so no balance snapshot yet.
+        await db.ExecuteAsync("INSERT INTO trading.paper_runs (trading_start, warmup_start, config, config_hash) VALUES ('2026-10-23', '2026-09-01', $1::jsonb, $2)",
+            null, config.Json(), config.Hash());
+        var (app, http) = await StartAsync(db);
+        await using var _ = app;
+
+        var overview = await Json(http, "/overview");
+        var run = Assert.Single(overview.GetProperty("runs").EnumerateArray());
+        Assert.True(run.GetProperty("awaitingFirstBar").GetBoolean());
+        Assert.Equal(10_000m, run.GetProperty("cash").GetDecimal());
+        Assert.Equal(10_000m, overview.GetProperty("total").GetProperty("cash").GetDecimal());
+        Assert.Equal(overview.GetProperty("total").GetProperty("equity").GetDecimal(), overview.GetProperty("total").GetProperty("cash").GetDecimal());
+        Assert.Equal(0, (await Json(http, "/system")).GetProperty("unavailable").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task Without_the_dashboard_grants_the_system_view_degrades_and_the_ai_routes_say_why()
+    {
+        var db = await fixture.NewAsync();
+        await db.ExecuteAsync("REVOKE SELECT ON ai.kill_switch_events, ai.cost_ledger, audit.events FROM ops_api", null);
+        var (app, http) = await StartAsync(db);
+        await using var _ = app;
+
+        var system = await Json(http, "/system");
+        Assert.Equal(["aiKillSwitch", "audit"], system.GetProperty("unavailable").EnumerateArray().Select(e => e.GetString()));
+        Assert.Contains("m5-migrate", system.GetProperty("unavailableReason").GetString());
+        var costs = await Get(http, "/ai/costs");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, costs.StatusCode);
+        Assert.Contains("migration 0008", await costs.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task Dashboard_routes_show_the_paper_state_and_the_chain_from_a_fill_to_the_dataset()
     {
         var db = await PaperAsync();

@@ -2,6 +2,26 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-21 — M5b Kapı C: dashboard düzeltmeleri ve yeni tasarım (kullanıcının tarayıcı kontrolü)
+- **`/system` HTTP 500:** en olası neden, migration 0008'in canlı `ops` veritabanına uygulanmamış olması; hiçbir script `m5-migrate.ps1`'i çağırmıyordu. 0008 olmadan:
+  - `ops_api` AI ve audit tablolarını okuyamaz;
+  - paper trader'ın her döngüde okuduğu `ops_actions.run_id` kolonu yoktur, bu yüzden Run 2 hiç adım atmamış olabilir.
+
+  Yapılanlar:
+  - `/system` artık eksik bölümleri `unavailable` listesinde bildiriyor ve trading sağlığını yine gösteriyor;
+  - diğer uç noktalar bu durumda 503 ve migration yönlendirmesi döndürüyor;
+  - yeni kullanıcı script'i `scripts/m5-update.ps1` sırayla migration'ları uygular, Trading.Host'u canlı veriyle yeniden derleyip başlatır, `-ChecksOnly` kontrolünü ve paper raporunu çalıştırır;
+  - deny kuralları ve CLAUDE.md güncellendi.
+- **Nakit toplamı:** ilk mumunu işlememiş bir run'ın nakdi 0 sayılıyordu (equity 20.000, nakit 10.000). Artık başlangıç sermayesi sayılıyor; run kartında "İlk 4h mum kapanışı bekleniyor" gösteriliyor (`awaitingFirstBar`).
+- **Radar:**
+  - koşullar okunabilir Türkçe adlarla gösteriliyor;
+  - sıfırı kesen göstergelerde yüzde yerine fark veriliyor (MACD'de −816 % gibi anlamsız değerler kalktı);
+  - "Sinyal aktif" ayrıştırıldı: "Yeni giriş sinyali", "Giriş koşulları sağlandı", "Kesişim bekleniyor", "Trend sürüyor";
+  - dolumun bir sonraki 4h açılışta gerçekleştiği açıklanıyor; hücre ayrıntısında son L2 kararı görünüyor;
+  - matrise son kapanış sütunu eklendi; gösterge tablosu gruplandı.
+- **Görsel tasarım (`ui-ux-pro-max`):** koyu varsayılan quant terminal teması ve açık tema düğmesi, `tabular-nums`, SVG ikonlu rozetler, mikro çubuklar, her sekmede bilgi şeridi, geri sayımlar, okunabilir strateji adları. CSP ve harici kaynak yasağı korundu.
+- Testler: radar adları, uzaklık kuralı ve giriş türü; ilk mumu bekleyen run; grant'ler olmadan `/system` ve 503.
+
 ## 2026-10-21 — M5b Kapı C: Kohort 1 aktivasyonu
 - **Kayıt (kullanıcı koşusu):**
   - Kohort 1 holdout'ta cohort 2 olarak kaydedildi: `registered_at` 2026-10-21 17:41:45 UTC, `A_1` 2026-10-23, pencere sonu 2027-10-23.

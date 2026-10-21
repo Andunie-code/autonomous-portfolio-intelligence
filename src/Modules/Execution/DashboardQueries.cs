@@ -40,6 +40,28 @@ public sealed class DashboardQueries(string connectionString)
         return rows;
     }
 
+    /// <summary>
+    /// The ops schema is older than this build: a missing grant, table or column (42501, 42P01, 42703), usually
+    /// because a migration (0008: the dashboard's grants and ops_actions.run_id) has not been applied yet.
+    /// </summary>
+    public static bool IsSchemaBehind(PostgresException e) => e.SqlState is PostgresErrorCodes.InsufficientPrivilege or PostgresErrorCodes.UndefinedTable or PostgresErrorCodes.UndefinedColumn;
+
+    public const string SchemaBehindMessage = "The ops database schema is older than Trading.Host (migration 0008 not applied?): run scripts/m5-migrate.ps1.";
+
+    /// <summary>A section the schema cannot serve yet is left out and named in <paramref name="unavailable"/>, so the rest still renders.</summary>
+    private static async Task<List<JsonObject>> OptionalRowsAsync(NpgsqlConnection connection, string section, JsonArray unavailable, string sql, CancellationToken ct)
+    {
+        try
+        {
+            return await RowsAsync(connection, sql, ct);
+        }
+        catch (PostgresException e) when (IsSchemaBehind(e))
+        {
+            unavailable.Add(section);
+            return [];
+        }
+    }
+
     private static string Json(JsonNode node) => node.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
 
     private static int Limit(int? limit) => Math.Clamp(limit ?? 50, 1, MaxRows);
@@ -105,7 +127,8 @@ public sealed class DashboardQueries(string connectionString)
         {
             var rows = balances.Where(b => b["run_id"]!.GetValue<long>() == run.Id).ToList();
             var capital = run.Config.Sleeves.Sum(s => s.Capital);
-            var cash = rows.Sum(r => D(r["cash"]));
+            // A run that has not processed its first candle holds its starting capital in cash.
+            var cash = rows.Count == 0 ? capital : rows.Sum(r => D(r["cash"]));
             var equity = rows.Count == 0 ? capital : rows.Sum(r => D(r["equity"]));
             var positions = rows.SelectMany(r => r["positions"]!.AsArray().Select(p => p!.AsObject())).ToList();
             decimal Notional(JsonObject p) => D(p["quantity"]) * D(p["lastClose"]);
@@ -137,6 +160,7 @@ public sealed class DashboardQueries(string connectionString)
                 ["manifestHash"] = run.Config.ManifestHash,
                 ["tradingStart"] = run.TradingStart,
                 ["barTime"] = rows.Count == 0 ? null : rows[0]["bar_time"]!.DeepClone(),
+                ["awaitingFirstBar"] = rows.Count == 0,
                 ["capital"] = capital,
                 ["cash"] = Math.Round(cash, 8),
                 ["equity"] = Math.Round(equity, 8),
@@ -370,15 +394,20 @@ public sealed class DashboardQueries(string connectionString)
     /// System health: trading and AI kill switches, recent cycles and late cycles (> 60 s), reconciliation, cohort
     /// status relayed by the evaluator (sealed or revealed only) and recent audit events (type, time, actor; no payload).
     /// HoldoutEnvironmentVerified lives in the holdout database, which ops_api cannot read (architecture §6.2).
+    /// The AI kill switch and the audit trail need migration 0008's grants; without them those sections are listed
+    /// in "unavailable" and the trading health still renders.
     /// </summary>
     public async Task<string> SystemAsync(CancellationToken ct)
     {
         await using var connection = await OpenAsync(ct);
         JsonNode? First(List<JsonObject> rows) => rows.FirstOrDefault()?.DeepClone();
+        var unavailable = new JsonArray();
+        var aiKillSwitch = First(await OptionalRowsAsync(connection, "aiKillSwitch", unavailable, "SELECT tripped, actor, trigger_kind, reason, at FROM ai.kill_switch_events ORDER BY id DESC LIMIT 1", ct));
+        var audit = await OptionalRowsAsync(connection, "audit", unavailable, "SELECT id, recorded_at, actor, event FROM audit.events ORDER BY id DESC LIMIT 30", ct);
         return Json(new JsonObject
         {
             ["tradingKillSwitch"] = First(await RowsAsync(connection, "SELECT engaged, actor, reason, recorded_at FROM trading.kill_switch_events ORDER BY id DESC LIMIT 1", ct)),
-            ["aiKillSwitch"] = First(await RowsAsync(connection, "SELECT tripped, actor, trigger_kind, reason, at FROM ai.kill_switch_events ORDER BY id DESC LIMIT 1", ct)),
+            ["aiKillSwitch"] = aiKillSwitch,
             ["cycles"] = new JsonArray([.. await RowsAsync(connection, """
                 SELECT scheduled_for, started_at, finished_at, extract(epoch FROM finished_at - started_at) * 1000 AS duration_ms,
                        extract(epoch FROM started_at - scheduled_for) AS lag_seconds, bars_processed, catch_up, stale, outcome, detail -> 'degraded' AS degraded
@@ -392,7 +421,9 @@ public sealed class DashboardQueries(string connectionString)
             ["cohortStatus"] = new JsonArray([.. await RowsAsync(connection,
                 "SELECT DISTINCT ON (cohort_id) cohort_id, status, recorded_at FROM research.cohort_status ORDER BY cohort_id, id DESC", ct)]),
             ["holdoutEnvironmentVerified"] = "not readable from ops (holdout database; see the H-ENV report)",
-            ["audit"] = new JsonArray([.. await RowsAsync(connection, "SELECT id, recorded_at, actor, event FROM audit.events ORDER BY id DESC LIMIT 30", ct)]),
+            ["audit"] = new JsonArray([.. audit]),
+            ["unavailable"] = unavailable,
+            ["unavailableReason"] = unavailable.Count == 0 ? null : SchemaBehindMessage,
         });
     }
 

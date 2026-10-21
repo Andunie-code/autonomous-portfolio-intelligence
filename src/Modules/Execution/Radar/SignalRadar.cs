@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.Json.Nodes;
 using PortfolioIntelligence.Kernel.Dsl;
 using PortfolioIntelligence.Kernel.Indicators;
 using PortfolioIntelligence.Kernel.MarketData;
@@ -39,12 +41,26 @@ public sealed record RadarSymbol(string Symbol, string Category, int Bars, DateT
 
 public sealed record RadarRegime(string Symbol, string State, decimal? Close, decimal? Sma300, decimal? Ema100, decimal? Sma300DistancePct, decimal? Ema100DistancePct);
 
-/// <summary>One atom with its distance: how far the left operand must move, in % of the right, for the atom to hold.</summary>
-public sealed record RadarAtom(string Side, string Op, string Left, string Right, decimal? LeftValue, decimal? RightValue, string Value, decimal? DistancePct);
+/// <summary>
+/// One atom. <c>LeftName</c>/<c>RightName</c> are display names (EMA50, BTC SMA300, Donchian50 üst); <c>Gap</c> is
+/// left − right; <c>DistancePct</c> is how far the left operand must move, in % of the right, for the atom to hold,
+/// given only when both operands are positive (prices, averages, volumes). For oscillators that cross zero (MACD,
+/// Supertrend direction) a percentage of a value near zero means nothing, so only the gap is given.
+/// <c>RightMult</c> is the right operand's multiplier (volume &gt; 2.5 × average: 2.5).
+/// </summary>
+public sealed record RadarAtom(
+    string Side, string Op, string Left, string Right, string LeftName, string RightName, decimal? LeftValue, decimal? RightValue,
+    decimal? RightMult, string Value, decimal? Gap, decimal? DistancePct);
 
+/// <summary>
+/// <c>EntryKind</c>: "cross" when the entry needs a crossing on this candle (a new signal, once per crossing);
+/// "level" when it is a set of conditions that can hold on many candles in a row. Either way a flat sleeve buys at
+/// the next 4h candle's open, unless a risk rule clips or rejects it.
+/// </summary>
 public sealed record RadarProximity(
     string Symbol,
     string Status,
+    string EntryKind,
     int Satisfied,
     int Total,
     string Entry,
@@ -87,9 +103,10 @@ public static class SignalRadar
         var views = strategies.OrderBy(s => s.CohortId).ThenBy(s => s.Name, StringComparer.Ordinal).Select(s =>
         {
             var strategy = DslStrategy.FromJson(s.DefinitionJson);
+            var names = OperandNames(s.DefinitionJson);
             var rows = s.Symbols.Concat(watch).Distinct().Order(StringComparer.Ordinal)
                 .Where(symbol => series.TryGetValue(symbol, out var bars) && bars.Count > 0)
-                .Select(symbol => Proximity(strategy, symbol, series[symbol], btcByTime, positions.FirstOrDefault(p => p.Strategy == s.Name && p.Symbol == symbol)))
+                .Select(symbol => Proximity(strategy, names, symbol, series[symbol], btcByTime, positions.FirstOrDefault(p => p.Strategy == s.Name && p.Symbol == symbol)))
                 .ToList();
             return new RadarStrategyView(s.Name, s.CohortId, strategy.DefinitionHash, rows);
         }).ToList();
@@ -161,7 +178,7 @@ public static class SignalRadar
             sma.Value is { } s ? Pct(close - s, s) : null, ema.Value is { } e ? Pct(close - e, e) : null);
     }
 
-    private static RadarProximity Proximity(DslStrategy strategy, string symbol, IReadOnlyList<Candle> bars, Dictionary<DateTimeOffset, Candle> btc, RadarPosition? position)
+    private static RadarProximity Proximity(DslStrategy strategy, IReadOnlyDictionary<string, string> names, string symbol, IReadOnlyList<Candle> bars, Dictionary<DateTimeOffset, Candle> btc, RadarPosition? position)
     {
         var tracker = strategy.CreateReferenceTracker();
         var instance = strategy.CreateInstance(tracker);
@@ -173,7 +190,9 @@ public static class SignalRadar
 
         var view = DslStrategy.Inspect(instance);
         var side = position is null ? "entry" : "exit";
-        var atoms = view.Atoms.Select(a => new RadarAtom(a.Side, a.Op, a.Left, a.Right, R(a.Left0), R(a.Right0), a.Value.ToString(), Distance(a))).ToList();
+        var atoms = view.Atoms.Select(a => new RadarAtom(a.Side, a.Op, a.Left, a.Right, DisplayName(a.Left, names), DisplayName(a.Right, names),
+            R(a.Left0), R(a.Right0), Multiplier(a.Right), a.Value.ToString(), a.Left0 is { } l && a.Right0 is { } r ? R(l - r) : null, Distance(a))).ToList();
+        var entryKind = atoms.Any(a => a.Side == "entry" && a.Op.StartsWith("cross_", StringComparison.Ordinal)) ? "cross" : "level";
         var relevant = atoms.Where(a => a.Side == side).ToList();
         var satisfied = relevant.Count(a => a.Value == nameof(Tri.True));
         var close = bars[^1].Close;
@@ -185,9 +204,70 @@ public static class SignalRadar
                 Tri.Unknown => "unknown", // warm-up or missing BTC bar: no entry (Kleene, m3-protocol §2)
                 _ => satisfied > 0 ? "partial" : "far",
             };
-        return new RadarProximity(symbol, status, satisfied, relevant.Count, view.Entry.ToString(), view.Exit.ToString(),
+        return new RadarProximity(symbol, status, entryKind, satisfied, relevant.Count, view.Entry.ToString(), view.Exit.ToString(),
             position?.EntryPrice, position?.Stop, position is { } p ? Pct(close - p.Stop, close) : null, atoms);
     }
+
+    /// <summary>Display names of a definition's indicator outputs, keyed by the inspector's label ("fast.value" → "EMA50").</summary>
+    private static Dictionary<string, string> OperandNames(string definitionJson)
+    {
+        var names = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var node in JsonNode.Parse(definitionJson)?["indicators"]?.AsArray() ?? [])
+        {
+            if (node?["id"]?.GetValue<string>() is not { } id || node["type"]?.GetValue<string>() is not { } type)
+            {
+                continue;
+            }
+
+            var p = node["params"]?.AsObject();
+            string P(string key) => p?[key]?.ToJsonString() ?? "";
+            var btc = node["source"]?.GetValue<string>() == "btc" ? "BTC " : "";
+            var title = btc + type switch
+            {
+                "ema" or "sma" or "atr" or "rsi" or "roc" or "adx" => type.ToUpperInvariant() + P("period"),
+                "donchian" => "Donchian" + P("period"),
+                "volume_sma" => "Hacim ort." + P("period"),
+                "macd" => "MACD",
+                "supertrend" => "Supertrend",
+                "bollinger" => "Bollinger",
+                _ => id,
+            };
+            foreach (var (output, suffix) in new[] { ("value", ""), ("line", ""), ("signal", " sinyal"), ("histogram", " histogram"), ("hist", " histogram"),
+                         ("upper", " üst"), ("lower", " alt"), ("middle", " orta"), ("dir", " yönü"), ("percent_b", " %B"), ("adx", ""), ("plus_di", " +DI"), ("minus_di", " −DI") })
+            {
+                names[$"{id}.{output}"] = title + suffix;
+            }
+        }
+
+        return names;
+    }
+
+    /// <summary>"fast.value" → "EMA50", "btc.close" → "BTC fiyatı", "close[1]" → "Fiyat (önceki mum)"; the multiplier is kept out (see RightMult).</summary>
+    private static string DisplayName(string label, IReadOnlyDictionary<string, string> names)
+    {
+        var core = label.Split('×')[0];
+        var lagged = core.EndsWith(']');
+        if (lagged)
+        {
+            core = core[..core.IndexOf('[')];
+        }
+
+        var name = core switch
+        {
+            "close" => "Fiyat",
+            "open" => "Açılış",
+            "high" => "Yüksek",
+            "low" => "Düşük",
+            "volume" => "Hacim",
+            "btc.close" => "BTC fiyatı",
+            _ when core.StartsWith("btc.", StringComparison.Ordinal) => "BTC " + core[4..],
+            _ => names.GetValueOrDefault(core, core),
+        };
+        return lagged ? name + " (önceki mum)" : name;
+    }
+
+    private static decimal? Multiplier(string label) =>
+        label.Split('×') is [_, var m] && decimal.TryParse(m, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) ? value : null;
 
     /// <summary>
     /// For gt/gte/cross_above: how far the left operand must rise, in % of the right (≤ 0: already above). For
@@ -195,7 +275,7 @@ public static class SignalRadar
     /// </summary>
     private static decimal? Distance(DslAtomState atom)
     {
-        if (atom.Left0 is not { } left || atom.Right0 is not { } right || right == 0)
+        if (atom.Left0 is not { } left || atom.Right0 is not { } right || left <= 0 || right <= 0)
         {
             return null;
         }

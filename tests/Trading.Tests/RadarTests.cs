@@ -120,6 +120,41 @@ public class RadarTests
     }
 
     [Fact]
+    public void Atoms_carry_display_names_and_no_percentage_of_a_value_near_zero()
+    {
+        var report = SignalRadar.Compute(Candles(), Strategies, [], new HashSet<string>());
+        RadarProximity Row(string prefix) => report.Strategies.Single(s => s.Name.StartsWith(prefix, StringComparison.Ordinal)).Symbols.Single(r => r.Symbol == "ETHUSDT");
+
+        foreach (var atom in report.Strategies.SelectMany(s => s.Symbols).SelectMany(r => r.Atoms))
+        {
+            if (atom.LeftValue is { } l && atom.RightValue is { } r)
+            {
+                Assert.Equal(Math.Round(l - r, 8), atom.Gap);
+                if (l <= 0 || r <= 0)
+                {
+                    Assert.Null(atom.DistancePct); // MACD and other oscillators: a % of a value near zero means nothing
+                }
+            }
+        }
+
+        var h04 = Row("h04");
+        Assert.Equal("cross", h04.EntryKind);
+        Assert.Contains(h04.Atoms, a => a.Left == "macd.line" && a.LeftName == "MACD" && a.Right == "macd.signal" && a.RightName == "MACD sinyal");
+        Assert.Null(Assert.Single(h04.Atoms, a => a.Right == "0").DistancePct);
+
+        var h08 = Row("h08");
+        Assert.Contains(h08.Atoms, a => a.Left == "close" && a.LeftName == "Fiyat" && a.RightName == "SMA150");
+        Assert.Contains(h08.Atoms, a => a.Left == "btc.close" && a.LeftName == "BTC fiyatı" && a.RightName == "BTC SMA300");
+
+        var h07 = Row("h07");
+        Assert.Equal("level", h07.EntryKind);
+        var volume = Assert.Single(h07.Atoms, a => a.Left == "volume");
+        Assert.Equal(("Hacim", "Hacim ort.20", 2.5m), (volume.LeftName, volume.RightName, volume.RightMult));
+        Assert.Contains(h07.Atoms, a => a.RightName == "Donchian50 üst");
+        Assert.Contains(h07.Atoms, a => a.Side == "exit" && a.RightName == "EMA20");
+    }
+
+    [Fact]
     public void The_report_is_deterministic_and_independent_of_input_order()
     {
         var candles = Candles();

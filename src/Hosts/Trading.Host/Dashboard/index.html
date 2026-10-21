@@ -1,40 +1,59 @@
 <!doctype html>
-<html lang="tr">
+<html lang="tr" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
-  <title>Portfolio Intelligence</title>
+  <meta name="color-scheme" content="dark light">
+  <title>Portfolio Intelligence · Terminal</title>
   <link rel="stylesheet" href="/dashboard/app.css">
   <script src="/dashboard/app.js" defer></script>
 </head>
 <body>
+  <a class="skip" href="#main">İçeriğe geç</a>
   <header class="top">
-    <div class="brand">Portfolio Intelligence <span class="muted">· paper · yerel</span></div>
-    <nav id="tabs" class="tabs" hidden>
-      <button data-tab="overview" class="active">Özet</button>
-      <button data-tab="sleeves">Kohortlar ve pozisyonlar</button>
-      <button data-tab="radar">Sinyal radarı</button>
-      <button data-tab="trace">İzlenebilirlik</button>
-      <button data-tab="system">Sistem ve AI</button>
-    </nav>
-    <div class="session">
-      <span id="updated" class="muted" role="status"></span>
-      <button id="refresh" hidden>Yenile</button>
-      <button id="logout" hidden>Oturumu kapat</button>
+    <div class="bar">
+      <div class="brand">
+        <span class="logo" aria-hidden="true"></span>
+        <span class="name">Portfolio Intelligence</span>
+        <span class="mode">PAPER · YEREL</span>
+      </div>
+      <div class="clocks" id="clocks" aria-label="Zamanlayıcılar">
+        <div class="clock" title="Trading.Host her saat HH:00:15 UTC'de yeni mumları alır ve işler.">
+          <span class="clock-label">Sonraki kontrol <span id="next-check-at" class="mono"></span></span>
+          <span id="next-check" class="clock-value mono"></span>
+        </div>
+        <div class="clock" title="4h mumlar 00, 04, 08, 12, 16 ve 20 UTC'de kapanır; kapanıştan sonraki ilk kontrolde işlenir.">
+          <span class="clock-label">Sonraki 4h mum kapanışı <span id="next-close-at" class="mono"></span></span>
+          <span id="next-close" class="clock-value mono"></span>
+        </div>
+      </div>
+      <div class="session">
+        <span id="updated" class="muted small" role="status"></span>
+        <button id="theme" class="icon-btn" type="button" aria-label="Açık temaya geç"></button>
+        <button id="refresh" class="icon-btn" type="button" aria-label="Yenile" hidden></button>
+        <button id="logout" class="btn ghost" type="button" hidden>Oturumu kapat</button>
+      </div>
     </div>
+    <nav id="tabs" class="tabs" aria-label="Bölümler" hidden>
+      <button type="button" data-tab="overview" class="active">Özet</button>
+      <button type="button" data-tab="sleeves">Kohortlar ve pozisyonlar</button>
+      <button type="button" data-tab="radar">Sinyal radarı</button>
+      <button type="button" data-tab="trace">İzlenebilirlik</button>
+      <button type="button" data-tab="system">Sistem ve AI</button>
+    </nav>
   </header>
 
-  <main>
+  <main id="main">
     <section id="login" class="card login">
       <h1>Ops API oturumu</h1>
       <p class="muted">Token yalnızca bu sekmenin oturum belleğinde tutulur ve yalnızca <code>Authorization</code> başlığıyla gönderilir.</p>
       <form id="login-form" autocomplete="off">
         <label for="token">Bearer token</label>
         <input id="token" type="password" spellcheck="false" required>
-        <button type="submit">Bağlan</button>
+        <button type="submit" class="btn primary">Bağlan</button>
       </form>
-      <p id="login-error" class="error" hidden></p>
+      <p id="login-error" class="error" role="alert" hidden></p>
     </section>
 
     <section id="view-overview" class="view" hidden></section>
@@ -44,6 +63,6 @@
     <section id="view-system" class="view" hidden></section>
   </main>
 
-  <footer class="muted">Salt okunur görünüm (ADR-0020). Operasyonel eylemler Ops API üzerinden yapılır. Açığa çıkmamış kohortların sonuçları araştırma girdisi değildir.</footer>
+  <footer class="muted small">Salt okunur görünüm (ADR-0020). Operasyonel eylemler Ops API üzerinden yapılır. Açığa çıkmamış kohortların sonuçları araştırma girdisi değildir.</footer>
 </body>
 </html>

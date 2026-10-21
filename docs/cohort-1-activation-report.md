@@ -50,8 +50,17 @@ Aktivasyon raporu: `m5-cohort1-activation-20261021T184605Z.txt`, SHA-256 `1d213c
 - **Yaşam döngüsü sayımı (bu commit):** Windows PowerShell 5.1, JSON dizisi döndüren `Invoke-RestMethod` sonucunu tek nesne verir. `@(...)` bu nesneyi tek öğe saydığı için kohort filtresi bütün satırları geçirdi; sayım tüm kohortların `PaperTrading` geçişlerini topladı (2 + 3 = 5). Sonuç önce bir değişkene atanıyor; böylece pipeline satırları tek tek dolaşıyor. Eski ve yeni kod sentetik bir `/lifecycle` yanıtıyla karşılaştırıldı: eski 5, yeni `members=3 paperTrading=3`. Script'in sonundaki uyarı ve çıkış kodu 1 bu yanlış sayımdan geliyordu.
 - **`-ChecksOnly -CohortId <id>`:** Yalnızca önkontrolü ve 7. adımı (salt-okunur Ops API çağrıları) çalıştırır. Hiçbir şeyi yeniden başlatmaz ya da değiştirmez.
 
-## 6. Kullanıcıya kalan kontroller
-1. `powershell -ExecutionPolicy Bypass -File scripts/m5-cohort1-activate.ps1 -CohortId 2 -ChecksOnly`. Beklenen satır: `lifecycle cohort=2 members=3 paperTrading=3/3`.
+## 6. İlk tarayıcı kontrolü (kullanıcı, 2026-10-21)
+- İki ayrı run görünüyor; beş strateji `PaperTrading` durumunda. Bu gözlem kriter 4'ün ayrı run kısmını karşılıyor; 3/3 sayımı `-ChecksOnly` satırıyla kesinleşecek.
+- Bulunan hatalar:
+  - `/system` HTTP 500 verdi. Migration 0008 canlı veritabanına uygulanmamıştı; aktivasyon script'i `m5-migrate.ps1`'i çağırmıyordu.
+  - Henüz adım atmamış Run 2'nin nakdi toplamda 0 sayıldı.
+  - Radar metinleri anlaşılmıyordu.
+- Düzeltmeler CHANGELOG'da. Tümü `scripts/m5-update.ps1` ile uygulanır.
+- 0008 olmadan paper trader'ın döngüleri de hata veriyor olabilir: `ops_actions.run_id` kolonu yok. Run 2'nin "Son mum: —" görünmesi bununla tutarlı. Güncellemeden sonraki paper raporunda `cycle_error` sayısı ve ilk döngünün sonucu kontrol edilir.
+
+## 7. Kullanıcıya kalan kontroller
+1. `powershell -ExecutionPolicy Bypass -File scripts/m5-update.ps1`: migration'lar, Trading.Host'un yeniden derlenmesi, `-ChecksOnly` ve paper raporu. Beklenen satır: `lifecycle cohort=2 members=3 paperTrading=3/3`.
 2. Tarayıcıda `http://127.0.0.1:55490/dashboard`:
    - `/sleeves`'te iki ayrı run (Kohort 0: 2 sleeve; Kohort 1: 3 sleeve);
    - `/system`'de `risk_config_version_added` audit olayı ve AI kill switch;
