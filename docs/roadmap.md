@@ -1,6 +1,6 @@
 # Yol Haritası
 
-Son güncelleme: 2026-10-20 (rev. 5.3; M5 tamamlandı) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-21 (rev. 5.4; M5b Kapı A) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: **M0 yerelde tamamlandı** (2026-10-13; doğrulama `716a1bd` commit'inde, temiz klonda). Uzak depo: private GitHub deposu `Andunie-code/autonomous-portfolio-intelligence`. M1 ve sonrası başlamadı; her milestone ayrı kullanıcı onayı gerektirir. Bir milestone, kabul kriterlerindeki testler **gerçekten uygulanıp geçtiğinde** tamamlanmış sayılır.
 
@@ -175,6 +175,15 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Parity replay (L1 sinyal ve L2 karar paritesi, ADR-0015) geçiyor; fark raporu (L3) normalize metriklerle üretiliyor; risk tablosunun her satırı test edildi; paper'da stop kuralı backtest ile birebir; bayat veride yalnızca çıkışlar çalışıyor; restart tutarlı (kaçırılan mumlar sırayla işleniyor).
   - 7 gün paper çalışması; makinenin kapalı kaldığı süreler raporlanıyor ve sonrasında reconciliation ile tutarlı devam ediliyor (yerel çalışmada kesintisizlik garanti edilmez, ADR-0013); yedekten geri yükleme denendi.
   - P1 analiz raporu kullanıcıya sunuldu.
+
+### M5b — Kohort 1 ve M9a dashboard (M) — Kapı A onaylandı (2026-10-21)
+- **Kararlar (U):** D31 (Kohort 1, yalnızca operasyonel; ADR-0019, [`cohort-1-preregistration.md`](cohort-1-preregistration.md)) ve D32 (M9a; ADR-0020).
+- **Kapılar (U):** **A** = ADR-0019/0020 ve Kohort 1 ön kaydı; **B** = çevrimdışı kod ve testler (kohort başına paper run, manifest üretici, kayıt istemcisi, Kernel `Inspect()`, radar, dashboard, migration 0008, etkileşimli script'ler), `verify.ps1` yeşil; **C** = kullanıcının koşuları (release bilgisi, manifestonun üretilip onayla commit'lenmesi, `m5-cohort1-activate.ps1`, tarayıcı kontrolü) ve aktivasyon raporu.
+- **Kabul kriterleri:**
+  - Kohort 1: `cohort-1-preregistration.md` §5.
+  - M5 regresyonu: M2'nin dört hash'i, M3 golden'ları ve Kohort 0 parity L1/L2 hash'leri değişmedi; Kohort 0'ın paper run'ı kesintisiz sürüyor.
+  - M9a: zincir (dolum → L2 → L1 → strateji → manifesto hash'i → deney → snapshot) gezilebiliyor; DecisionTrace, degraded işaretleri, trading/LLM kill switch'leri ve görev sınıfı bazında maliyet görünüyor; radar 11 göstergeyi, BTC rejimini ve aktif stratejilerin koşul yakınlığını gösteriyor.
+  - Güvenlik: H24 route testi genişletildi (yeni POST yok, yasaklı kelime yok, tüm veri uç noktalarında 401, güvenlik başlıkları, yanlış `Host` → 421); `research_app` izinleri değişmedi; yanıtlarda secret yok.
 
 ### M6 — Binance Testnet execution (M)
 - **Ön koşul:** B6 (exchange anahtarının IP kısıtı); Binance Spot'ta koruyucu stop emir tipi ve Testnet desteği doğrulanıp `sources.md`'ye işlendi.

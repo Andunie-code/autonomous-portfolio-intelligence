@@ -1,6 +1,6 @@
 # Gereksinimler
 
-Son güncelleme: 2026-10-20 (rev. 5.4; M5: P1 → D29, asgari paper süresi → D30) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-21 (rev. 5.5; D31 Kohort 1, D32 M9a) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: M0–M5 tamamlandı (roadmap). M6 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
 
@@ -50,6 +50,8 @@ Kârlılık varsayılmaz. Sistemin amacı, bir stratejinin avantajı olup olmad�
 | D27 | DSL indikatör havuzu (2026-10-16) | M2 indikatörlerine ek olarak SMA, MACD, ADX, Bollinger, Donchian, ROC, Volume SMA ve BTCUSDT piyasa rejim filtresi (aynı kapanış anındaki BTC mumu, look-ahead yok). ADR-0016 |
 | D29 | Korelasyon kümesi tavanı (P1, 2026-10-20) | Operasyonda (paper/Testnet) **bağlayıcı** küme maruziyet tavanı: korelasyon kümesi başına portföy değerinin **%60'ı**. Kümeler, son 30 günlük günlük log getirilerinin Pearson korelasyonu, ortalama bağlantılı hiyerarşik kümeleme ve **ρ* = 0,70** kesimiyle oluşturulur. Uyarı eşiği **%54** (bilgilendirme). Tavanı aşacak alım kırpılır ya da reddedilir; zorunlu satış yapılmaz; çıkışlar serbesttir. `RiskConfig`'tedir; yalnızca kullanıcı Ops API üzerinden değiştirir. Araştırma backtest'lerine ve dondurulmuş kohort manifestolarına uygulanmaz. Dayanak ve sınırlamalar: `m5-p1-analysis.md` (kanıt ince) |
 | D30 | Asgari paper süresi (2026-10-20) | `PaperTrading → TestnetActive` için en az **14 gün** ve en az **60 işlenmiş 4h mum** paper; son 7 günde **sıfır kritik hata** (reconciliation tutarsızlığı, invariant ihlali, duplicate dolum, hash uyuşmazlığı, HTTP 418). Geçiş yine kullanıcı onayı gerektirir (D3, V10) |
+| D31 | Kohort 1: operasyonel kohort (2026-10-21) | H08 `n150-b300`, H04 `f12-s26-g12` ve H07 `n50-v2p5`, araştırma kapılarını geçmemiş olmalarına rağmen kullanıcı kararıyla **yalnızca operasyonel** kohort olarak dondurulur: protokol tam, `power.underpowered: true`, gerekçe `exemptions`'ta; `Validated` olamaz. Kayıt normal yoldan (`registered_at` ve `A_1` sunucuda). Kohort kendi paper run'ında çalışır. Kapıyı geçmemiş strateji yalnızca bu tür açık bir kararla dondurulabilir. ADR-0019, `cohort-1-preregistration.md` |
+| D32 | Dashboard'un öne çekilmesi (M9a, 2026-10-21) | M9'un bugünkü veriyle karşılanabilen kısmı (izlenebilirlik zinciri, DecisionTrace/degraded/LLM acil durdurma, görev sınıfı bazında maliyet) ve sinyal radarı, Trading.Host'ta loopback'te, salt-okunur olarak sunulur. M9'un tam kabulü yerinde kalır. ADR-0020 |
 | D28 | E1 verisi M3'te (2026-10-16) | Kategori mantığı çevrimdışı ve sentetik testlerle; ayrıca E1 adaylarından hacme göre ilk 5 parite (1h, 4h) kullanıcının etkileşimli Kapı-2 koşusuyla import edilir |
 | D25 | Pozisyon başına hard stop (2026-10-14) | `RiskConfig`'te bağlayıcı bir "pozisyon başına maksimum kayıp" koruyucu stop'u bulunur: giriş fiyatından **%10** (`MaxPositionLossPct = 0.10`, 2026-10-14). Gerekçe: varlık başına %20 tavanla tek bir tam pozisyon portföyde en fazla %2 kaybettirir ve %3 günlük limiti tek başına tüketemez. Strateji stop'u ile birlikte, girişe en yakın olan geçerlidir (ADR-0014) |
 | D11 | Kill switch (rev. 2026-10-14) | Pozisyonları tut, yeni emir açma; açık giriş emirleri iptal edilir. **Koruyucu stop emirleri iptal edilmez** (çıkışlar her zaman çalışır, ADR-0014). "Tümünü kapat" ayrı bir manuel eylem |
@@ -99,7 +101,7 @@ Kârlılık varsayılmaz. Sistemin amacı, bir stratejinin avantajı olup olmad�
 - **Baseline'lar:** EMA 50/100 trend ve Supertrend. **Benchmark'lar:** BTC buy-and-hold, eşit ağırlıklı sepet, nakit. (U)
 - **Paper sermayesi:** 10.000 USDT nominal. (U)
 - **Altyapı:** modüler monolit, PostgreSQL, background worker'lar. Redis, RabbitMQ, Kafka ve TimescaleDB yok. (U)
-- **Dashboard:** M9'da. Öncesinde API ve minimal bir durum sayfası. (U)
+- **Dashboard:** M9'da. Öncesinde API ve minimal bir durum sayfası. (U) — rev. 2026-10-21 (D32): salt-okunur M9a dashboard'u ve sinyal radarı öne çekildi (ADR-0020).
 
 ## 5. Kapsam dışı
 Gerçek para ile işlem, futures/margin, birden fazla borsa, haber ve sentiment, mobil arayüz, model fine-tuning, LLM'in ürettiği kodun çalıştırılması, sistemin kendi güvenlik kurallarını değiştirmesi, Anthropic runtime kullanımı (D19). Web araştırması M7'den önce kapsam dışı.

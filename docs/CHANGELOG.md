@@ -2,6 +2,16 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-21 — M5b Kapı A (kullanıcı onayı): Kohort 1 (operasyonel) ve M9a dashboard
+- **Kullanıcı kararları (U):**
+  - **D31:** Kohort 1 = H08 `n150-b300`, H04 `f12-s26-g12`, H07 `n50-v2p5`; yalnızca operasyonel (`underpowered: true`, gerekçe `exemptions`'ta, `Validated` olamaz); kendi paper run'ı; D29 yalnızca `RiskConfig`'te.
+  - H12 yerine H04 seçildi (BTC rejim filtresi tek üyede; MACD ailesi tekrarlanmıyor). Not: manifestonun değerlendirdiği `policy` koşusunda M_R: H08 −4,2 %, H04 0,2 %, H07 −1,2 %.
+  - **D32:** M9'un bugünkü veriyle karşılanabilen kısmı ve sinyal radarı öne çekildi (M9a).
+- **Belgeler:**
+  - yeni: ADR-0019 (operasyonel kohort, kohort başına paper run, kayıt istemcisi), ADR-0020 (yerel dashboard ve radar), `docs/cohort-1-preregistration.md`;
+  - güncellenen: `requirements.md` (D31, D32, §4 dashboard notu), `roadmap.md` (M5b).
+- Kod değişikliği yok.
+
 ## 2026-10-20 — M5 kapanışı (kullanıcı kabulü)
 - **Kullanıcı kararları (U):**
   - **D29 (P1):** operasyonda bağlayıcı küme maruziyet tavanı %60 (ρ* = 0,70, ortalama bağlantılı kümeleme, 30 günlük getiriler), uyarı %54.
