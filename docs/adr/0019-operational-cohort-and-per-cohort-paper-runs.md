@@ -2,7 +2,14 @@
 
 - Durum: **Kabul edildi (Kapı A, kullanıcı onayı 2026-10-21)** · Tarih: 2026-10-21
 - Karar türü: **U** (operasyonel kohort, üye seçimi, doğrulama ekseni, D29'un yeri; D31) ve **T** (run modeli, kayıt istemcisi, ısınma).
-- Uygulama durumu: **Uygulanmadı.** Kapı B'de çevrimdışı kod ve testler; gerçek ortam Kapı C'de, kullanıcının koşularıyla.
+- Uygulama durumu: **Kapı B'de çevrimdışı uygulandı (2026-10-21); gerçek ortam Kapı C'de, kullanıcının koşularıyla.**
+- Uygulama notları (Kapı B):
+  - Run'ın kohortu `paper_runs.config` içindeki sleeve'lerin `cohortId`'sinden okunur. `PaperRunConfig`'e isteğe bağlı `actionsAfter` eklendi: yeni bir run yalnızca kendisinden sonra istenen operasyonel eylemleri uygular. Boşken yazılmadığı için mevcut run'ların JSON'u ve hash'i değişmez.
+  - Sleeve indeksleri run'a özgü olduğu için `trading.ops_actions`'a `run_id` eklendi (migration 0008). Birden fazla run varken `POST /positions/close` `runId` ister; tek run varken ona varsayılır. "Tümünü kapat" tüm run'lara uygulanır.
+  - Canlı veri, daha uzun ısınma isteyen yeni bir kohort için saklanan ilk mumdan önceki eksik mumları da tamamlar (kesimden önceye asla gitmez).
+  - Döngü metriğindeki `bars_processed`, herhangi bir run'ın işlediği farklı bar sayısıdır.
+  - Manifest üretici `cohort-manifest` (BacktestCli, research_app): üyeler `docs/cohort-1.spec.json`'daki ön kayıtlı M4 noktalarıdır. Her üyenin zaten deneme olması ve no-halt koşusunun M4'te kaydedilen sonuç hash'ini yeniden üretmesi şarttır. Global deneme sayacı değişirse hiçbir şey yazılmaz. Holm'un en kötü durumu için güç planı α / üye sayısı ile yapılır (Kohort 0: α/2).
+  - Kayıt istemcisi: Research.Host `job submit-cohort` (`Registration:Manifest`, `Registration:Url`, `Registration:TokenFile`). Compose'da Research.Host'a yalnızca `submit_token` eklendi; bir mimari test holdout rollerinin, `status_relay`'in ve read-status token'ının orada olmadığını sabitler.
 - İlgili: ADR-0006, ADR-0012, ADR-0013, ADR-0015, ADR-0018; `architecture.md` §6.3–§6.5; `cohort-1-preregistration.md`; `m4-llmless-results.md`; D21, D23, D29, D30, D31
 
 ## Bağlam

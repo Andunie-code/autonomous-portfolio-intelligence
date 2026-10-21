@@ -90,6 +90,8 @@ services:
       Trading__SecretsDirectory: /run/secrets
       Trading__LiveData: ${PI_TRADING_LIVE_DATA:-disabled}
       OpsApi__TokenFile: /run/secrets/ops_api_token
+      # Signal radar watch list (ADR-0020 §5): the E1 subset of docs/m3-e1-subset.md; fetched and shown only, never traded.
+      Radar__WatchSymbols: WIFUSDT,ORDIUSDT,GMTUSDT,BONKUSDT,BOMEUSDT
     secrets: [trading_app, ops_api, ops_api_token]
     ports:
       - "127.0.0.1:55490:8080"   # Ops API, loopback only

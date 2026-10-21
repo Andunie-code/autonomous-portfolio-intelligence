@@ -54,6 +54,8 @@ public class RepositoryRuleTests
     [InlineData("PowerShell(*-File*m5-paper-report*)")]
     [InlineData("PowerShell(*-File*m5-backup*)")]
     [InlineData("PowerShell(*-File*m5-restore-test*)")]
+    [InlineData("PowerShell(*-File*m5-cohort1*)")]
+    [InlineData("Bash(*-File*m5-cohort1*)")]
     [InlineData("Bash(docker compose exec*)")]
     [InlineData("PowerShell(docker compose exec*)")]
     [InlineData("PowerShell(docker compose*holdout-evaluator*)")]

@@ -2,7 +2,12 @@
 
 - Durum: **Kabul edildi (Kapı A, kullanıcı onayı 2026-10-21)** · Tarih: 2026-10-21
 - Karar türü: **U** (M9'un bir kısmının öne çekilmesi; D32) ve **T** (sunum, güvenlik modeli, uç noktalar, radar semantiği).
-- Uygulama durumu: **Uygulanmadı.**
+- Uygulama durumu: **Kapı B'de çevrimdışı uygulandı (2026-10-21); gerçek tarayıcı kontrolü kullanıcının Kapı C koşusudur.**
+- Uygulama notları (Kapı B):
+  - **`HoldoutEnvironmentVerified` ops'tan okunamaz:** bayrak holdout veritabanındadır ve `ops_api`'ye holdout erişimi verilmez. `/system` bunu açıkça belirtir ve evaluator'ın `status_relay` ile yazdığı kohort durumlarını (`sealed`/`revealed`) gösterir. Bayrak, H-ENV raporundan ve `scripts/m5-cohort1-release.ps1` çıktısından izlenir.
+  - Radar penceresi saate göre değil, saklanan son kapanmış muma göre alınır; veri kesintisi boş tablo yerine eski bir `asOf` olarak görünür.
+  - `RowsAsync` ve sorgu katmanı salt-okunurdur; `ops_api`'nin yeni grant'leri yalnızca `SELECT`'tir (bir rol testi bunu ve `research_app`'in değişmediğini sabitler).
+  - Ön yüz okunabilirlik gözden geçirmesi (kullanıcı isteği): klavye odağı, açık temada uyarı rengi kontrastı (≥ 4.5:1), işaretli PnL değerleri, kısa UTC zaman biçimi, tablo zebra deseni.
 - İlgili: ADR-0013, ADR-0015, ADR-0018; `architecture.md` §10, §11; `m5-protocol.md` §3 (H24); `roadmap.md` M9; D23, D25, D29, D32
 
 ## Bağlam

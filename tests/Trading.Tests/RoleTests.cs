@@ -46,6 +46,26 @@ public class RoleTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
     }
 
     [Fact]
+    public async Task The_dashboard_grants_of_ops_api_are_read_only_and_research_gains_nothing()
+    {
+        // Migration 0008 (ADR-0020 §4): ops_api reads the AI ledger, traces and kill switch, the audit trail, the
+        // strategy registry and the frozen-strategy provenance view; it writes none of them.
+        var db = await fixture.NewAsync();
+        foreach (var table in new[] { "ai.cost_ledger", "ai.decision_traces", "ai.kill_switch_events", "audit.events", "research.strategy_versions", "research.frozen_provenance" })
+        {
+            await db.ExecuteAsync($"SELECT * FROM {table}", "ops_api");
+        }
+
+        await Denied(db, "ops_api", "INSERT INTO ai.kill_switch_events (at, tripped, actor, trigger_kind, reason) VALUES (now(), true, 'x', 'Manual', 'x')");
+        await Denied(db, "ops_api", "INSERT INTO research.strategy_versions (name, definition_hash, definition) VALUES ('x', repeat('a', 64), '{}')");
+        await Denied(db, "ops_api", "SELECT * FROM research.experiments");
+        await Denied(db, "ops_api", "SELECT * FROM ai.qualification_protocols");
+        await Denied(db, "research_app", "SELECT * FROM research.frozen_provenance");
+        await Denied(db, "research_app", "SELECT * FROM trading.ops_actions");
+        await Denied(db, "trading_app", "SELECT * FROM audit.events");
+    }
+
+    [Fact]
     public async Task Status_relay_only_inserts_cohort_status_and_research_cannot_write_it()
     {
         var db = await fixture.NewAsync();

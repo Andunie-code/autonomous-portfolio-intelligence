@@ -2,6 +2,16 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-21 — M5b Kapı B: çevrimdışı kod ve testler
+- **Kohort başına paper run (ADR-0019):** `PaperTrader`, `PaperTrading`'e geçen ve run'ı olmayan her kohort için ayrı run açar; mevcut run'lar değişmez. Isınma `max(45 gün, en uzun gösterge + 1 bar + 1 gün)` (H08: 52 gün). Pozisyon kapatma run'a özgü (`ops_actions.run_id`). Canlı veri, daha uzun ısınma için önceki mumları da tamamlar.
+- **Kohort 1 hazırlığı:** `cohort-manifest` üretici ve `docs/cohort-1.spec.json`. Yeni deneme açılmaz; no-halt koşusu M4 sonuç hash'ini yeniden üretmelidir. Research.Host `job submit-cohort` (yalnızca submit token). Evaluator kodu değişmedi.
+- **Kernel:** `DslStrategy.Inspect` (salt okunur). M2 hash'leri, motor regresyonu ve Kohort 0 parity testleri değişmeden geçti.
+- **M9a (ADR-0020):** sinyal radarı (11 gösterge, BTC rejimi, interpreter'a dayalı yakınlık), `/dashboard` ve salt-okunur veri uç noktaları, güvenlik başlıkları, loopback `Host` kuralı (421), token karşılaştırmasında sabit uzunluklu özet. Migration 0008: `ops_api`'ye yalnızca `SELECT` grant'leri ve `research.frozen_provenance` view'ı; yeni tablo yok.
+- **Ön yüz:** kullanıcı isteğiyle okunabilirlik gözden geçirmesi (odak göstergesi, kontrast, işaretli PnL, zaman biçimi).
+- **Script'ler (kullanıcı):** `m5-cohort1-release.ps1`, `m5-cohort1-activate.ps1`; Claude Code için deny kuralları ve CLAUDE.md güncellendi.
+- **Sınırlama:** `HoldoutEnvironmentVerified` ops'tan okunamadığı için dashboard'da gösterilmez (ADR-0020 notu).
+- `verify.ps1` yeşil: **518 test** (Architecture 90, MarketData 97, HoldoutEvaluator 46, Trading 31, Infrastructure 24, Backtest 119, Ai 111); build 0 uyarı / 0 hata; secret scan geçti.
+
 ## 2026-10-21 — M5b Kapı A (kullanıcı onayı): Kohort 1 (operasyonel) ve M9a dashboard
 - **Kullanıcı kararları (U):**
   - **D31:** Kohort 1 = H08 `n150-b300`, H04 `f12-s26-g12`, H07 `n50-v2p5`; yalnızca operasyonel (`underpowered: true`, gerekçe `exemptions`'ta, `Validated` olamaz); kendi paper run'ı; D29 yalnızca `RiskConfig`'te.

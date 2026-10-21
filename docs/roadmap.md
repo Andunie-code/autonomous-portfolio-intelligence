@@ -176,7 +176,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - 7 gün paper çalışması; makinenin kapalı kaldığı süreler raporlanıyor ve sonrasında reconciliation ile tutarlı devam ediliyor (yerel çalışmada kesintisizlik garanti edilmez, ADR-0013); yedekten geri yükleme denendi.
   - P1 analiz raporu kullanıcıya sunuldu.
 
-### M5b — Kohort 1 ve M9a dashboard (M) — Kapı A onaylandı (2026-10-21)
+### M5b — Kohort 1 ve M9a dashboard (M) — Kapı A onaylandı; Kapı B tamam (2026-10-21, 518 test)
 - **Kararlar (U):** D31 (Kohort 1, yalnızca operasyonel; ADR-0019, [`cohort-1-preregistration.md`](cohort-1-preregistration.md)) ve D32 (M9a; ADR-0020).
 - **Kapılar (U):** **A** = ADR-0019/0020 ve Kohort 1 ön kaydı; **B** = çevrimdışı kod ve testler (kohort başına paper run, manifest üretici, kayıt istemcisi, Kernel `Inspect()`, radar, dashboard, migration 0008, etkileşimli script'ler), `verify.ps1` yeşil; **C** = kullanıcının koşuları (release bilgisi, manifestonun üretilip onayla commit'lenmesi, `m5-cohort1-activate.ps1`, tarayıcı kontrolü) ve aktivasyon raporu.
 - **Kabul kriterleri:**

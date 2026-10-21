@@ -57,6 +57,8 @@
       "PowerShell(*-File*m5-seed*)",
       "Bash(*-File*m5-migrate*)",
       "PowerShell(*-File*m5-migrate*)",
+      "Bash(*-File*m5-cohort1*)",
+      "PowerShell(*-File*m5-cohort1*)",
       "Bash(docker compose run*holdout*)",
       "PowerShell(docker compose run*holdout*)",
       "Bash(docker compose run*henv*)",
