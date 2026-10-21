@@ -3,6 +3,7 @@
   Research-side M5 commands as research_app on the ops database (docs/m5-protocol.md §4.2, §5, §9; CLAUDE.md).
     powershell -ExecutionPolicy Bypass -File scripts/m5-research.ps1 <command> [arguments]
   Commands: parity-m3 | freeze-import <manifest> <cohortId> | parity-m5 <manifest> <cohortId> [--record] | p1-analysis <manifest>
+            | cohort-manifest <spec> --image-digest <d> --engine-sha <s> [--out <path>]   (M5b, ADR-0019)
 .DESCRIPTION
   research_app reads research data (< C), its registries and the frozen-strategy and lifecycle tables; it cannot
   read live candles, trading.* or unrevealed cohorts. Nothing here touches the network or the holdout database.
@@ -24,7 +25,7 @@ if ($settings['PI_OPS_DB'] -eq 'ops' -and (Test-Path $researchSecret)) {
 }
 
 try {
-    if ($Command -in @('freeze-import', 'parity-m5', 'p1-analysis') -and $Arguments.Count -ge 1) { Assert-CleanFile $Arguments[0] }
+    if ($Command -in @('freeze-import', 'parity-m5', 'p1-analysis', 'cohort-manifest') -and $Arguments.Count -ge 1) { Assert-CleanFile $Arguments[0] }
     dotnet run --project src/Tools/BacktestCli -c Release -- $Command @Arguments
     exit $LASTEXITCODE
 } finally {

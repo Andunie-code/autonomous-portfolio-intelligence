@@ -19,11 +19,14 @@ public static class ResearchHost
     /// Job-based runs (ADR-0013 §1, m5-protocol §7.1): the container starts for one job and exits.
     ///   calibrate-quick    synthetic gate calibration (heavy CPU load, no database, no network; the cycle-time test)
     ///   henv-credentials   H25: no status_relay credential is present in this container (names only, no values)
+    ///   submit-cohort      registers the manifest Registration:Manifest with the evaluator (ADR-0019 §5)
     /// </summary>
     public static int RunJob(string job, IConfiguration configuration, TextWriter output)
     {
         switch (job)
         {
+            case "submit-cohort":
+                return CohortSubmission.RunAsync(configuration, output, null, CancellationToken.None).GetAwaiter().GetResult();
             case "calibrate-quick":
             {
                 var started = DateTimeOffset.UtcNow;
@@ -38,7 +41,7 @@ public static class ResearchHost
                 return found.Count == 0 ? 0 : 1;
             }
             default:
-                output.WriteLine("usage: Research.Host job <calibrate-quick|henv-credentials>");
+                output.WriteLine("usage: Research.Host job <calibrate-quick|henv-credentials|submit-cohort>");
                 return 2;
         }
     }

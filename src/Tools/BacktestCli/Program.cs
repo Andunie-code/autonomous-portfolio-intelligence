@@ -14,6 +14,7 @@ using PortfolioIntelligence.Research.Evaluation;
 // compares the result hashes; calibrate runs the synthetic gate calibration (docs/m3-protocol.md §7, no database).
 // M4: research-m4 runs the pre-registered LLM-less research cycle (docs/m4-protocol.md) through the Researcher tools.
 // M5: freeze-import, parity-m5 (L1/L2 parity replay) and p1-analysis (docs/m5-protocol.md §4.5, §5, §9).
+// M5b: cohort-manifest builds a cohort manifest from a spec of pre-registered M4 points (ADR-0019).
 // Reads market.candles from the local database; no network. Output: metrics only.
 const string ProtocolVersion = "m2-protocol v1";
 const string ProtocolCommit = "296757f";
@@ -53,6 +54,20 @@ switch (command)
         return await ParityM5.ParityAsync(OpsConnection(), Path.GetFullPath(args[1]), long.Parse(args[2], CultureInfo.InvariantCulture), args.Contains("--record"),
             Environment.GetEnvironmentVariable("PI_ENGINE_SOURCE") ?? GitHead(root));
     }
+    case "cohort-manifest" when args.Length >= 2:
+    {
+        // cohort-manifest <spec.json> --image-digest <digest> --engine-sha <sha> [--out <path>] (ADR-0019).
+        var root = FindRepositoryRoot();
+        string? Option(string name) => Array.IndexOf(args, name) is var i and >= 0 && i + 1 < args.Length ? args[i + 1] : null;
+        if (Option("--image-digest") is not { } digest || Option("--engine-sha") is not { } sha)
+        {
+            Console.Error.WriteLine("cohort-manifest needs --image-digest and --engine-sha (the registered evaluator release).");
+            return 1;
+        }
+
+        return await CohortManifestCommand.RunAsync(OpsConnection(), root, Path.GetFullPath(args[1]), digest, sha,
+            Option("--out") ?? Path.Combine(root, "docs", "cohorts", "cohort-1.json"));
+    }
     case "p1-analysis" when args.Length >= 2:
     {
         var root = FindRepositoryRoot();
@@ -60,7 +75,8 @@ switch (command)
     }
     default:
         Console.Error.WriteLine("Usage: run-baselines | parity-m3 | calibrate [--quick] [--out <path>] | cohort0 | research-m4 | " +
-                                "freeze-import <manifest> <cohortId> | parity-m5 <manifest> <cohortId> [--record] | p1-analysis <manifest>");
+                                "freeze-import <manifest> <cohortId> | parity-m5 <manifest> <cohortId> [--record] | p1-analysis <manifest> | " +
+                                "cohort-manifest <spec> --image-digest <d> --engine-sha <s> [--out <path>]");
         return 1;
 }
 

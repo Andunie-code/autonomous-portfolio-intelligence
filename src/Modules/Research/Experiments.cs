@@ -74,6 +74,17 @@ public sealed class ExperimentStore(string connectionString)
         return await ReadAsync(command, cancellationToken);
     }
 
+    /// <summary>Experiments of one strategy definition (strategy hash) and variant, oldest first.</summary>
+    public async Task<IReadOnlyList<ExperimentSummary>> ByStrategyAsync(string strategyHash, string variant, CancellationToken cancellationToken)
+    {
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var command = new NpgsqlCommand($"SELECT {SummaryColumns} FROM research.experiments WHERE strategy_hash = $1 AND variant = $2 ORDER BY id", connection);
+        command.Parameters.AddWithValue(strategyHash);
+        command.Parameters.AddWithValue(variant);
+        return await ReadAsync(command, cancellationToken);
+    }
+
     public async Task<ExperimentSummary?> GetAsync(long id, CancellationToken cancellationToken)
     {
         await using var connection = new NpgsqlConnection(connectionString);

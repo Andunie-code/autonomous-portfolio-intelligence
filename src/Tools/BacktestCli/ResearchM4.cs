@@ -23,7 +23,7 @@ internal static class ResearchM4
 {
     private const string ProtocolVersion = "m4-protocol v1";
     private const string ProtocolCommit = "32cf7c5";
-    private const string ListHash = "89ab3965a8cbaf068788a95bc354f0340c29ae1b8d3834ef6c840bad1d4c2ec7";
+    internal const string ListHash = "89ab3965a8cbaf068788a95bc354f0340c29ae1b8d3834ef6c840bad1d4c2ec7";
     private const int GlobalTrialCap = 100;
     private const int DeflatedSharpeTrials = 98;
 

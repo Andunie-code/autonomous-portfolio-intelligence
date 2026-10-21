@@ -110,7 +110,8 @@ services:
       dockerfile: src/Hosts/Research.Host/Dockerfile
     environment:
       ConnectionStrings__Research: Host=postgres;Database=ops;Username=research_app
-    secrets: [research_app]
+    # submit_token: the evaluator's submit-only token (architecture §10), for `job submit-cohort` (ADR-0019 §5).
+    secrets: [research_app, submit_token]
     networks:
       ops:
         ipv4_address: 172.30.1.30

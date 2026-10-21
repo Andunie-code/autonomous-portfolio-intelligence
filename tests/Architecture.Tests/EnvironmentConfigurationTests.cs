@@ -100,6 +100,18 @@ public class EnvironmentConfigurationTests
         Assert.Contains("networks: [ops]", services["henv-probe-trading"]);
     }
 
+    [Fact]
+    public void Research_host_holds_only_its_login_and_the_submit_only_token()
+    {
+        // architecture §10, ADR-0019 §5: never a holdout role, status_relay or the read-status token.
+        var services = AllServices().ToDictionary(s => s.Service, s => s.Lines);
+        Assert.Contains("secrets: [research_app, submit_token]", services["research-host"]);
+        Assert.Equal(1, services["research-host"].Count(l => l.StartsWith("secrets:", StringComparison.Ordinal)));
+        Assert.DoesNotContain(services["research-host"], l => l.Contains("eval_", StringComparison.Ordinal) || l.Contains("status_relay", StringComparison.Ordinal)
+                                                              || l.Contains("read_status_token", StringComparison.Ordinal) || l.Contains("Holdout", StringComparison.Ordinal));
+        Assert.DoesNotContain(services["trading-host"], l => l.Contains("submit_token", StringComparison.Ordinal));
+    }
+
     private static List<string[]> HbaRules() => File.ReadAllLines(Path.Combine(Root, "deploy", "postgres", "pg_hba.conf"))
         .Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))
         .Select(l => l.Split(' ', StringSplitOptions.RemoveEmptyEntries)).ToList();

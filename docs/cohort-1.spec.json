@@ -1,0 +1,15 @@
+{
+  "cohort": "Kohort 1",
+  "kind": "operational",
+  "hypothesisList": "docs/m4-hypotheses.v1.json",
+  "members": [
+    { "hypothesis": "h08", "point": "n150-b300", "definitionHash": "e34a7b626331a6e34885109ab2901c8211ec8272b9d4bd0f55cec5d0dfe90a8a" },
+    { "hypothesis": "h04", "point": "f12-s26-g12", "definitionHash": "44382f29b407f29406ca27dd53e5025fd9b2748269e150d937657b92c4047aad" },
+    { "hypothesis": "h07", "point": "n50-v2p5", "definitionHash": "a262a80048f9b32eb9cd143acf738b358b8bb91ed71d8be26fb38ba2bf3cc0e5" }
+  ],
+  "forceUnderpowered": true,
+  "exemptions": [
+    "operational-override (U, 2026-10-21): research gates G2, G3, G6 not passed (m4-llmless-results); never eligible for Validated"
+  ],
+  "notes": "Operational cohort (D31, ADR-0019; docs/cohort-1-preregistration.md). registered_at and A_c are assigned by the evaluator. The D29 cluster cap is operational (RiskConfig) and not part of this manifest."
+}
