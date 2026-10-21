@@ -2,6 +2,22 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-21 — M5b Kapı C: güncelleme sonrası doğrulama
+- **`m5-update.ps1` (kullanıcı koşusu):**
+  - migration 0008 uygulandı;
+  - `-ChecksOnly` sonucu: `paperTrading=3/3`, reconciliation temiz, D29 0,70 / 0,60 / 0,54.
+- **Operasyonel rapor:**
+  - 34 döngü, gecikmeli döngü 0, sonuçlar `ok:29 degraded:3 error:2`;
+  - reconciliation 33/33 temiz; duplicate dolum 0;
+  - audit: `cycle_error:2`, `paper_run_created:2`, `risk_config_version_added:1`;
+  - bellek: Trading.Host 48,86 MiB / 384 MiB.
+  - İki hatalı döngü, 0008 uygulanmadan önceki döngüler (`ops_actions.run_id` yoktu).
+- **Kabul:** Kohort 1'in altı kabul kriteri karşılandı (`cohort-1-activation-report.md` §4). Açık olan tek nokta, migration sonrası ilk döngünün `ok` olduğunun teyidi.
+- **`m5-update.ps1` düzeltmesi:**
+  - Kontroller artık, yeniden başlatmadan sonra biten ilk döngüyü bekliyor. Önceki koşuda kontroller açılış döngüsünden önce çalıştı ve eski container'ın son `error` sonucunu gösterdi.
+  - Bu ilk döngü `error` ise script durur.
+  - Trading.Host zaten açılışta beklemeden bir döngü çalıştırıyor; host kodu değişmedi.
+
 ## 2026-10-21 — M5b Kapı C: dashboard düzeltmeleri ve yeni tasarım (kullanıcının tarayıcı kontrolü)
 - **`/system` HTTP 500:** en olası neden, migration 0008'in canlı `ops` veritabanına uygulanmamış olması; hiçbir script `m5-migrate.ps1`'i çağırmıyordu. 0008 olmadan:
   - `ops_api` AI ve audit tablolarını okuyamaz;
