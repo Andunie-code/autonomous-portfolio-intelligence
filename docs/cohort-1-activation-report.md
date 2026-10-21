@@ -1,6 +1,6 @@
 # Kohort 1 — aktivasyon raporu (M5b Kapı C)
 
-- Durum: **Aktive edildi ve doğrulandı (kullanıcı koşuları, 2026-10-21).** Altı kabul kriteri karşılandı. Migration sonrası ilk döngü `error` değil, `degraded` (§8). Açık kalanlar: neden kodunun `stale-data` olduğunun teyidi ve M5b'nin kullanıcı kabulü (§9).
+- Durum: **Tamamlandı ✅ (kullanıcı kabulü U, 2026-10-21).** Altı kabul kriteri karşılandı. Migration sonrası ilk döngünün `degraded` nedeni `stale-data` olarak teyit edildi (§8). Dashboard tarayıcıda kontrol edildi (§9).
 - Ön kayıt: [`cohort-1-preregistration.md`](cohort-1-preregistration.md) (D31, ADR-0019). Manifesto: `docs/cohorts/cohort-1.json`, commit `6b6f912`.
 - Bu rapor yalnızca kayıt ve operasyonel alanları içerir. Fiyat, PnL ve pozisyon yoktur. Açığa çıkmamış Kohort 1'in paper sonuçları araştırma ya da hipotez girdisi değildir (CLAUDE.md).
 
@@ -92,17 +92,18 @@ Raporlar:
   - Kohort 1'in run'ı ilk adımlarını şimdi işliyor ve ısınma başlangıcından (52 gün) itibaren geçmiş mumları sırayla tamamlıyor. Bu mumlar gecikmiş sayılıyor.
   - Isınma barları işlem başlangıcından önce olduğu için girişleri etkilemez.
   - Kohort 0'ın ilk açılışında da aynı durum yaşandı (`m5-acceptance-report.md` §2: `degraded:2`, ısınmadaki bayat veri).
-  - Bu çıkarımdır; neden kodu bu raporda yoktu.
+  - **Teyit (kullanıcının ikinci `-ChecksOnly` koşusu):** `lastCycleDegraded=stale-data`, `lastCycleAt=2026-10-21T19:14:07Z`, `bars=311`. Bu, yeniden başlatmadaki açılış döngüsüdür ve ısınma mumlarının sırayla tamamlandığını gösterir. `strategy-hash-mismatch` yok. Rapor `m5-cohort1-activation-20261021T192926Z.txt`, SHA-256 `1e7e7fbff32c3c626f3936ca574e610a89f159021c9b80dbbfc387d47de1be22`.
 - **Script güncellemesi:** `-ChecksOnly` artık `lastCycleDegraded=<neden kodları>` satırını, `m5-update.ps1` ise ilk döngünün neden kodlarını yazıyor. Bunlar yalnızca operasyonel alanlardır.
 
-## 9. Kullanıcıya kalan kontroller
-1. 20:00:15 UTC döngüsünden sonra `-ChecksOnly`'yi yeniden çalıştır. Beklenen:
-   - `lastCycleOutcome=ok`, ya da `degraded` ise `lastCycleDegraded=stale-data`;
-   - `strategy-hash-mismatch` görünmemeli (görünürse alarm).
-
-   Aynı neden kodları dashboard'da "Sistem ve AI → Saatlik döngüler → Degraded nedeni" sütununda da görünür.
-2. Tarayıcıda yeni dashboard. Dikkat edilecekler:
-   - Run 2'nin "İlk 4h mum kapanışı bekleniyor" durumundan çıkması;
-   - `/system`'in hatasız açılması;
-   - radar metinleri.
-3. M5b'nin kullanıcı kabulü.
+## 9. Dashboard kontrolü ve kapanış (kullanıcı, 2026-10-21)
+- **Özet:**
+  - toplam equity ve nakit 20.000,00; nakit düzeltmesi doğrulandı;
+  - Run 2 (Kohort 1 · #2) ilk mumunu işledi (son mum 21.10.2026 12:00 UTC) ve korelasyon kümeleri görünüyor;
+  - geri sayımlar çalışıyor.
+- **Kohortlar ve pozisyonlar:** beş strateji okunabilir adlarıyla ve `Paper trading` durumunda.
+- **Sinyal radarı:** koşul metinleri okunabilir. Örnekler: "Yeni giriş sinyali (Boğa trendine dönüş bu mumda ✓)", "mesafe %0,06", "kesişime %0,53".
+- **Sistem ve AI:**
+  - 500 hatası giderildi; kartlar ve audit tablosu geliyor.
+  - **Bulunan küçük hata:** uyarı şeridi yokken sayfaya başıboş bir `null` metni basılıyordu. DOM'un `replaceChildren` metodu `null` değeri metin olarak yazar. Görünümler artık boş değerleri eleyen `show()` yardımcısından geçiyor. Bir test, `app.js`'te doğrudan `view.replaceChildren(` kalmadığını sabitliyor.
+- **Kapanış:** M5b kullanıcı kabulüyle tamamlandı (U, 2026-10-21).
+- **Sonraki gözlem:** Kohort 1 paper'da sürüyor. `PaperTrading → TestnetActive` geçişi D30 koşullarına (≥ 14 gün, ≥ 60 işlenmiş 4h mum, son 7 günde sıfır kritik hata) ve ayrı kullanıcı onayına bağlıdır.

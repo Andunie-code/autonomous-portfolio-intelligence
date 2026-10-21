@@ -1,6 +1,6 @@
 # Yol Haritası
 
-Son güncelleme: 2026-10-21 (rev. 5.5; M5b Kapı C aktivasyonu) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-21 (rev. 5.6; M5b tamamlandı) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: **M0 yerelde tamamlandı** (2026-10-13; doğrulama `716a1bd` commit'inde, temiz klonda). Uzak depo: private GitHub deposu `Andunie-code/autonomous-portfolio-intelligence`. M1 ve sonrası başlamadı; her milestone ayrı kullanıcı onayı gerektirir. Bir milestone, kabul kriterlerindeki testler **gerçekten uygulanıp geçtiğinde** tamamlanmış sayılır.
 
@@ -176,11 +176,11 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - 7 gün paper çalışması; makinenin kapalı kaldığı süreler raporlanıyor ve sonrasında reconciliation ile tutarlı devam ediliyor (yerel çalışmada kesintisizlik garanti edilmez, ADR-0013); yedekten geri yükleme denendi.
   - P1 analiz raporu kullanıcıya sunuldu.
 
-### M5b — Kohort 1 ve M9a dashboard (M) — Kapı A onaylandı; Kapı B tamam (518 test); Kapı C: Kohort 1 aktive edildi ve kabul kriterleri karşılandı (2026-10-21); kullanıcı kabulü bekleniyor
+### M5b — Kohort 1 ve M9a dashboard (M) — ✅ Tamamlandı (kullanıcı kabulü U, 2026-10-21; 523 test)
 - **Kapı C durumu:** [`cohort-1-activation-report.md`](cohort-1-activation-report.md).
   - Kayıt: holdout cohort 2; `A_1` 2026-10-23, pencere sonu 2027-10-23; `underpowered`.
   - Parity: L1/L2 birebir. D29 `RiskConfig`'te.
-  - Doğrulama (`m5-update.ps1`): 3/3 `PaperTrading`, gecikmeli döngü 0, reconciliation 33/33, Trading.Host 48,86 MiB. Migration sonrası ilk döngü `degraded` (beklenen neden: ısınmadaki bayat veri); neden kodunun teyidi ve kullanıcı kabulü bekleniyor.
+  - Doğrulama (`m5-update.ps1`): 3/3 `PaperTrading`, gecikmeli döngü 0, reconciliation 33/33, Trading.Host 48,86 MiB. Migration sonrası ilk döngü `degraded`; neden `stale-data` (ısınma mumları) olarak teyit edildi. Dashboard'un beş sekmesi tarayıcıda kontrol edildi. Kapanış: [`cohort-1-activation-report.md`](cohort-1-activation-report.md) §9.
 - **Kararlar (U):** D31 (Kohort 1, yalnızca operasyonel; ADR-0019, [`cohort-1-preregistration.md`](cohort-1-preregistration.md)) ve D32 (M9a; ADR-0020).
 - **Kapılar (U):** **A** = ADR-0019/0020 ve Kohort 1 ön kaydı; **B** = çevrimdışı kod ve testler (kohort başına paper run, manifest üretici, kayıt istemcisi, Kernel `Inspect()`, radar, dashboard, migration 0008, etkileşimli script'ler), `verify.ps1` yeşil; **C** = kullanıcının koşuları (release bilgisi, manifestonun üretilip onayla commit'lenmesi, `m5-cohort1-activate.ps1`, tarayıcı kontrolü) ve aktivasyon raporu.
 - **Kabul kriterleri:**

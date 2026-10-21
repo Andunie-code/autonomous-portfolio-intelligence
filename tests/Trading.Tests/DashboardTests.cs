@@ -99,6 +99,7 @@ public class DashboardTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
             var body = await response.Content.ReadAsStringAsync();
             Assert.DoesNotContain(Token, body);
             Assert.DoesNotContain(".innerHTML", body); // every value is rendered with textContent
+            Assert.DoesNotContain("view.replaceChildren(", body); // views go through show(), which drops optional nulls ("null" text otherwise)
             Assert.DoesNotContain("<script>", body); // no inline script (CSP script-src 'self')
             Assert.DoesNotContain("http://", body.Replace("http://www.w3.org", "", StringComparison.Ordinal)); // no external resource
         }

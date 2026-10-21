@@ -2,6 +2,17 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-21 — M5b tamamlandı (kullanıcı kabulü)
+- **Kullanıcı kararı (U):** M5b (Kohort 1 operasyonel paper, M9a dashboard ve sinyal radarı) tamamlandı.
+- **Son kontroller (kullanıcı):**
+  - `-ChecksOnly`: `paperTrading=3/3` ve `lastCycleDegraded=stale-data`. Döngü, yeniden başlatmadaki açılış döngüsüdür (19:14:07 UTC, 311 bar, ısınma mumları). `strategy-hash-mismatch` yok.
+  - Rapor SHA-256 `1e7e7fbf…be22`.
+- **Dashboard (kullanıcının tarayıcı kontrolü):**
+  - nakit düzeltmesi doğrulandı (20.000,00); Run 2 ilk mumunu işledi;
+  - radar metinleri okunabilir; `/system` hatasız.
+  - Sistem sekmesindeki başıboş `null` metni düzeltildi: görünümler artık boş değerleri eleyen `show()` yardımcısından geçiyor. Regresyon testi eklendi.
+- **Güncellenen belgeler:** `cohort-1-activation-report.md` (kapanış), `roadmap.md` (rev. 5.6), `requirements.md` durum satırı.
+
 ## 2026-10-21 — M5b Kapı C: migration sonrası ilk döngü
 - **Kullanıcının `-ChecksOnly` koşusu:**
   - `paperTrading=3/3`, reconciliation temiz;

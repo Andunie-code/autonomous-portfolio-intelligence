@@ -41,6 +41,12 @@ function el(tag, attrs, ...children) {
   return node;
 }
 
+// Replaces a view's content. Unlike el(), the DOM's replaceChildren would print null as the text "null", so
+// optional parts (a warning shown only sometimes) are dropped here.
+function show(target, ...children) {
+  target.replaceChildren(...children.flat(Infinity).filter((c) => c !== null && c !== undefined && c !== false));
+}
+
 // Inline SVG icons (24×24 strokes, Lucide-like shapes), decorative unless labelled by their parent.
 const ICONS = {
   info: ['M12 16v-4', 'M12 8h.01', 'C12 12 10'],
@@ -224,7 +230,7 @@ async function renderOverview(view) {
   const data = await api('/overview');
   const t = data.total; const limits = data.limits || {};
   const waiting = data.runs.filter((r) => r.awaitingFirstBar).length;
-  view.replaceChildren(
+  show(view, 
     callout('Bu ekran tüm paper run\'ların toplamını ve her run\'ın risk limitlerine göre durumunu gösterir. Sistem her 4h mum kapanışında stratejileri çalıştırır; '
       + 'kararlar risk kurallarından (toplam maruziyet, drawdown, D29 korelasyon kümesi tavanı) geçer ve emir bir sonraki mumun açılışında dolar.'),
     el('div', { class: 'kpis' },
@@ -265,7 +271,7 @@ async function renderSleeves(view) {
   const cohortOf = Object.fromEntries(sleeves.map((s) => [`${s.runId}/${s.sleeve}`, s.cohortId]));
   const positions = sleeves.flatMap((s) => s.positions.map((p) => ({ ...p, runId: s.runId, sleeve: s.sleeve, name: s.name, cohortId: s.cohortId })));
   const lastBuy = (p) => fills.find((f) => f.run_id === p.runId && f.sleeve === p.sleeve && f.symbol === p.symbol && f.side === 'buy');
-  view.replaceChildren(
+  show(view, 
     callout('Her strateji kendi sleeve\'inde (ayrı nakit ve pozisyonlar) çalışır. Bir sinyal önce L1 sinyal olayı olarak yazılır, ardından L2 risk kararıyla onaylanır, kırpılır ya da reddedilir; '
       + 'onaylanan emir bir sonraki 4h mumun açılış fiyatından dolar. Bir pozisyona ya da dolum satırına tıklayınca izlenebilirlik zinciri açılır.'),
     scrollCard('Stratejiler (sleeve)', table([
@@ -466,7 +472,7 @@ async function renderRadar(view) {
     indicatorBox.replaceChildren(el('table', {}, el('thead', {}, groupRow, labelRow), el('tbody', {}, body)));
   }
 
-  view.replaceChildren(
+  show(view, 
     callout('Bu ekran, aktif her stratejinin giriş ve çıkış koşullarını son kapanan 4h mumla, stratejinin kendi interpreter\'ıyla değerlendirir. Radar karar vermez: '
       + 'gerçek kararlar her saat HH:00:15 UTC\'deki döngüde verilir ve alım/satım bir sonraki 4h mumun açılış fiyatından gerçekleşir. Bu yüzden "Yeni giriş sinyali" görünen bir paritede pozisyon, sonraki mum işlenene kadar görünmez.'),
     el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', { text: 'BTCUSDT piyasa rejimi' }), el('span', { class: 'muted small', text: `Son mum ${time(data.asOf)} · ${data.barsUsed} mum` })),
@@ -504,10 +510,10 @@ async function renderTrace(view) {
     callout('Bu ekran bir dolumun nereden geldiğini adım adım gösterir: dolum → risk kararı (L2) → sinyal (L1) → strateji tanımı ve hash\'i → kohort manifestosu → araştırma deneyleri → veri seti. '
       + 'Paper modunda ayrı OrderIntent tablosu yoktur: L2 risk kararı olayı intent ile kararı birlikte taşır.'),
     el('div', { class: 'card' }, el('div', { class: 'toolbar' }, input, go)));
-  if (!state.traceFill) { view.replaceChildren(header); return; }
+  if (!state.traceFill) { show(view, header); return; }
   const p = await api(`/provenance/${encodeURIComponent(state.traceFill)}`);
   const f = p.fill; const d = p.decision; const s = p.signal; const c = p.cohort || {};
-  view.replaceChildren(header, el('div', { class: 'card' }, el('ol', { class: 'chain' },
+  show(view, header, el('div', { class: 'card' }, el('ol', { class: 'chain' },
     el('li', {}, el('div', { class: 'step' }, `Dolum #${f.id} · `, badge(f.side === 'buy' ? 'Alış' : 'Satış', f.side === 'buy' ? 'good' : 'bad'), ` ${f.symbol}`),
       kv([['Strateji', strategyTitle(f.strategy, f.cohort_id)], ['Zaman', time(f.fill_time)], ['Fiyat × miktar', `${price(f.price)} × ${num(f.quantity, 6)}`], ['Ücret', num(f.fee, 4)], ['Neden', f.reason]])),
     el('li', {}, el('div', { class: 'step', text: 'Risk kararı (L2) · OrderIntent karşılığı' }),
@@ -539,7 +545,7 @@ async function renderSystem(view) {
   const unavailable = sys.unavailable || [];
   const aiMissing = unavailable.includes('aiKillSwitch');
   const failed = (x) => x instanceof Error;
-  view.replaceChildren(
+  show(view, 
     callout('Bu ekran sistemin sağlığını gösterir: kill switch\'ler, saatlik döngülerin süresi ve gecikmesi, reconciliation (defter ↔ bakiye tutarlılığı), audit olayları ve AI maliyeti. '
       + 'Trading kill switch açıkken yeni giriş yapılmaz; çıkışlar ve stop\'lar çalışmaya devam eder.'),
     unavailable.length ? callout(`Okunamayan bölümler: ${unavailable.join(', ')}. ${sys.unavailableReason || ''}`, 'warn') : null,
@@ -600,7 +606,7 @@ async function refresh() {
     $('updated').textContent = `Güncellendi ${new Date().toLocaleTimeString('tr-TR', { hour12: false })}`;
   } catch (e) {
     if (e instanceof Unauthorized) { showLogin('Token reddedildi.'); return; }
-    view.replaceChildren(el('div', { class: 'callout bad', role: 'alert' }, icon('alert'), el('div', {}, el('strong', { text: 'Veri alınamadı. ' }), e.message)));
+    show(view, el('div', { class: 'callout bad', role: 'alert' }, icon('alert'), el('div', {}, el('strong', { text: 'Veri alınamadı. ' }), e.message)));
   }
 }
 

@@ -2,7 +2,7 @@
 
 Son güncelleme: 2026-10-21 (rev. 5.5; D31 Kohort 1, D32 M9a) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
 
-> Durum: M0–M5 tamamlandı (roadmap). M6 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
+> Durum: M0–M5 ve M5b (Kohort 1, M9a dashboard) tamamlandı (roadmap). M6 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
 
 ## Karar durumu etiketleri
 | Etiket | Anlamı |
