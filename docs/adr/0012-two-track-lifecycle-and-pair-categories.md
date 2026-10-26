@@ -1,7 +1,7 @@
 # ADR-0012: İki izli yaşam döngüsü ve parite kategorileri
 
 - Durum: Kabul edildi (kullanıcı kararları U1, U5, U6, U7) · Tarih: 2026-10-13
-- Uygulama durumu: **M5'te uygulandı (2026-10-20):** operasyonel iz (`research.lifecycle_events`; `Frozen → PaperTrading` parity kanıtıyla) ve paper'da deneysel parite tavanı. `TestnetActive` M6'da.
+- Uygulama durumu: **M5'te uygulandı (2026-10-20):** operasyonel iz (`research.lifecycle_events`; `Frozen → PaperTrading` parity kanıtıyla) ve paper'da deneysel parite tavanı. `TestnetActive` M6'da: geçiş Ops API `testnet-activate` uç noktasıyla (`confirm: true`, D30 sunucuda hesaplanır) ve DB trigger'ıyla yapılır; ADR-0021, `m6-protocol.md` §6 (Kapı A onaylandı, 2026-10-26).
 - İlgili: ADR-0006, ADR-0011, `architecture.md` §6.4, `risk-model.md` §2
 
 ## Bağlam

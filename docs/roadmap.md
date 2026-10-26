@@ -1,6 +1,6 @@
 # Yol Haritası
 
-Son güncelleme: 2026-10-21 (rev. 5.6; M5b tamamlandı) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-26 (rev. 5.7; M6 başladı, Kapı A onaylandı) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: **M0 yerelde tamamlandı** (2026-10-13; doğrulama `716a1bd` commit'inde, temiz klonda). Uzak depo: private GitHub deposu `Andunie-code/autonomous-portfolio-intelligence`. M1 ve sonrası başlamadı; her milestone ayrı kullanıcı onayı gerektirir. Bir milestone, kabul kriterlerindeki testler **gerçekten uygulanıp geçtiğinde** tamamlanmış sayılır.
 
@@ -189,8 +189,15 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - M9a: zincir (dolum → L2 → L1 → strateji → manifesto hash'i → deney → snapshot) gezilebiliyor; DecisionTrace, degraded işaretleri, trading/LLM kill switch'leri ve görev sınıfı bazında maliyet görünüyor; radar 11 göstergeyi, BTC rejimini ve aktif stratejilerin koşul yakınlığını gösteriyor.
   - Güvenlik: H24 route testi genişletildi (yeni POST yok, yasaklı kelime yok, tüm veri uç noktalarında 401, güvenlik başlıkları, yanlış `Host` → 421); `research_app` izinleri değişmedi; yanıtlarda secret yok.
 
-### M6 — Binance Testnet execution (M)
-- **Ön koşul:** B6 (exchange anahtarının IP kısıtı); Binance Spot'ta koruyucu stop emir tipi ve Testnet desteği doğrulanıp `sources.md`'ye işlendi.
+### M6 — Binance Testnet execution (M) — başladı (2026-10-26, U)
+- **Ön kayıt:** [`m6-protocol.md`](m6-protocol.md) v1 ve ADR-0021 (Kapı A, kullanıcı onayı 2026-10-26). Kapı B henüz başlamadı.
+- **Kapılar (U):**
+  - **A:** Binance belgelerinin doğrulanması (`sources.md` S-B11…S-B24), protokol ve ADR.
+  - **B:** çevrimdışı kod ve testler (sahte handler, fault injection); `verify.ps1` yeşil.
+  - **C:** kullanıcının gerçek Testnet koşuları: ≥ 20 emirlik tatbikat; D30 dolduktan sonra `PaperTrading → TestnetActive` geçişi.
+- **Ön koşul:**
+  - ~~B6~~ → D33 (2026-10-26).
+  - Stop emir tipi ve Testnet desteği belgeden doğrulandı (S-B14, S-B18). Sembol bazında destek tatbikatta gözlenir.
 - **Kabul kriterleri:**
   - Giriş dolumundan sonra koruyucu stop emri borsaya gönderiliyor; kill switch açıldığında giriş emirleri iptal ediliyor, stop emirleri kalıyor (D11 rev.); stop emri reddi alarm üretiyor ve yeni girişleri durduruyor; Testnet stop sapmaları fark raporunda kategorize ediliyor.
   - Fault injection altında duplicate emir sayısı 0 ve ledger reconcile ediliyor.

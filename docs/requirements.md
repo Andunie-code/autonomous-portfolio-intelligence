@@ -1,8 +1,8 @@
 # Gereksinimler
 
-Son güncelleme: 2026-10-21 (rev. 5.5; D31 Kohort 1, D32 M9a) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-26 (rev. 5.6; M6 Kapı A: D33, D30 sayımı) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
 
-> Durum: M0–M5 ve M5b (Kohort 1, M9a dashboard) tamamlandı (roadmap). M6 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
+> Durum: M0–M5 ve M5b (Kohort 1, M9a dashboard) tamamlandı (roadmap). M6 başladı (Kapı A, `m6-protocol.md`). M6 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
 
 ## Karar durumu etiketleri
 | Etiket | Anlamı |
@@ -49,7 +49,8 @@ Kârlılık varsayılmaz. Sistemin amacı, bir stratejinin avantajı olup olmad�
 | D26 | Protokol v1 bloke edici değerleri (B5, 2026-10-16) | Kohort içi α = **0,05** tek yönlü (aile içinde Bonferroni, kohort içinde Holm); hedef güç **0,80**; δ = min(max(**0,05**; **0,50** × backtest excess); **0,15**); δ biçimi **(a)**: alt sınır > 0 **ve** nokta tahmini ≥ δ; ileriye dönük pencerede maks. drawdown **> 0,25** → `Failed`; birincil metriğin benchmark'ı **nakit** (maliyet sonrası mutlak yıllık getiri). Ayrıntı: `m3-protocol.md` §4 |
 | D27 | DSL indikatör havuzu (2026-10-16) | M2 indikatörlerine ek olarak SMA, MACD, ADX, Bollinger, Donchian, ROC, Volume SMA ve BTCUSDT piyasa rejim filtresi (aynı kapanış anındaki BTC mumu, look-ahead yok). ADR-0016 |
 | D29 | Korelasyon kümesi tavanı (P1, 2026-10-20) | Operasyonda (paper/Testnet) **bağlayıcı** küme maruziyet tavanı: korelasyon kümesi başına portföy değerinin **%60'ı**. Kümeler, son 30 günlük günlük log getirilerinin Pearson korelasyonu, ortalama bağlantılı hiyerarşik kümeleme ve **ρ* = 0,70** kesimiyle oluşturulur. Uyarı eşiği **%54** (bilgilendirme). Tavanı aşacak alım kırpılır ya da reddedilir; zorunlu satış yapılmaz; çıkışlar serbesttir. `RiskConfig`'tedir; yalnızca kullanıcı Ops API üzerinden değiştirir. Araştırma backtest'lerine ve dondurulmuş kohort manifestolarına uygulanmaz. Dayanak ve sınırlamalar: `m5-p1-analysis.md` (kanıt ince) |
-| D30 | Asgari paper süresi (2026-10-20) | `PaperTrading → TestnetActive` için en az **14 gün** ve en az **60 işlenmiş 4h mum** paper; son 7 günde **sıfır kritik hata** (reconciliation tutarsızlığı, invariant ihlali, duplicate dolum, hash uyuşmazlığı, HTTP 418). Geçiş yine kullanıcı onayı gerektirir (D3, V10) |
+| D30 | Asgari paper süresi (2026-10-20) | `PaperTrading → TestnetActive` için en az **14 gün** ve en az **60 işlenmiş 4h mum** paper; son 7 günde **sıfır kritik hata** (reconciliation tutarsızlığı, invariant ihlali, duplicate dolum, hash uyuşmazlığı, HTTP 418). Geçiş yine kullanıcı onayı gerektirir (D3, V10). **Sayım (U, 2026-10-26):** 14 gün, `PaperTrading` lifecycle olayından itibaren takvim günüdür; 60 mum, stratejinin kohort paper run'ında işlenmiş 4h mumlardır ve catch-up mumları dahildir; kesinti oranı ayrıca gösterilir (`m6-protocol.md` §6.1) |
+| D33 | Testnet anahtarı ve B6 (2026-10-26) | Testnet API anahtarında statik IP kısıtı aranmaz (dinamik ev IP'si; Testnet yalnızca sanal bakiye kullanır). Telafi edici kontroller: istekler kodda yalnızca `https://testnet.binance.vision` host'una kilitlidir (`TestnetGuardHandler`), 3xx reddedilir, anahtar yalnızca Trading.Host'un Docker secret'larındadır (`testnet_api_key`, `testnet_api_secret`) ve yalnızca işlem iznine sahiptir. **Yalnızca Testnet için geçerlidir;** gerçek borsa ayrı karar ister. B6 kapandı. ADR-0021 |
 | D31 | Kohort 1: operasyonel kohort (2026-10-21) | H08 `n150-b300`, H04 `f12-s26-g12` ve H07 `n50-v2p5`, araştırma kapılarını geçmemiş olmalarına rağmen kullanıcı kararıyla **yalnızca operasyonel** kohort olarak dondurulur: protokol tam, `power.underpowered: true`, gerekçe `exemptions`'ta; `Validated` olamaz. Kayıt normal yoldan (`registered_at` ve `A_1` sunucuda). Kohort kendi paper run'ında çalışır. Kapıyı geçmemiş strateji yalnızca bu tür açık bir kararla dondurulabilir. ADR-0019, `cohort-1-preregistration.md` |
 | D32 | Dashboard'un öne çekilmesi (M9a, 2026-10-21) | M9'un bugünkü veriyle karşılanabilen kısmı (izlenebilirlik zinciri, DecisionTrace/degraded/LLM acil durdurma, görev sınıfı bazında maliyet) ve sinyal radarı, Trading.Host'ta loopback'te, salt-okunur olarak sunulur. M9'un tam kabulü yerinde kalır. ADR-0020 |
 | D28 | E1 verisi M3'te (2026-10-16) | Kategori mantığı çevrimdışı ve sentetik testlerle; ayrıca E1 adaylarından hacme göre ilk 5 parite (1h, 4h) kullanıcının etkileşimli Kapı-2 koşusuyla import edilir |
@@ -96,7 +97,7 @@ Kârlılık varsayılmaz. Sistemin amacı, bir stratejinin avantajı olup olmad�
 ## 4. Varsayılanlar
 - **Piyasa:** spot, USDT quote. Kaldıraç, margin, futures ve açığa satış yok. (U, Faz A)
 - **Pariteler:** Çekirdek evren 20 parite; her biri `[2022-01-01, 2026-01-01)` aralığında kullanılabilir geçmişe sahip. Liste, kayıt zamanındaki bilgiyle sıralanır ve hayatta kalma yanlılığı raporuyla birlikte seçilir. Kullanılabilir geçmiş şartı C'ye kadar hayatta kalmayı koşul koyduğu için evren **survivor-conditioned**'dır; ayrıntılı prosedür `m1-data-policy.md`'de. Daha yeni pariteler E1/E2 kategorilerinde (D22). (U)
-- **Exchange anahtarı:** yalnızca trade izni, withdrawal yok, IP kısıtlı. (U) — Yerel çalışmada IP kısıtı ev bağlantısının IP'sine bağlıdır; uygulanabilirliği açık engel B6'dır.
+- **Exchange anahtarı:** yalnızca trade izni, withdrawal yok. (U) — Testnet anahtarında IP kısıtı yerine kod düzeyinde host allowlist'i ve secret izolasyonu uygulanır (D33, 2026-10-26). Gerçek borsa anahtarı kapsam dışıdır.
 - **Strateji temsili:** beyaz listeli DSL (JSON). LLM'in ürettiği kod çalıştırılmaz. (U, ADR-0003)
 - **Baseline'lar:** EMA 50/100 trend ve Supertrend. **Benchmark'lar:** BTC buy-and-hold, eşit ağırlıklı sepet, nakit. (U)
 - **Paper sermayesi:** 10.000 USDT nominal. (U)
@@ -148,6 +149,6 @@ Gerçek para ile işlem, futures/margin, birden fazla borsa, haber ve sentiment,
 | ~~B2~~ | ~~M5'te VPS satın alımı~~ — **Kaldırıldı** (rev. 5, D5: VPS yok) | — |
 | B4 | M1 başlatma onayı; Binance'in açık uç noktalarına (anahtarsız) erişim izni; çekirdek parite seçim prosedürünün onayı. **Durum (2026-10-14): kapandı.** Seçim prosedürü, Kapı 1 ve Kapı 2 onaylandı; M1 kullanıcı kabulüyle tamamlandı (`m1-core-universe.md`) | — |
 | B5 | Protokol v1'in bloke edici istatistiksel değerleri. **Durum (2026-10-16): kapandı** (D26) | — |
-| B6 | Exchange (Testnet) anahtarının IP kısıtı (§4, U): yerel çalışmada ev bağlantısının IP'si değişebilir. Kısıt nasıl uygulanacak ya da gevşetilecek mi? | M6 |
+| ~~B6~~ | ~~Exchange (Testnet) anahtarının IP kısıtı~~ — **Kapandı (2026-10-26, U): D33** | — |
 
 **Not:** İlk `Validated` sonucu, kohortun dondurulmasından en erken 6 ay sonra gelebilir. Testnet buna bağlı değildir.

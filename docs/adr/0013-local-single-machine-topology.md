@@ -78,7 +78,7 @@ Her servis için Compose'da `mem_limit` ve `cpus` tanımlanır. Başlangıç de�
 - **Aynı makine:** Geliştirici ve Claude Code, holdout ile aynı makinede çalışır. Docker yönetim yetkisi olan biri ya da bir araç (`docker exec`, volume bağlama, superuser) rol ve `pg_hba` kontrollerini aşabilir. Önceki VPS tasarımındaki "geliştirme makinesinde holdout verisi yok" güvencesi bu kararla kalkar (D17 rev.).
 - **Holdout verisi geliştirme diskinde:** Evaluator'ın import ettiği `C` sonrası veri, aynı diskteki Docker volume'ünde bulunur.
 - **Runtime anahtarları:** Testnet ve Gemini runtime anahtarları Claude Code ile aynı makinededir. Process ayrımı (D9) korunur; dosya düzeyindeki ayrım `Read(**/secrets/**)` deny kuralına ve süreç disiplinine dayanır.
-- **Exchange anahtarının IP kısıtı:** Ev bağlantısının IP'si değişebilir; açık engel B6.
+- **Exchange anahtarının IP kısıtı:** Ev bağlantısının IP'si değişebilir. B6, D33 ile kapandı (2026-10-26): Testnet anahtarında IP kısıtı yoktur; yerine kodda host allowlist'i ve secret izolasyonu uygulanır (ADR-0021).
 - **Uptime:** Uyku, yeniden başlatma ve Windows güncellemeleri paper ve Testnet sürekliliğini keser. Bayat veride yalnızca çıkışlar çalışır; Testnet'te koruyucu stop emirleri borsada bekler (ADR-0014). İleriye dönük değerlendirme arşiv verisini kullandığı için uptime'dan etkilenmez.
 - **Yedek:** Tek makine; harici kopya şartı korunur (`architecture.md` §12).
 - **Saat ve yönetici yetkisi:** Makinenin yöneticisi saati ve tüm verileri değiştirebilir; süreç kuralı ve audit ile ele alınır.

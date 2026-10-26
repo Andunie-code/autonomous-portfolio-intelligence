@@ -29,6 +29,12 @@ Kullanıcıdan açık onay alınmadan yapılmaz:
 - Holdout veritabanına ve evaluator'a erişim denenmez. SSH bağlantısı kurulmaz.
 - Holdout koruma kodu (adında `Holdout` geçen dosyalar) ve evaluator kodu, kullanıcının açık isteği olmadan değiştirilmez.
 - **M5 yerel ortamı (m5-protocol §4, §11):** `ops` veritabanına yalnızca `research_app` login'iyle bağlanılır. `market.live_candles`, `trading.*` ve canlı veriden türeyen tablolar (korelasyon, PnL) okunmaz. `scripts/m5-*.ps1` (bootstrap, deploy, migrate, henv, seed-cohort0, paper-start, paper-report, backup, restore-test, cohort1-release, cohort1-activate, update; `m5-research.ps1` hariç), evaluator ve probe komutları, profilli `docker compose` komutları ve Trading.Host'un başlatılması **yalnızca kullanıcı** tarafından çalıştırılır. Paper raporlarından yalnızca operasyonel alanlar (m5-protocol §7.3) görülür. M9a dashboard'u (`/dashboard`) ve veri uç noktaları (`/overview`, `/sleeves`, `/fills`, `/decisions`, `/provenance`, `/radar`, `/system`, `/ai/*`) gerçek ortamda Claude Code tarafından açılmaz ve çağrılmaz (ADR-0020 §6); doğrulama yalnızca sentetik test verisiyle yapılır.
+- **M6 Testnet (m6-protocol §1, §8, §11; D33):**
+  - Claude Code, `testnet.binance.vision` API'sine hiçbir yolla istek atmaz. Testnet fiyatları `≥ C` canlı veri sayılır.
+  - Testnet emirleri, dolumları ve bakiyeleri `trading.*` kapsamındadır ve okunmaz.
+  - `scripts/m6-*.ps1` (testnet-key, testnet-drill, testnet-activate, update) ve Testnet tatbikatı **yalnızca kullanıcı** tarafından çalıştırılır.
+  - Tatbikat ve Testnet raporlarından yalnızca operasyonel alanlar (m6-protocol §8.3) görülür.
+  - Testnet anahtarı yalnızca `secrets/` altındadır ve okunmaz.
 - Holdout ortamına ait sır adları (`tests/Architecture.Tests/HoldoutSecretReferenceTests.cs`) evaluator projesi dışında hiçbir kaynak, config ya da script dosyasında kullanılmaz.
 
 ## Sırlar

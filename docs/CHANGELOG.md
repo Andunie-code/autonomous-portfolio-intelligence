@@ -2,6 +2,36 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-26 — M6 Kapı A (kullanıcı onayı): Testnet ön kaydı, ADR-0021, D33
+- **Kullanıcı kararları (U):**
+  - M6 başlatıldı; kapılar A, B ve C (`m6-protocol.md` U-M6-1).
+  - **D33:** B6 kapandı. Testnet anahtarında IP kısıtı yok. Yerine kodda yalnızca `testnet.binance.vision` host allowlist'i, 3xx reddi, secret'ların yalnızca Trading.Host'ta tutulması ve işlem izni geçerli. Karar yalnızca Testnet için.
+  - **D30 sayımı:** takvim günü ve catch-up dahil işlenmiş 4h mumlar; kesinti oranı ayrıca gösterilir.
+  - Strateji `TestnetActive` olunca paper run'ı paralel sürer.
+  - **Emir tipleri:** koruyucu stop `STOP_LOSS` (sembolde yoksa bantlı `STOP_LOSS_LIMIT`); giriş bantlı `LIMIT IOC`; çıkış ve kapatma `MARKET`.
+  - İmzalama HMAC-SHA256.
+- **Belge doğrulaması:** `sources.md` S-B11…S-B24. Yalnızca `developers.binance.com` belgeleri okundu; Testnet API'sine istek atılmadı. Öne çıkanlar:
+  - yeni anahtar varsayılan olarak işlem yapamaz;
+  - 5xx ve `-1007` yanıtlarında yürütme durumu bilinmez;
+  - `recvWindow`, Matching Engine'den hemen önce yeniden kontrol edilir;
+  - Testnet yaklaşık ayda bir, önceden bildirilmeden sıfırlanır ve yalnızca `/api` uç noktaları vardır;
+  - `STOP_LOSS` tetiklenince market emri olur;
+  - Spot REST'te `newClientOrderId` için biçim kuralı yok (FIX kümesi kullanılır).
+- **Yeni belgeler:**
+  - `docs/m6-protocol.md` v1 (ön kayıt; §0.2 A-1…A-6 dahil kullanıcı onaylı);
+  - `docs/adr/0021-testnet-execution-adapter.md`.
+- **Güncellenen belgeler:** `requirements.md` (D33, D30 sayımı, §4, B6), `risk-model.md`, `architecture.md` §5 ve §10, `roadmap.md` (M6 kapıları), `testing-strategy.md` §5, ADR-0012/0013/0014 notları, `sources.md`.
+- **M5b arka plan gözlemi:** kullanıcının 2026-10-26 raporu (SHA-256 `9869e507…f9d6`) `m5-acceptance-report.md` §6'ya yalnızca operasyonel alanlarla işlendi:
+  - 40 döngü, gecikmeli döngü 0;
+  - reconciliation 43/0, duplicate dolum 0;
+  - iki kesinti;
+  - Kohort 1'in ilk canlı giriş sinyali (sembol ve fiyat yok; araştırma girdisi değildir).
+- **Korkuluklar (T17):**
+  - `.claude/settings.json`'a `testnet.binance.vision` (WebFetch, curl, wget, PowerShell) ve `*-File*m6-*` deny kuralları eklendi;
+  - `CLAUDE.md`'ye M6 Testnet bölümü eklendi;
+  - testleri Kapı B'de yazılacak (`RepositoryRuleTests`).
+- Kod değişikliği yok.
+
 ## 2026-10-21 — M5b tamamlandı (kullanıcı kabulü)
 - **Kullanıcı kararı (U):** M5b (Kohort 1 operasyonel paper, M9a dashboard ve sinyal radarı) tamamlandı.
 - **Son kontroller (kullanıcı):**

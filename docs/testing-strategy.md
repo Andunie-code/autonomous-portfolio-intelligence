@@ -54,6 +54,13 @@ Son güncelleme: 2026-10-14 (rev. 5) · Değişiklikler: [CHANGELOG.md](CHANGELO
   - L2 karar paritesi: aynı portföy durumu ve `RiskConfig` ile risk ve sizer kararları aynıdır (birebir).
   - L3 fark raporu: normalize metrikler hesaplanır ve farklar kategorize edilir; mutlak emir büyüklükleri karşılaştırılmaz. Sentetik bir senaryoda portföy kısıtı nedeniyle açılmayan işlem, parity hatası değil L3 kategorisi olarak raporlanır.
 - **Koruyucu stop (Testnet, M6):** giriş dolumundan sonra stop emri gönderilir; kill switch açıldığında giriş emirleri iptal edilir, stop emirleri kalır; stop emri reddi alarm üretir ve yeni girişleri durdurur.
+- **Testnet (M6) Kapı B listesi:** `m6-protocol.md` §9 bağlayıcıdır. Kapsadığı alanlar:
+  - guard ve imza;
+  - filtre property testleri;
+  - fault injection ve restart; `NeverAccepted`;
+  - reconciliation ve Testnet sıfırlaması;
+  - V10 ve D30;
+  - harici dolum modu ve regresyon kilitleri.
 - Risk tablosunun her satırı test edilir.
 - Fault injection altında duplicate emir sayısı 0.
 - Kanarya secret testi.

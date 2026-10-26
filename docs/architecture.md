@@ -151,7 +151,9 @@ Hiçbir LLM rolü dondurma, holdout değerlendirmesi ya da doğrulama durumu üz
 ```
 Intent → RiskApproved | RiskRejected
 RiskApproved → Submitting → Accepted → PartiallyFilled → Filled | Canceled | Expired | ExchangeRejected
-Submitting --timeout/5xx--> Unknown --(origClientOrderId ile sorgu)--> gerçek durum
+Submitting --timeout/5xx--> Unknown --(origClientOrderId ile sorgu)--> gerçek durum | NeverAccepted
+Accepted | PartiallyFilled --iptal--> CancelRequested --> Canceled | Filled | Unknown
+(Testnet ayrıntıları: m6-protocol.md §2–§5, ADR-0021)
 ```
 
 ## 6. Araştırma, değerlendirme ve holdout (ADR-0006, ADR-0009, ADR-0012, ADR-0013)
@@ -378,7 +380,7 @@ Deneme sayacı, menşeinden bağımsız olarak (LLM, grid, insan, `dev-assisted`
 Bkz. `risk-model.md` §4.
 
 ## 10. Güvenlik
-- Exchange anahtarı: trade izni, withdrawal yok, IP kısıtı (yerel çalışmada uygulanabilirliği açık engel B6). Yalnızca Trading.Host'ta bulunur.
+- Exchange anahtarı (Testnet): trade izni, withdrawal yok. IP kısıtı yerine kodda yalnızca `testnet.binance.vision` host allowlist'i ve redirect reddi uygulanır (D33, ADR-0021). Anahtar yalnızca Trading.Host'un Docker secret'larında bulunur.
 - **Secret'lar:**
   - Geliştirmede `dotnet user-secrets` (yalnızca geliştirme anahtarları; holdout secret'ı yok).
   - Runtime'da Docker secret dosyaları (yerel diskte; Claude Code için `Read(**/secrets/**)` deny kuralı).

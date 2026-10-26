@@ -48,4 +48,27 @@ Sonraki operasyonel raporda `audit=` satırında `risk_config_version_added:1` g
 ## 5. Açık konular ve sonraki adımlar
 - **Paper gözlemi sürüyor:** günlük `m5-paper-report.ps1`. D30 için gereken 14 gün ve 60 mumluk süre bu gözlemle dolar.
 - **Kohort 0:** ileriye dönük penceresi 2027-10-17'de kapanır. Evaluator ilk gerçek arşiv import'unu `window end + 3 gün` sonra yapar; ilk `Validated / Failed / Inconclusive` sonucu o zaman gelir. Kohort 0 gücü yetersiz olarak işaretli; en iyi ihtimalle `Inconclusive` olur.
-- **M6 (Binance Testnet):** ön koşulları B6 (anahtarın IP kısıtı) ve `sources.md`'de stop emri tipi ile Testnet desteğinin doğrulanması. Ayrı kullanıcı onayıyla başlar.
+- **M6 (Binance Testnet):** ön koşulları B6 (anahtarın IP kısıtı) ve `sources.md`'de stop emri tipi ile Testnet desteğinin doğrulanması. Ayrı kullanıcı onayıyla başlar. **Güncelleme (2026-10-26):** M6 başladı; B6 → D33.
+
+## 6. Arka plan paper gözlemi (2026-10-26)
+Kullanıcı 5 günlük aradan sonra sistemi açtı ve `m5-paper-report.ps1` çalıştırdı (2026-10-26T18:48:00Z). Rapor SHA-256: `9869e507b900326a9256b655254e9043b96c1e354394449320b19c621fa7f9d6`. Burada yalnızca operasyonel alanlar yer alır (m5-protocol §7.3).
+
+- **Döngüler:** 40 döngü; gecikmeli (> 60 sn) döngü 0; sonuçlar `ok:33, degraded:5, error:2`. İki `error` döngüsü migration 0008'den önceye aittir (CHANGELOG 2026-10-21).
+- **Mumlar:** 617 mum işlendi; catch-up döngüsü 5, bayat döngü 4.
+- **Kesintiler:**
+  - 2026-10-20T23:00Z – 2026-10-21T09:48Z;
+  - 2026-10-21T23:00Z – 2026-10-26T18:46Z.
+  - Kaçırılan mumlar açılışta sırayla işlendi.
+- **Bütünlük:**
+  - reconciliation: 43 koşu, 0 tutarsızlık;
+  - duplicate dolum 0; negatif nakit 0; canlı mum anomalisi 0.
+- **Bellek:** Trading.Host 59,84 MiB / 384 MiB; PostgreSQL 47,13 MiB / 1 GiB.
+- **Dashboard (kullanıcı beyanı):**
+  - Kohort 1'de ilk canlı giriş sinyali ve L2 `Approved` kararı oluştu.
+  - Kesinti sırasında geçmiş mumlarda oluşan sinyaller `stale-data` kuralıyla doğru şekilde reddedildi.
+  - Sembol, fiyat ve PnL kaydedilmez. Açığa çıkmamış kohortun bu bilgisi araştırma ya da hipotez girdisi olarak kullanılmaz (CLAUDE.md).
+- **D30 etkisi** (U-M6-3, takvim günü):
+  - en erken uygunluk Kohort 0 için 2026-11-03, Kohort 1 için 2026-11-04;
+  - 60 mum şartı ve son 7 günde 0 kritik hata şartı ayrıca aranır;
+  - bu rapor döneminde kritik hata yok.
+

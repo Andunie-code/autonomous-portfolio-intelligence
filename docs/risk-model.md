@@ -2,7 +2,7 @@
 
 Son güncelleme: 2026-10-20 (rev. 5.1; M5, D29) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
-> Durum: Paper için M5'te **uygulandı ve test edildi** (`m5-protocol.md` §8, CHANGELOG 2026-10-20): §2'deki limitler, koruyucu stop, deneysel parite tavanı, küme tavanı, veri tazeliği ve trading kill switch. Testnet'e özgü kontroller (borsadaki stop emri, emir hataları) M6'da. Etiketler (U/T/P/TBD) için bkz. `requirements.md`.
+> Durum: Paper için M5'te **uygulandı ve test edildi** (`m5-protocol.md` §8, CHANGELOG 2026-10-20): §2'deki limitler, koruyucu stop, deneysel parite tavanı, küme tavanı, veri tazeliği ve trading kill switch. Testnet'e özgü kontroller (borsadaki stop emri, emir hataları) M6'da (`m6-protocol.md`, ADR-0021; Kapı A onaylandı 2026-10-26). Etiketler (U/T/P/TBD) için bkz. `requirements.md`.
 
 ## 1. İlkeler
 - Risk motoru deterministiktir ve AI'dan bağımsızdır. LLM `RiskConfig`'i okuyamaz ve yazamaz; yalnızca kalan limitlerin özetini görür.
@@ -21,7 +21,7 @@ Son güncelleme: 2026-10-20 (rev. 5.1; M5, D29) · Değişiklikler: [CHANGELOG.m
 | Veri tazeliği | Son mum, beklenenden 2 mumdan fazla gecikmişse yeni giriş yok | U (D7) |
 | **Koruyucu stop (pozisyon başına hard stop)** | Her pozisyon girişte bir koruyucu stop seviyesi alır. Efektif seviye, strateji stop'u ile `RiskConfig`'teki "pozisyon başına maksimum kayıp" seviyesinden girişe en yakın olanıdır. Hard stop değeri: giriş fiyatından **%10** (D25, 2026-10-14). Mum içinde tetiklenir; backtest ve paper'da OHLC kuralıyla, Testnet'te borsadaki stop emriyle uygulanır (ADR-0014). Günlük kayıp ve drawdown limitleri mum kapanışında değerlendirilir | U (D25, 2026-10-14) |
 | Minimum emir | Exchange `NOTIONAL`/`MIN_NOTIONAL` değeri ve fee'ye göre anlamsız küçük emirlerin engellenmesi | T (exchange kuralı) |
-| Emir tipleri | Limit ve koruma bantlı market; Testnet'te koruyucu stop emri (uygun tip M6 öncesi doğrulanacak) | T |
+| Emir tipleri | Testnet:<br>- giriş: koruma bantlı `LIMIT IOC` (referans fiyatın +%1'i);<br>- sinyal çıkışı ve kapatma: `MARKET`;<br>- koruyucu stop: `STOP_LOSS` (tetiklenince market); sembolde yoksa bantlı `STOP_LOSS_LIMIT` (S-B14, S-B18).<br>Filtre ihlali yapan emir borsaya gitmez | U (U-M6-5, 2026-10-26) |
 | **Deneysel parite toplam maruziyeti** (`ExperimentalPairsMaxExposure`) | Portföy değerinin **%10'u** (E1 ve E2 paritelerinin toplamı). Mevcut limitlere **ek olarak** uygulanır; en kısıtlayıcı limit geçerlidir. Tavanı aşacak alım kırpılır ya da reddedilir. Fiyat hareketiyle aşılırsa zorunlu satış yapılmaz, yalnızca yeni deneysel girişler durur. Çıkışlar her zaman serbesttir. Yalnızca kullanıcı, kimliği doğrulanmış Ops API üzerinden ve versiyonlu `RiskConfig` ile değiştirebilir; LLM, Research ve evaluator erişemez | U (U5, 2026-10-13) |
 | **Korelasyon kümesi tavanı** | Korelasyon kümesi başına toplam maruziyet portföy değerinin **%60'ı**. Kümeler; son 30 günlük günlük log getirileri, Pearson korelasyonu, ortalama bağlantılı hiyerarşik kümeleme ve **ρ* = 0,70** kesimiyle, yalnızca o güne kadarki veriden oluşturulur. Deneysel tavanla aynı kural uygulanır: aşan alım kırpılır, kırpılmış tutar `MIN_NOTIONAL`'ın altındaysa reddedilir; fiyat hareketiyle aşımda zorunlu satış yapılmaz; çıkışlar serbesttir. Etkin bağımsız pozisyon sayısı her döngüde hesaplanır ve raporlanır. En büyük küme payı **%54**'ü aşınca uyarı üretilir (audit `correlation_warning`). Operasyon `RiskConfig`'indedir; araştırma backtest'lerine ve kohort manifestolarına uygulanmaz. Dayanak: `m5-p1-analysis.md` (tarihsel kanıt ince) | U (D29, 2026-10-20) |
 
@@ -51,9 +51,10 @@ LLM'in durdurulması trading'i durdurmaz. Operasyon varsayılan deterministik po
 | Senaryo | Davranış |
 |---|---|
 | Bayat veya eksik veri | Yeni giriş açılmaz, çıkışlar çalışır. Boşluk doldurulamazsa alarm. Paper'da stop kuralı veri geldiğinde kapanan mumlara uygulanır; Testnet'te stop emri borsada bekler |
-| Koruyucu stop emri reddedildi ya da dolmadı (Testnet) | Pozisyon "korumasız" olarak işaretlenir, alarm üretilir, stop emri yeniden denenir; başarısızsa yeni giriş açılmaz. Sapma fark raporuna girer (ADR-0014, ADR-0015) |
+| Koruyucu stop emri reddedildi ya da dolmadı (Testnet) | Pozisyon "korumasız" olarak işaretlenir ve alarm üretilir. Testnet run'ında yeni giriş durur; stop her döngüde yeniden denenir. Korumasız pozisyonun kapanan mumunda `Low ≤ S` ise `MARKET` çıkış gönderilir. Sapma fark raporuna girer (ADR-0014, ADR-0015, ADR-0021) |
 | Makine kapalı, uykuda ya da yeniden başlatıldı (ADR-0013) | Paper döngüsü durur; açılışta önce reconciliation, sonra kaçırılan kapanmış mumlar sırayla işlenir (stop kuralı dahil). Testnet'te stop emirleri borsada kalır. İleriye dönük değerlendirme arşiv verisi kullandığı için etkilenmez |
-| Emirde timeout veya 5xx | Emir `Unknown` durumuna geçer ve `origClientOrderId` ile çözülür. Körü körüne tekrar gönderilmez |
+| Emirde timeout veya 5xx | Emir `Unknown` durumuna geçer ve `origClientOrderId` ile çözülür. Körü körüne tekrar gönderilmez. `timestamp + recvWindow + 60 sn` geçtikten sonra iki ardışık `-2013` gelirse emir `NeverAccepted` olur. Aynı niyet yalnızca bundan sonra yeni kimlikle gönderilebilir (S-B11, `m6-protocol.md` §3.3) |
+| Testnet sıfırlaması (yaklaşık ayda bir, S-B19) | Reconciliation `testnet-reset-suspected` alarmı üretir; yeni giriş açılmaz. Kullanıcının onaylı "yeniden taban" eylemi yeni bir Testnet run'ı açar. Paper etkilenmez (`m6-protocol.md` §4.4) |
 | 429 | Weight takibi, istemci tarafında limitleme, `Retry-After` |
 | Kısmi dolum | Ledger dolan miktarla güncellenir. Kalan kısım config'teki süre sonunda iptal edilir |
 | Duplicate gönderim | Kalıcı `clientOrderId` ile engellenir |
@@ -76,7 +77,7 @@ LLM'in durdurulması trading'i durdurmaz. Operasyon varsayılan deterministik po
 | Seçim yanlılığı (paralel kohortlar, varyantlar) | 2 × 3 açık kohort sınırı, aile kotası, kohort içinde Holm, "n denemeden k Validated" raporlaması | Aile kimliği atlatılabilir (hash ve benzerlik sınırları). Benzerlik yalnızca aile temsilcileriyle karşılaştırıldığı için temsilciden adım adım uzaklaşan varyantlar yakalanmayabilir (ADR-0015); global sınırlar asıl güvence |
 | Deneysel pariteler (kısa geçmiş) | E1 ve E2 kategorileri, %10 maruziyet tavanı, kanıt düzeyi etiketleri, doğrulamanın kategoriler arasında taşınmaması | Hayatta kalma yanlılığı çekirdekte tasarım gereği var; raporlanır |
 | Makine yöneticisi ya da saat manipülasyonu | Audit, kaynak dosyaların tarih başlıkları | Kabul edilmiş artık risk (yerel tek makine, ADR-0013) |
-| Runtime anahtarlarının Claude Code ile aynı makinede olması | Process ayrımı (D9), Docker secret dosyaları, `Read(**/secrets/**)` deny kuralı, trade-only ve withdrawal'sız Testnet anahtarı | Kabul edilmiş artık risk (ADR-0013). Exchange anahtarının IP kısıtı açık engel B6 |
+| Runtime anahtarlarının Claude Code ile aynı makinede olması | Process ayrımı (D9), Docker secret dosyaları, `Read(**/secrets/**)` deny kuralı, trade-only ve withdrawal'sız Testnet anahtarı; IP kısıtı yerine `TestnetGuardHandler` host allowlist'i (D33) | Kabul edilmiş artık risk (ADR-0013). Ağ düzeyinde egress kısıtı yok; sınır koddaki guard'dır (ADR-0021) |
 | Bellek baskısı (16 GB, IDE ve Claude Code ile ortak) | Servis başına `mem_limit`/`cpus`, iş bazlı Research.Host ve Evaluator, ağır işlerin sırayla çalışması (ADR-0013) | Ağır iş sırasında Trading.Host'un gecikmesi; döngü süreleri metrik olarak izlenir |
 | Prompt injection (M7) | Tool'suz Extractor, şema, alıntı doğrulaması | — |
 | Nitelikli olmayan modelin kullanılması | Görev politikası; downgrade yasağı test edilir | — |

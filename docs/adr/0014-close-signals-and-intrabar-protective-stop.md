@@ -43,7 +43,7 @@ Pozisyon açıkken her mum için, sırayla:
 | Paper (M5) | Trading.Host tick izlemez. Her kapanışta §2 kuralını kapanan muma uygular ve dolumu kuralın verdiği fiyattan kaydeder | Aynı mumlarla backtest ile **birebir** (ADR-0015, L1/L2) |
 | Testnet (M6) | Giriş dolumundan sonra borsaya `S` seviyesinde koruyucu bir stop emri bırakılır; borsa mum içinde tetikler | Birebir değildir. Sapmalar (gap, slippage, stop-limit emrinin dolmaması, tick yuvarlaması, borsa reddi) fark raporunda kategorize edilir |
 
-- Binance Spot'ta uygun stop emir tipi ve Testnet desteği **doğrulanmadı**; M6 öncesinde `sources.md`'ye işlenir.
+- Binance Spot'ta uygun stop emir tipi ve Testnet desteği **belgeden doğrulandı** (S-B14, S-B18; 2026-10-26). Seçim: `STOP_LOSS` (tetiklenince market); sembolde yoksa bantlı `STOP_LOSS_LIMIT` (U-M6-5, ADR-0021). Sembol bazında destek M6 Kapı C tatbikatında gözlenir.
 - Testnet'teki stop emirleri transactional outbox (ADR-0002) ve reconciliation kapsamındadır; stop seviyesi kapanışta güncellenirse emir iptal edilip yeni seviyeyle yeniden gönderilir.
 
 ### 4. Kill switch ve diğer limitler
