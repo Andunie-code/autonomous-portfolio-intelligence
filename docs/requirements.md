@@ -2,7 +2,7 @@
 
 Son güncelleme: 2026-10-26 (rev. 5.6; M6 Kapı A: D33, D30 sayımı) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
 
-> Durum: M0–M5 ve M5b (Kohort 1, M9a dashboard) tamamlandı (roadmap). M6 başladı (Kapı A, `m6-protocol.md`). M6 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
+> Durum: M0–M5 ve M5b (Kohort 1, M9a dashboard) tamamlandı (roadmap). M6 tamamlandı (kullanıcı kabulü 2026-10-28; gerçek Testnet terfisi D30 sonrasında, `m6-acceptance-report.md` §5). M7 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
 
 ## Karar durumu etiketleri
 | Etiket | Anlamı |

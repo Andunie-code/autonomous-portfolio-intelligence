@@ -28,10 +28,12 @@ function Show-Checks {
     $status = Invoke-RestMethod "$base/status" -Headers $headers
     $last = $status[0].last_cycle
     Write-Host "lastCycle outcome=$($last.outcome) degraded=$(@($last.detail.degraded) -join ',') bars=$($last.bars_processed) killSwitch=$($status[0].kill_switch)"
-    $lifecycle = @(Invoke-RestMethod "$base/lifecycle" -Headers $headers)
+    # Windows PowerShell 5.1 returns a JSON array as one object; @() would wrap it once more. The pipeline unrolls it,
+    # so each lifecycle event is visited and the latest one per member wins (events come in id order).
+    $lifecycle = Invoke-RestMethod "$base/lifecycle" -Headers $headers
     $states = @{}
-    foreach ($e in $lifecycle) { $states["$($e.cohort_id)/$($e.member_index)"] = $e.to_state }
-    $byState = $states.Values | Group-Object | ForEach-Object { "$($_.Name)=$($_.Count)" }
+    $lifecycle | ForEach-Object { $states["$($_.cohort_id)/$($_.member_index)"] = $_.to_state }
+    $byState = $states.Values | Group-Object | Sort-Object Name | ForEach-Object { "$($_.Name)=$($_.Count)" }
     Write-Host "lifecycle $($byState -join ' ')"
     $t = Invoke-RestMethod "$base/testnet" -Headers $headers
     $open = @($t.runs | Where-Object { -not $_.closed_at }).Count

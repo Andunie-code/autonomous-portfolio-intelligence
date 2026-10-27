@@ -2,6 +2,20 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-28 — M6 tamamlandı (kullanıcı kabulü)
+- **Kullanıcı kararı (U):** M6, C1–C3 kanıtlarıyla kapatıldı.
+  - **Kabul edilen sapma:** gerçek `PaperTrading → TestnetActive` terfisi (C4), D30 dolunca (en erken Kohort 0 için 2026-11-03, Kohort 1 için 2026-11-04) operasyonel adım olarak yapılır. M5'teki paper gözlemiyle aynı biçimde ele alındı.
+- **C3 (`m6-update.ps1`, kullanıcı):**
+  - migration 0009 uygulandı; Trading.Host M6 koduyla, Testnet açık olarak yeniden başladı; ilk döngü `ok`;
+  - Testnet: açık run 0, `Unknown` 0, korumasız pozisyon 0; borsaya emir gitmedi.
+  - D30: Kohort 0 7,33/14 gün, 43/60 mum; Kohort 1 6,17/14 gün, 36/60 mum; kritik hata 0.
+- **Paper raporu** (SHA-256 `82fa39d4…9224`):
+  - 56 döngü; gecikmeli döngü 0; reconciliation 75/0; duplicate 0; negatif nakit 0; canlı mum anomalisi 0;
+  - üç kesinti; kapanıştan 5 dakikadan geç işlenen 71 mum (kesinti sonrası catch-up);
+  - bellek Trading.Host 54,92 MiB, PostgreSQL 62,18 MiB.
+- **Script düzeltmesi:** `m6-update.ps1`'in lifecycle sayımı. Windows PowerShell 5.1 JSON dizisini tek nesne döndürdüğünde `@()` diziyi bir kez daha sarmalıyordu ve tüm durumlar tek grupta toplanıyordu. Dizi artık pipeline ile açılıyor.
+- **Güncellenen belgeler:** `m6-acceptance-report.md` (C3, C4 planı, kabul tablosu), `roadmap.md` (M6 ✅), `requirements.md` durum satırı, ADR-0021 durumu.
+
 ## 2026-10-28 — M6: Testnet sermayesi 5.000 USDT (m6-protocol v1.1, A-4; U)
 - **Kullanıcı kararı (U):** seçenek A. Testnet run sermayesi kohort başına 5.000 USDT nominal. Paper run'ları 10.000 ile sürer.
 - **Gerekçe:** Testnet'teki USDT bakiyesi yaklaşık 10.000 (kullanıcı beyanı; aylık sıfırlamada geri döner). %80 maruziyet sınırıyla iki kohort artık en fazla yaklaşık 8.000 USDT tutar.

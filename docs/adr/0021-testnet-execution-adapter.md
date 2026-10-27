@@ -2,7 +2,10 @@
 
 - Durum: **Kabul edildi (Kapı A, kullanıcı onayı 2026-10-26)** · Tarih: 2026-10-26
 - Karar türü: **U** (D33; `m6-protocol.md` U-M6-1…U-M6-6) ve **T** (adapter yapısı, outbox, Kernel harici dolum modu, guard, route değişikliği).
-- Uygulama durumu: **Kapı B'de çevrimdışı uygulandı (2026-10-27; `verify.ps1` yeşil, 598 test).** Gerçek Testnet, Kapı C'de kullanıcının koşularıyla denenir.
+- Uygulama durumu: **Uygulandı. M6 kullanıcı kabulüyle kapandı (2026-10-28).**
+  - Kapı B: çevrimdışı, `verify.ps1` yeşil (598 test; v1.1 ile 599).
+  - Kapı C: gerçek Testnet tatbikatı PASS (23 tam yaşam döngüsü).
+  - Gerçek strateji terfisi D30 sonrasındadır (`m6-acceptance-report.md` §5).
 - Uygulama notları (Kapı B):
   - **Kod yerleşimi:**
     - `Execution/Exchange`: `IExchangeAdapter`, `ExchangeFilters`, `ClientOrderIds`, `ExchangeStore` (outbox), `TestnetExecutor`, `TestnetDrill`, `ExchangeClock`;

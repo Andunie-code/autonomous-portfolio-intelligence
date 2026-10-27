@@ -189,9 +189,10 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - M9a: zincir (dolum → L2 → L1 → strateji → manifesto hash'i → deney → snapshot) gezilebiliyor; DecisionTrace, degraded işaretleri, trading/LLM kill switch'leri ve görev sınıfı bazında maliyet görünüyor; radar 11 göstergeyi, BTC rejimini ve aktif stratejilerin koşul yakınlığını gösteriyor.
   - Güvenlik: H24 route testi genişletildi (yeni POST yok, yasaklı kelime yok, tüm veri uç noktalarında 401, güvenlik başlıkları, yanlış `Host` → 421); `research_app` izinleri değişmedi; yanıtlarda secret yok.
 
-### M6 — Binance Testnet execution (M) — başladı (2026-10-26, U)
+### M6 — Binance Testnet execution (M) — ✅ tamamlandı (2026-10-28; kullanıcı kabulü)
 - **Ön kayıt:** [`m6-protocol.md`](m6-protocol.md) v1 ve ADR-0021 (Kapı A, kullanıcı onayı 2026-10-26).
-- **Durum (2026-10-27):** Kapı B tamamlandı. Çevrimdışı kod ve testler hazır; `verify.ps1` yeşil (598 test). Sırada Kapı C var (kullanıcı): anahtar, ≥ 20 emirlik tatbikat, `m6-update.ps1`, D30 dolunca terfi.
+- **Durum:** Kapı A (`b2433bc`), Kapı B (`a19a5e4`, 598 test) ve v1.1 (`86f5f1b`, A-4: Testnet sermayesi 5.000 USDT, 599 test) tamamlandı. Kapı C: C1 anahtar, C2 tatbikat PASS (23 tam yaşam döngüsü), C3 güncelleme. Kabul raporu: [`m6-acceptance-report.md`](m6-acceptance-report.md).
+  - **Kabul edilen sapma (U):** gerçek `PaperTrading → TestnetActive` terfisi (C4), D30 dolunca (en erken 2026-11-03) kapanıştan sonraki operasyonel adım olarak yapılır. Bu, M5'teki paper gözlemiyle aynı biçimde ele alındı.
 - **Kapılar (U):**
   - **A:** Binance belgelerinin doğrulanması (`sources.md` S-B11…S-B24), protokol ve ADR.
   - **B:** çevrimdışı kod ve testler (sahte handler, fault injection); `verify.ps1` yeşil.
