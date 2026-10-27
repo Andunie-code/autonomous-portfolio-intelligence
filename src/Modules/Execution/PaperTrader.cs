@@ -1,3 +1,4 @@
+using PortfolioIntelligence.Execution.Exchange;
 using PortfolioIntelligence.Kernel.Backtest;
 using PortfolioIntelligence.Kernel.Dsl;
 using PortfolioIntelligence.Kernel.MarketData;
@@ -21,9 +22,17 @@ public sealed record CycleOutcome(int BarsProcessed, bool CatchUp, bool Stale, b
 /// atomically. Within one process each run's engine is kept between cycles (no replay when the step log is
 /// unchanged); a new instance is a restart. <paramref name="warmup"/> overrides the indicator warm-up before the
 /// trading start (by default <see cref="WarmupFor"/>: at least 45 days).
+/// With <paramref name="testnet"/> (M6, m6-protocol §4): a cohort with TestnetActive members also gets a Testnet run,
+/// a copy of its paper run's sleeves that runs the same engine with the exchange's fills; the paper run goes on
+/// unchanged. Each cycle first maintains the Testnet orders and reconciles the account, then steps the runs.
 /// </summary>
-public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostModel costs, TimeSpan? warmup = null)
+public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostModel costs, TimeSpan? warmup = null, TestnetExecutor? testnet = null)
 {
+    /// <summary>Lifecycle states whose sleeve trades in a paper run: a TestnetActive strategy keeps its paper shadow (U-M6-4).</summary>
+    public static readonly IReadOnlySet<string> PaperStates = new HashSet<string> { "PaperTrading", "TestnetActive" };
+
+    public const string TestnetState = "TestnetActive";
+
     public static readonly TimeSpan Warmup = TimeSpan.FromDays(45);
     private readonly Dictionary<long, (int Steps, PortfolioEngine Engine)> _cache = [];
     private readonly HashSet<long> _warned = [];
@@ -65,10 +74,11 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
     public async Task<CycleOutcome> ProcessAsync(DateTimeOffset now, CancellationToken ct)
     {
         var degraded = new List<string>();
-        var runs = (await store.RunsAsync(ct)).ToList();
+        var closed = await store.ClosedRunsAsync(ct);
+        var runs = (await store.RunsAsync(ct)).Where(r => !closed.Contains(r.Id)).ToList();
 
         // A cohort in PaperTrading without a run gets its own (ADR-0019 §3); members that join later are not added.
-        var covered = runs.SelectMany(r => r.Config.Sleeves.Select(s => s.CohortId)).ToHashSet();
+        var covered = runs.Where(r => !r.Config.IsTestnet).SelectMany(r => r.Config.Sleeves.Select(s => s.CohortId)).ToHashSet();
         var (members, rejected) = await LoadMembersAsync(r => r.State == "PaperTrading" && !covered.Contains(r.CohortId), ct);
         degraded.AddRange(rejected.Select(r => $"strategy-hash-mismatch:{r}"));
         foreach (var cohort in members.GroupBy(m => m.Record.CohortId).OrderBy(g => g.Key))
@@ -81,6 +91,20 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
             runs.Add(run);
         }
 
+        TestnetReconciliation? testnetCheck = null;
+        if (testnet is not null)
+        {
+            try
+            {
+                testnetCheck = await PrepareTestnetAsync(runs, now, degraded, ct);
+            }
+            catch (ExchangeException e) when (e is not ExchangeIpBannedException)
+            {
+                degraded.Add("exchange-unavailable");
+                await store.AuditAsync("trading", "exchange_unavailable", new { error = e.GetType().Name }, ct);
+            }
+        }
+
         if (runs.Count == 0)
         {
             return new CycleOutcome(0, false, false, true, [.. degraded, "no-paper-strategies"]);
@@ -90,7 +114,24 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
         bool catchUp = false, stale = false, reconciliationOk = true;
         foreach (var run in runs)
         {
-            var outcome = await ProcessRunAsync(run, now, degraded, bars, ct);
+            if (run.Config.IsTestnet && (testnet is null || testnetCheck is null))
+            {
+                degraded.Add("exchange-unavailable"); // Testnet disabled or unreachable: the Testnet run waits; paper goes on
+                continue;
+            }
+
+            CycleOutcome outcome;
+            try
+            {
+                outcome = await ProcessRunAsync(run, now, degraded, bars, testnetCheck, ct);
+            }
+            catch (ExchangeException e) when (run.Config.IsTestnet && e is not ExchangeIpBannedException)
+            {
+                degraded.Add("exchange-unavailable");
+                await store.AuditAsync("trading", "exchange_unavailable", new { runId = run.Id, error = e.GetType().Name }, ct);
+                continue;
+            }
+
             catchUp |= outcome.CatchUp;
             stale |= outcome.Stale;
             reconciliationOk &= outcome.ReconciliationOk;
@@ -110,6 +151,36 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
     }
 
     /// <summary>
+    /// Exchange maintenance outside the hourly cycle (m6-protocol §5.5): with the kill switch engaged, the open entry
+    /// orders of every Testnet run are cancelled at once; protective stops stay. Returns the number of Testnet runs.
+    /// </summary>
+    public async Task<int> MaintainTestnetAsync(CancellationToken ct)
+    {
+        if (testnet is null)
+        {
+            return 0;
+        }
+
+        var closed = await store.ClosedRunsAsync(ct);
+        var open = (await store.RunsAsync(ct)).Where(r => r.Config.IsTestnet && !closed.Contains(r.Id)).ToList();
+        if (open.Count == 0)
+        {
+            return 0;
+        }
+
+        await testnet.PrepareAsync(open.SelectMany(r => r.Config.Symbols).Distinct(StringComparer.Ordinal).ToList(), ct);
+        var killSwitch = await store.KillSwitchEngagedAsync(ct);
+        foreach (var run in open)
+        {
+            var steps = await store.StepsAsync(run.Id, ct);
+            var length = CandleInterval.FromCode(run.Config.Interval).FixedLength!.Value;
+            await testnet.MaintainAsync(run, steps.Count > 0 ? steps[^1].BarTime + length : run.WarmupStart, killSwitch, ct);
+        }
+
+        return open.Count;
+    }
+
+    /// <summary>
     /// Indicator warm-up of a new run: the longest indicator warm-up of its strategies (BTC-sourced ones included)
     /// plus one bar and one day, in whole days, and never less than <see cref="Warmup"/> (ADR-0019 §4).
     /// </summary>
@@ -120,9 +191,95 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
         return needed > Warmup ? needed : Warmup;
     }
 
-    /// <summary>One run's cycle; <paramref name="bars"/> collects the bar times processed by any run.</summary>
-    private async Task<CycleOutcome> ProcessRunAsync(PaperRun run, DateTimeOffset now, List<string> degraded, HashSet<DateTimeOffset> bars, CancellationToken ct)
+    /// <summary>
+    /// Testnet part of a cycle (m6-protocol §3.2, §4): rules and clock, a requested rebaseline (closes the open Testnet
+    /// runs), a Testnet run with a balance baseline for every cohort with TestnetActive members, maintenance of every
+    /// Testnet run's orders, then the account-wide reconciliation. Null when there is no Testnet run.
+    /// </summary>
+    private async Task<TestnetReconciliation?> PrepareTestnetAsync(List<PaperRun> runs, DateTimeOffset now, List<string> degraded, CancellationToken ct)
     {
+        var frozen = await store.FrozenAsync(ct);
+        var active = frozen.Where(f => f.State == TestnetState).Select(f => f.CohortId).Distinct().Order().ToList();
+        var open = runs.Where(r => r.Config.IsTestnet).ToList();
+        if (active.Count == 0 && open.Count == 0)
+        {
+            return null;
+        }
+
+        var symbols = runs.Where(r => open.Contains(r) || active.Any(c => r.Config.Sleeves.Any(s => s.CohortId == c)))
+            .SelectMany(r => r.Config.Symbols).Distinct(StringComparer.Ordinal).ToList();
+        await testnet!.PrepareAsync(symbols, ct);
+
+        // Rebaseline (§4.4): the user's action closes the open Testnet runs; new runs and a new baseline follow.
+        var sources = await testnet.BaselineSourcesAsync(ct);
+        var rebaseline = (await store.ActionsAfterAsync(0, ct)).LastOrDefault(a => a.Action == "testnet-rebaseline" && !sources.Contains($"rebaseline:{a.Id}"));
+        string? source = null;
+        if (rebaseline is not null)
+        {
+            foreach (var run in open)
+            {
+                await store.CloseRunAsync(run.Id, $"rebaseline:{rebaseline.Id}", ct);
+                runs.Remove(run);
+            }
+
+            await store.AuditAsync("trading", "testnet_runs_closed", new { runs = open.Select(r => r.Id).ToList(), actionId = rebaseline.Id }, ct);
+            open.Clear();
+            source = $"rebaseline:{rebaseline.Id}";
+        }
+
+        var coveredTestnet = open.SelectMany(r => r.Config.Sleeves.Select(s => s.CohortId)).ToHashSet();
+        foreach (var cohortId in active.Where(c => !coveredTestnet.Contains(c)))
+        {
+            var paper = runs.LastOrDefault(r => !r.Config.IsTestnet && r.Config.Sleeves.Any(s => s.CohortId == cohortId));
+            var (members, rejected) = await LoadMembersAsync(r => r.CohortId == cohortId, ct);
+            if (paper is null || rejected.Count > 0)
+            {
+                continue; // no paper run to mirror, or a hash alarm
+            }
+
+            var start = NextBoundary(now);
+            var lastAction = await store.LastActionIdAsync(ct);
+            var config = paper.Config with { Venue = PaperRunConfig.TestnetVenue, ActionsAfter = lastAction == 0 ? null : lastAction };
+            var run = await store.CreateRunAsync(start, start - (warmup ?? WarmupFor(members.Select(m => m.Strategy))), config, ct);
+            await testnet.BaselineAsync(run.Id, source ?? $"run-start:{run.Id}", await testnet.AccountAsync(ct), ct);
+            await store.AuditAsync("trading", "testnet_run_created", new { run.Id, cohortId, paperRunId = paper.Id, run.TradingStart, configHash = run.Config.Hash() }, ct);
+            runs.Add(run);
+            open.Add(run);
+        }
+
+        if (open.Count == 0)
+        {
+            return null;
+        }
+
+        var killSwitch = await store.KillSwitchEngagedAsync(ct);
+        var unknown = 0;
+        foreach (var run in open)
+        {
+            var steps = await store.StepsAsync(run.Id, ct);
+            var length = CandleInterval.FromCode(run.Config.Interval).FixedLength!.Value;
+            unknown += await testnet.MaintainAsync(run, steps.Count > 0 ? steps[^1].BarTime + length : run.WarmupStart, killSwitch, ct);
+        }
+
+        if (unknown > 0)
+        {
+            degraded.Add("order-unknown");
+        }
+
+        var check = await testnet.ReconcileAsync(open, ct);
+        if (!check.Ok)
+        {
+            degraded.Add(check.Reason == "testnet-reset-suspected" ? "testnet-reset-suspected" : "testnet-reconciliation");
+            await store.AuditAsync("trading", "testnet_reconciliation_failed", check.Detail, ct);
+        }
+
+        return check;
+    }
+
+    /// <summary>One run's cycle; <paramref name="bars"/> collects the bar times processed by any run.</summary>
+    private async Task<CycleOutcome> ProcessRunAsync(PaperRun run, DateTimeOffset now, List<string> degraded, HashSet<DateTimeOffset> bars, TestnetReconciliation? testnetCheck, CancellationToken ct)
+    {
+        var onTestnet = run.Config.IsTestnet;
         var strategies = new List<IStrategy>();
         foreach (var sleeve in run.Config.Sleeves)
         {
@@ -149,7 +306,8 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
         var byTime = series.ToDictionary(kv => kv.Key, kv => kv.Value.ToDictionary(c => c.OpenTime));
         var engine = cached ? c.Engine : new PortfolioEngine(new PortfolioSetup(
             run.Config.Sleeves.Select((s, i) => new SleeveSpec(s.Name, strategies[i], s.Capital)).ToList(),
-            costs, Risk(riskVersions, 0, run), run.Config.Symbols, interval, run.TradingStart, run.Config.Experimental.ToHashSet(), RecordEvents: true));
+            costs, Risk(riskVersions, 0, run), run.Config.Symbols, interval, run.TradingStart, run.Config.Experimental.ToHashSet(), RecordEvents: true,
+            ExternalFills: onTestnet));
 
         // 1. Rebuild from the step log; every step must reproduce its recorded state hash.
         foreach (var step in cached ? [] : steps)
@@ -176,6 +334,13 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
             }
         }
 
+        // Testnet: the account-wide check of the exchange orders and balances (m6-protocol §4.3).
+        if (onTestnet && reconciliationOk && testnetCheck is { Ok: false })
+        {
+            reconciliationOk = false;
+            await store.AddReconciliationAsync(run.Id, steps.LastOrDefault()?.BarTime, false, testnetCheck.Detail, ct);
+        }
+
         if (reconciliationOk && steps.Count > 0)
         {
             await store.AddReconciliationAsync(run.Id, steps[^1].BarTime, true, new { steps = steps.Count, fills = engine.Fills.Count }, ct);
@@ -200,16 +365,25 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
                 break; // wait for data
             }
 
+            // Testnet: the orders sent for this bar's open must be resolved before the step can apply their fills.
+            if (onTestnet && await testnet!.PendingAsync(run, t - length, ct))
+            {
+                degraded.Add("orders-pending");
+                break;
+            }
+
             var killSwitch = await store.KillSwitchEngagedAsync(ct);
             var actions = await store.ActionsAfterAsync(lastActionId, ct);
             lastActionId = actions.Count > 0 ? actions[^1].Id : lastActionId;
             var riskVersion = riskVersions.Keys.DefaultIfEmpty(0).Max();
             var disabled = run.Config.Sleeves
                 .Select((s, i) => (i, State: frozen.Single(f => f.CohortId == s.CohortId && f.MemberIndex == s.MemberIndex).State))
-                .Where(x => x.State != "PaperTrading")
+                .Where(x => onTestnet ? x.State != TestnetState : !PaperStates.Contains(x.State))
                 .Select(x => x.i)
                 .ToList();
-            var blocked = killSwitch ? "kill-switch" : !reconciliationOk ? "reconciliation" : late ? "stale-data" : null;
+            var external = onTestnet ? await testnet!.ExternalAsync(run, engine, t, ct) : null;
+            var blocked = killSwitch ? "kill-switch" : !reconciliationOk ? "reconciliation" : late ? "stale-data"
+                : external?.Unprotected is { Count: > 0 } ? "unprotected" : null;
             stale |= late;
             var inputs = new StepInputs(
                 blocked,
@@ -219,7 +393,8 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
                 actions.Any(a => a.Action == "close-all"),
                 present,
                 lastActionId,
-                riskVersion);
+                riskVersion,
+                external);
 
             var eventsBefore = engine.Events.Count;
             var fillsBefore = engine.Fills.Count;
@@ -239,6 +414,11 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
                 t, inputs, engine.StateHash(), engine.Events.Skip(eventsBefore).ToList(), engine.Fills.Skip(fillsBefore).ToList(), balances, correlation), ct);
             processed++;
             bars.Add(t);
+            if (onTestnet)
+            {
+                // The step's orders go out now, for the next open (outbox, m6-protocol §3.1); stops follow the holdings.
+                await testnet!.SubmitAsync(run, engine, t, now, await store.KillSwitchEngagedAsync(ct) ? "kill-switch" : null, ct);
+            }
 
             // P1 warning (informational): the largest cluster share crosses the warning level.
             var above = correlation is not null && document.ClusterWarningShare is { } warning && correlation.MaxClusterShare >= (double)warning;
@@ -254,6 +434,17 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
             else
             {
                 _warned.Remove(run.Id);
+            }
+        }
+
+        if (onTestnet && engine.LastStep is { } lastStep)
+        {
+            // Idempotent: sends what a crash after the last step left unsent, retries entries within their bar and
+            // re-places missing stops; then reports positions still without a stop (m6-protocol §5.3).
+            await testnet!.SubmitAsync(run, engine, lastStep, now, await store.KillSwitchEngagedAsync(ct) ? "kill-switch" : !reconciliationOk ? "reconciliation" : null, ct);
+            if ((await testnet.UnprotectedAsync(run, engine, ct)).Count > 0)
+            {
+                degraded.Add("unprotected-stop");
             }
         }
 

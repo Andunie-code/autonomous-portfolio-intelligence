@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PortfolioIntelligence.Execution;
+using PortfolioIntelligence.Execution.Exchange;
+using PortfolioIntelligence.Execution.Exchange.Binance;
 using PortfolioIntelligence.Execution.Radar;
 using PortfolioIntelligence.Infrastructure.Logging;
 using PortfolioIntelligence.Kernel.Backtest;
@@ -21,26 +23,35 @@ namespace PortfolioIntelligence.Trading.Host;
 ///   Trading:Worker = disabled   Ops API only (tests)
 ///   Radar:WatchSymbols          comma-separated watch-only symbols of the signal radar (ADR-0020 §5; no run, no order)
 ///   OpsApi:AllowedHosts         loopback host names accepted by the Ops API (default 127.0.0.1;localhost;[::1])
+///   Trading:Testnet = enabled   Binance Spot Testnet execution (M6, ADR-0021; off by default). Needs the Docker
+///                               secrets testnet_api_key and testnet_api_secret in Trading:SecretsDirectory (D33)
 /// </summary>
 public static class TradingHost
 {
+    public const string TestnetKeyFile = "testnet_api_key";
+    public const string TestnetSecretFile = "testnet_api_secret";
+
     public static WebApplicationBuilder CreateBuilder(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        builder.Logging.AddPortfolioLogging(builder.Configuration);
         var configuration = builder.Configuration;
+        var credentials = TestnetCredentialsFrom(configuration);
+        // Docker secret files never enter the configuration: their values are masked as literals (m6-protocol §8.2).
+        builder.Logging.AddPortfolioLogging(builder.Configuration, FileSecrets(configuration));
         var watch = WatchSymbols(configuration);
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<TradingHealth>();
+        builder.Services.AddSingleton<MaintenanceSignal>();
         builder.Services.AddSingleton(_ => new PaperStore(Required(configuration, "Trading")));
-        builder.Services.AddSingleton(_ => new OpsService(Required(configuration, "OpsApi")));
+        builder.Services.AddSingleton(sp => new OpsService(Required(configuration, "OpsApi"), sp.GetRequiredService<TimeProvider>(), credentials is not null));
+        builder.Services.AddSingleton(sp => new TestnetRuntime(credentials is null ? null : CreateExecutor(sp, credentials)));
         builder.Services.AddSingleton(_ => new DashboardQueries(Required(configuration, "OpsApi")));
         builder.Services.AddSingleton(_ => new RadarService(Required(configuration, "OpsApi"), watch));
         builder.Services.AddSingleton(sp => new LiveCandleStore(Required(configuration, "Trading")));
         builder.Services.AddSingleton(sp =>
         {
             var store = sp.GetRequiredService<PaperStore>();
-            return new PaperTrader(store, new LiveCandleSource(sp.GetRequiredService<LiveCandleStore>()), CostModel.V1);
+            return new PaperTrader(store, new LiveCandleSource(sp.GetRequiredService<LiveCandleStore>()), CostModel.V1, testnet: sp.GetRequiredService<TestnetRuntime>().Executor);
         });
         builder.Services.AddSingleton(sp =>
         {
@@ -73,6 +84,57 @@ public static class TradingHost
         return app;
     }
 
+    /// <summary>
+    /// The Testnet key from the Docker secret files (D33): only with Trading:Testnet = enabled and both files present
+    /// and non-empty; otherwise Testnet stays off.
+    /// </summary>
+    public static TestnetCredentials? TestnetCredentialsFrom(IConfiguration configuration)
+    {
+        if (!string.Equals(configuration["Trading:Testnet"], "enabled", StringComparison.Ordinal) || configuration["Trading:SecretsDirectory"] is not { Length: > 0 } secrets)
+        {
+            return null;
+        }
+
+        var key = ReadSecret(Path.Combine(secrets, TestnetKeyFile));
+        var secret = ReadSecret(Path.Combine(secrets, TestnetSecretFile));
+        return key is { Length: > 0 } && secret is { Length: > 0 } ? new TestnetCredentials(key, secret) : null;
+    }
+
+    /// <summary>Values of the secret files the host reads (Ops API token, login passwords, Testnet key), for log redaction.</summary>
+    public static IReadOnlyList<string> FileSecrets(IConfiguration configuration)
+    {
+        var files = new List<string>();
+        if (configuration["OpsApi:TokenFile"] is { Length: > 0 } token)
+        {
+            files.Add(token);
+        }
+
+        if (configuration["Trading:SecretsDirectory"] is { Length: > 0 } secrets)
+        {
+            files.AddRange(new[] { TestnetKeyFile, TestnetSecretFile, "trading_app", "ops_api" }.Select(f => Path.Combine(secrets, f)));
+        }
+
+        return files.Select(ReadSecret).OfType<string>().Where(v => v.Length > 0).ToList();
+    }
+
+    private static string? ReadSecret(string path) => File.Exists(path) ? File.ReadAllText(path).Trim() : null;
+
+    /// <summary>
+    /// Testnet execution: HTTP client (HMAC signing, then the Testnet guard as the last handler; no redirects), the
+    /// adapter, the outbox store as trading_app and the executor. The guard allows the frozen strategies' pairs (read
+    /// once at start; a new cohort needs a restart).
+    /// </summary>
+    private static TestnetExecutor CreateExecutor(IServiceProvider sp, TestnetCredentials credentials)
+    {
+        var store = sp.GetRequiredService<PaperStore>();
+        var symbols = store.FrozenAsync(CancellationToken.None).GetAwaiter().GetResult()
+            .SelectMany(f => CohortManifestReader.Read(f.Manifest).Pairs.Select(p => p.Symbol)).ToHashSet(StringComparer.Ordinal);
+        var clock = new ExchangeClock(sp.GetRequiredService<TimeProvider>());
+        var http = BinanceTestnetAdapter.CreateClient(credentials, clock, symbols, TestnetGuardHandler.CreateNetworkHandler());
+        return new TestnetExecutor(new BinanceTestnetAdapter(http, clock), new ExchangeStore(store.ConnectionString), clock,
+            (e, payload, ct) => store.AuditAsync("trading", e, payload, ct));
+    }
+
     /// <summary>Watch-only radar symbols: upper-case USDT spot symbols only (anything else is ignored).</summary>
     public static IReadOnlyList<string> WatchSymbols(IConfiguration configuration) =>
         (configuration["Radar:WatchSymbols"] ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -92,22 +154,39 @@ public static class TradingHost
     }
 }
 
-/// <summary>Runs <see cref="TradingCycle"/> at HH:00:15 UTC every hour (m5-protocol §2.1).</summary>
-public sealed class TradingWorker(TradingCycle cycle, TimeProvider clock, ILogger<TradingWorker> logger) : BackgroundService
+/// <summary>Testnet execution of this host, or none when Testnet is off.</summary>
+public sealed record TestnetRuntime(TestnetExecutor? Executor);
+
+/// <summary>
+/// Runs <see cref="TradingCycle"/> at HH:00:15 UTC every hour (m5-protocol §2.1); in between, a maintenance request
+/// (kill switch engaged, m6-protocol §5.5) runs the exchange maintenance at once.
+/// </summary>
+public sealed class TradingWorker(TradingCycle cycle, TimeProvider clock, MaintenanceSignal signal, ILogger<TradingWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // First cycle immediately at start (restart: reconciliation, then missed bars in order).
         var scheduled = clock.GetUtcNow();
+        Task? request = null; // one pending read of the signal at a time, so no request is lost
         while (!stoppingToken.IsCancellationRequested)
         {
             var outcome = await cycle.RunAsync(scheduled, stoppingToken);
             logger.LogInformation("Cycle {Scheduled:O}: {Bars} bars, degraded [{Degraded}]", scheduled, outcome.BarsProcessed, string.Join(", ", outcome.Degraded));
             scheduled = TradingCycle.NextSchedule(clock.GetUtcNow());
-            var wait = scheduled - clock.GetUtcNow();
-            if (wait > TimeSpan.Zero)
+            for (var wait = scheduled - clock.GetUtcNow(); wait > TimeSpan.Zero; wait = scheduled - clock.GetUtcNow())
             {
-                await Task.Delay(wait, clock, stoppingToken);
+                var due = Task.Delay(wait, clock, stoppingToken);
+                request ??= signal.WaitAsync(stoppingToken);
+                if (await Task.WhenAny(due, request) != request)
+                {
+                    await due;
+                    break;
+                }
+
+                await request;
+                request = null;
+                await cycle.MaintainAsync(stoppingToken);
+                logger.LogInformation("Exchange maintenance on request");
             }
         }
     }

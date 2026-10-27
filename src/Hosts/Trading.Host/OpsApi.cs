@@ -43,6 +43,8 @@ public sealed record OpsToken(string? Value)
 /// bearer token; the dashboard files carry no data. There is deliberately no route for manifests, results,
 /// validation status or cohort registration, and the dashboard adds no write route; <see cref="Routes"/> is pinned
 /// by a test. Requests whose Host is not a loopback name are refused (421) against DNS rebinding.
+/// M6 (ADR-0021 §7) adds two read routes (/testnet, /promotion) and two confirmed user actions: the
+/// PaperTrading → TestnetActive transition (V10) and the Testnet rebaseline after an exchange reset.
 /// </summary>
 public static class OpsApi
 {
@@ -68,11 +70,15 @@ public static class OpsApi
         "GET /dashboard",
         "GET /dashboard/app.js",
         "GET /dashboard/app.css",
+        "GET /testnet",
+        "GET /promotion",
         "POST /kill-switch",
         "POST /strategies/{name}/disable",
         "POST /positions/close",
         "POST /positions/close-all",
         "POST /risk-config",
+        "POST /strategies/{name}/testnet-activate",
+        "POST /testnet/rebaseline",
     ];
 
     /// <summary>Applied to every response (ADR-0020 §3); the dashboard has no inline script or style.</summary>
@@ -86,6 +92,8 @@ public static class OpsApi
     public sealed record CloseRequest(int Sleeve, string Symbol, string Reason, long? RunId = null);
 
     public sealed record RiskConfigRequest(RiskConfigDocument Config, string Reason, bool Confirm);
+
+    public sealed record ConfirmedRequest(string Reason, bool Confirm);
 
     public static void Map(WebApplication app)
     {
@@ -143,12 +151,24 @@ public static class OpsApi
         Get(app, "/ai/costs", (s, _, ct) => s.GetRequiredService<DashboardQueries>().AiCostsAsync(ct));
         Get(app, "/ai/traces", (s, request, ct) => s.GetRequiredService<DashboardQueries>().AiTracesAsync(Limit(request), ct));
 
+        // M6 (m6-protocol §7): Testnet orders and protective stops, and the D30 progress.
+        Get(app, "/testnet", (s, _, ct) => s.GetRequiredService<DashboardQueries>().TestnetAsync(s.GetRequiredService<TestnetRuntime>().Executor is not null, ct));
+        Get(app, "/promotion", (s, _, ct) => s.GetRequiredService<DashboardQueries>().PromotionAsync(s.GetRequiredService<TimeProvider>().GetUtcNow(), ct));
+
         // The dashboard's static files: no data and no token (the page asks for the token and sends it as a header).
         Asset(app, "/dashboard", "index.html", "text/html; charset=utf-8");
         Asset(app, "/dashboard/app.js", "app.js", "text/javascript; charset=utf-8");
         Asset(app, "/dashboard/app.css", "app.css", "text/css; charset=utf-8");
 
-        Post<KillSwitchRequest>(app, "/kill-switch", (ops, r, _, ct) => ops.SetKillSwitchAsync(r.Engaged, r.Reason, ct));
+        Post<KillSwitchRequest>(app, "/kill-switch", async (ops, r, request, ct) =>
+        {
+            await ops.SetKillSwitchAsync(r.Engaged, r.Reason, ct);
+            if (r.Engaged)
+            {
+                // Open entry orders on the exchange are cancelled now, not at the next hourly cycle (m6-protocol §5.5).
+                request.HttpContext.RequestServices.GetRequiredService<MaintenanceSignal>().Request();
+            }
+        });
         Post<ReasonRequest>(app, "/strategies/{name}/disable", (ops, r, request, ct) => ops.DisableStrategyAsync((string)request.RouteValues["name"]!, r.Reason, ct));
         Post<CloseRequest>(app, "/positions/close", (ops, r, _, ct) => ops.ClosePositionsAsync(r.RunId, r.Sleeve, r.Symbol, r.Reason, ct));
         Post<ReasonRequest>(app, "/positions/close-all", (ops, r, _, ct) => ops.ClosePositionsAsync(null, null, null, r.Reason, ct));
@@ -157,6 +177,9 @@ public static class OpsApi
             var current = await ops.CurrentRiskAsync(ct) ?? throw new OpsRequestException("no paper run yet");
             await ops.AddRiskConfigAsync(r.Config, current, r.Reason, r.Confirm, ct);
         });
+        Post<ConfirmedRequest>(app, "/strategies/{name}/testnet-activate", (ops, r, request, ct) =>
+            ops.ActivateTestnetAsync((string)request.RouteValues["name"]!, r.Reason, r.Confirm, ct));
+        Post<ConfirmedRequest>(app, "/testnet/rebaseline", (ops, r, _, ct) => ops.RebaselineTestnetAsync(r.Reason, r.Confirm, ct));
     }
 
     private static System.Text.Json.Nodes.JsonObject JsonNode(string json) => System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();
@@ -226,6 +249,10 @@ public static class OpsApi
             catch (OpsRequestException e)
             {
                 return Results.BadRequest(new { error = e.Message });
+            }
+            catch (OpsConflictException e)
+            {
+                return Results.Conflict(new { error = e.Message });
             }
         });
 }

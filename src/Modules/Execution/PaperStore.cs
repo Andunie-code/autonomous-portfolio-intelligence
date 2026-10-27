@@ -36,6 +36,11 @@ public interface IPaperStore
 
     Task<PaperRun> CreateRunAsync(DateTimeOffset tradingStart, DateTimeOffset warmupStart, PaperRunConfig config, CancellationToken ct);
 
+    /// <summary>Runs that ended (a Testnet run after an exchange reset, m6-protocol §4.4); they are not processed again.</summary>
+    Task<IReadOnlySet<long>> ClosedRunsAsync(CancellationToken ct);
+
+    Task CloseRunAsync(long runId, string reason, CancellationToken ct);
+
     Task<IReadOnlyList<StepRecord>> StepsAsync(long runId, CancellationToken ct);
 
     Task<IReadOnlyDictionary<int, (long Fills, decimal Cash)>> LedgerAsync(long runId, CancellationToken ct);
@@ -119,12 +124,36 @@ public sealed class PaperStore(string connectionString) : IPaperStore
     {
         await using var connection = await OpenAsync(ct);
         await using var command = new NpgsqlCommand(
-            "INSERT INTO trading.paper_runs (trading_start, warmup_start, config, config_hash) VALUES ($1, $2, $3::jsonb, $4) RETURNING id", connection);
+            "INSERT INTO trading.paper_runs (trading_start, warmup_start, config, config_hash, venue) VALUES ($1, $2, $3::jsonb, $4, $5) RETURNING id", connection);
         command.Parameters.AddWithValue(tradingStart);
         command.Parameters.AddWithValue(warmupStart);
         command.Parameters.AddWithValue(config.Json());
         command.Parameters.AddWithValue(config.Hash());
+        command.Parameters.AddWithValue(config.Venue ?? "paper");
         return new PaperRun((long)(await command.ExecuteScalarAsync(ct))!, tradingStart, warmupStart, config);
+    }
+
+    public async Task<IReadOnlySet<long>> ClosedRunsAsync(CancellationToken ct)
+    {
+        await using var connection = await OpenAsync(ct);
+        await using var command = new NpgsqlCommand("SELECT run_id FROM trading.run_closures", connection);
+        var result = new HashSet<long>();
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            result.Add(reader.GetInt64(0));
+        }
+
+        return result;
+    }
+
+    public async Task CloseRunAsync(long runId, string reason, CancellationToken ct)
+    {
+        await using var connection = await OpenAsync(ct);
+        await using var command = new NpgsqlCommand("INSERT INTO trading.run_closures (run_id, reason) VALUES ($1, $2)", connection);
+        command.Parameters.AddWithValue(runId);
+        command.Parameters.AddWithValue(reason);
+        await command.ExecuteNonQueryAsync(ct);
     }
 
     public async Task<IReadOnlyList<StepRecord>> StepsAsync(long runId, CancellationToken ct)

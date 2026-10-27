@@ -1,3 +1,4 @@
+using PortfolioIntelligence.Execution.Exchange;
 using PortfolioIntelligence.Kernel.MarketData;
 using PortfolioIntelligence.MarketData.Live;
 
@@ -19,7 +20,8 @@ public sealed class TradingHealth
 /// One hourly cycle (m5-protocol §2.1): fetch newly closed candles (when live data is enabled), process the paper
 /// runs, record the cycle metric. HTTP 418 engages the trading kill switch automatically (risk-model §3.1); 429
 /// and per-symbol failures leave the bar to the gap rule or to the next cycle. <paramref name="watchSymbols"/> are
-/// fetched for the signal radar only (ADR-0020 §5): they enter no run and produce no order.
+/// fetched for the signal radar only (ADR-0020 §5): they enter no run and produce no order. HTTP 418 from the exchange
+/// (M6) engages the kill switch the same way.
 /// </summary>
 public sealed class TradingCycle(PaperStore store, PaperTrader trader, LiveCandleFeed? feed, TradingHealth health, TimeProvider clock, IReadOnlyList<string>? watchSymbols = null)
 {
@@ -69,7 +71,18 @@ public sealed class TradingCycle(PaperStore store, PaperTrader trader, LiveCandl
                 }
             }
 
-            result = await trader.ProcessAsync(clock.GetUtcNow(), ct);
+            try
+            {
+                result = await trader.ProcessAsync(clock.GetUtcNow(), ct);
+            }
+            catch (ExchangeIpBannedException)
+            {
+                await store.EngageKillSwitchAsync("system", "HTTP 418 from the exchange", ct);
+                await store.AuditAsync("trading", "exchange_ip_banned", new { scheduledFor }, ct);
+                result = new CycleOutcome(0, false, false, true, ["kill-switch"]);
+                outcome = "ip-banned";
+            }
+
             if (result.Degraded.Count > 0 && outcome == "ok")
             {
                 outcome = "degraded";
@@ -88,6 +101,19 @@ public sealed class TradingCycle(PaperStore store, PaperTrader trader, LiveCandl
         await store.AddCycleMetricAsync(new CycleMetric(scheduledFor, started, finished, result.BarsProcessed, result.CatchUp, result.Stale, outcome, detail), ct);
         health.Update(new TradingHealth.Snapshot(finished, outcome, result.Degraded));
         return result;
+    }
+
+    /// <summary>An immediate exchange maintenance pass (kill switch, m6-protocol §5.5); failures wait for the next cycle.</summary>
+    public async Task MaintainAsync(CancellationToken ct)
+    {
+        try
+        {
+            await trader.MaintainTestnetAsync(ct);
+        }
+        catch (ExchangeException e)
+        {
+            await store.AuditAsync("trading", "exchange_maintenance_failed", new { error = e.GetType().Name }, ct);
+        }
     }
 
     /// <summary>The next hourly schedule point (HH:00:15 UTC) strictly after <paramref name="now"/>.</summary>

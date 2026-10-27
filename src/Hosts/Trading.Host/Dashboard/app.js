@@ -225,9 +225,34 @@ async function api(path) {
   return response.json();
 }
 
+// ---------- D30 progress (m6-protocol §6.1) ----------
+function progress(label, value, target, unit) {
+  const share = Math.max(0, Math.min(1, Number(value) / target));
+  const fill = el('div', { class: `fill ${share >= 1 ? '' : 'warn'}`.trim() });
+  fill.style.width = `${share * 100}%`;
+  return el('div', { class: 'meter' }, el('div', { class: 'head' }, el('span', { text: label }), el('span', { class: 'mono', text: `${num(value, unit === 'gün' ? 1 : 0)}/${target} ${unit}` })),
+    el('div', { class: 'track', role: 'meter', 'aria-valuemin': '0', 'aria-valuemax': String(target), 'aria-valuenow': String(value), 'aria-label': label }, fill));
+}
+
+const MISSING_TEXT = { days: '14 gün dolmadı', bars: '60 mum dolmadı', 'critical-errors': 'son 7 günde kritik hata var' };
+
+function promotionCard(promotion) {
+  const rows = promotion.strategies.filter((s) => ['PaperTrading', 'TestnetActive'].includes(s.state));
+  return card('Testnet terfisi (D30: ≥ 14 gün, ≥ 60 işlenmiş 4h mum, son 7 günde 0 kritik hata)',
+    rows.length === 0 ? el('p', { class: 'note', text: 'Paper\'da strateji yok.' }) : rows.map((s) => el('div', { class: 'promotion' },
+      el('div', { class: 'card-head' }, strategyCell(s.name, s.cohortId),
+        s.state === 'TestnetActive' ? badge('Testnet', 'good', 'check') : s.eligible ? badge('Uygun · kullanıcı onayı bekliyor', 'good', 'check') : badge('Bekliyor', 'muted', 'clock'),
+        s.experimental ? badge('deneysel', 'warn', 'alert') : null),
+      progress(`${cohortLabel(s.cohortId).replace('K', 'Kohort ')}: gün`, s.days, promotion.minimumDays, 'gün'),
+      progress('İşlenmiş 4h mum', s.bars, promotion.minimumBars, 'mum'),
+      el('p', { class: 'note', text: `Kritik hata (7 gün): ${s.criticalErrors7d} · kesinti oranı ${pct(s.outageRatio)} · paper başlangıcı ${time(s.paperSince)}`
+        + (s.missing.length ? ` · eksik: ${s.missing.map((m) => MISSING_TEXT[m] || m).join(', ')}` : '') }))),
+    el('p', { class: 'note', text: 'Geçiş yalnızca kullanıcı oturumuyla yapılır (scripts/m6-testnet-activate.ps1, confirm: true). Doğrulama gerekmez; Validated olmayan stratejiler "deneysel" etiketi taşır.' }));
+}
+
 // ---------- overview ----------
 async function renderOverview(view) {
-  const data = await api('/overview');
+  const [data, promotion] = await Promise.all([api('/overview'), api('/promotion').catch(() => null)]);
   const t = data.total; const limits = data.limits || {};
   const waiting = data.runs.filter((r) => r.awaitingFirstBar).length;
   show(view, 
@@ -261,7 +286,62 @@ async function renderOverview(view) {
       run.clusters.length === 0 ? el('p', { class: 'note', text: 'Henüz korelasyon görüntüsü yok (ilk adımlardan sonra oluşur).' })
         : run.clusters.filter((c) => c.exposure > 0 || c.symbols.length > 1).map((c) =>
           meter(`Küme ${c.cluster}: ${c.symbols.join(', ')}`, c.exposure, limits.clusterCapMaxExposure, limits.clusterWarningShare)),
-      el('p', { class: 'note', text: 'Pozisyonu olmayan tekil kümeler gizlendi. Tavanı aşacak alım kırpılır ya da reddedilir; zorunlu satış yapılmaz.' })))));
+      el('p', { class: 'note', text: 'Pozisyonu olmayan tekil kümeler gizlendi. Tavanı aşacak alım kırpılır ya da reddedilir; zorunlu satış yapılmaz.' })))),
+    promotion ? promotionCard(promotion) : null);
+}
+
+// ---------- testnet (m6-protocol §7) ----------
+const ORDER_STATUS_VIEW = {
+  Submitting: ['Gönderiliyor', 'info'], Accepted: ['Borsada', 'good'], PartiallyFilled: ['Kısmi dolum', 'warn'], Filled: ['Doldu', 'good'],
+  Canceled: ['İptal', 'muted'], Expired: ['Süresi doldu', 'muted'], ExchangeRejected: ['Borsa reddi', 'bad'], Unknown: ['Bilinmiyor', 'bad'],
+  NeverAccepted: ['Borsaya ulaşmadı', 'muted'], LocalRejected: ['Filtre reddi', 'warn'], CancelRequested: ['İptal isteniyor', 'info'], none: ['Stop yok', 'bad'],
+};
+function orderBadge(status) { const [label, kind] = ORDER_STATUS_VIEW[status] || [status, 'muted']; return badge(label, kind); }
+const PURPOSE_TEXT = { Entry: 'Giriş', Stop: 'Koruyucu stop', Exit: 'Çıkış', Close: 'Kapatma' };
+
+async function renderTestnet(view) {
+  const data = await api('/testnet');
+  const dev = data.deviations || {};
+  show(view,
+    callout('Testnet emirleri outbox üzerinden gider: emir önce veritabanına "gönderiliyor" olarak yazılır, sonra borsaya gönderilir. Zaman aşımı ya da 5xx durumunda emir "bilinmiyor" olur ve '
+      + 'clientOrderId ile sorgulanarak çözülür; asla körü körüne yeniden gönderilmez. Her pozisyonun borsada bir koruyucu stop emri olmalıdır; kill switch giriş emirlerini iptal eder, stop\'lara dokunmaz.'),
+    data.enabled ? null : callout('Testnet bu Trading.Host\'ta kapalı (Trading:Testnet ve Testnet anahtarı). Paper sürüyor.', 'warn'),
+    el('div', { class: 'kpis' },
+      kpi('Testnet run', String(data.runs.filter((r) => !r.closed_at).length), '', data.runs.length ? `toplam ${data.runs.length}` : 'henüz yok'),
+      kpi('Bilinmeyen emir', String(data.unknown ?? 0), Number(data.unknown) > 0 ? 'neg' : 'pos'),
+      kpi('Korumasız pozisyon', String(data.unprotected ?? 0), Number(data.unprotected) > 0 ? 'neg' : 'pos'),
+      kpi('Reconciliation', data.reconciliation ? (data.reconciliation.ok ? 'Temiz' : 'UYUMSUZ') : '—', data.reconciliation ? (data.reconciliation.ok ? 'pos' : 'neg') : '',
+        data.reconciliation ? `${data.reconciliation.reason || ''} ${time(data.reconciliation.checked_at)}`.trim() : ''),
+      kpi('Bakiye tabanı', data.baseline ? time(data.baseline.recorded_at) : '—', '', data.baseline ? data.baseline.source : ''),
+      kpi('Kural snapshot', data.rules ? short(data.rules.rules_hash) : '—', '', data.rules ? time(data.rules.recorded_at) : '')),
+    scrollCard('Pozisyonlar ve borsadaki koruyucu stop', table([
+      { label: 'Strateji', render: (p) => strategyCell(p.strategy, p.cohortId) }, { label: 'Run', render: (p) => p.runId },
+      { label: 'Parite', render: (p) => el('strong', { text: p.symbol }) }, { label: 'Miktar', num: true, render: (p) => num(p.quantity, 6) },
+      { label: 'Motor stop', num: true, render: (p) => price(p.engineStop) }, { label: 'Borsa stop', num: true, render: (p) => price(p.exchangeStop) },
+      { label: 'Tip', key: 'stopType' }, { label: 'Durum', render: (p) => orderBadge(p.stopStatus) },
+    ], data.positions)),
+    el('div', { class: 'grid2' },
+      card('Outbox (amaç × durum)', table([
+        { label: 'Amaç', render: (r) => PURPOSE_TEXT[r.purpose] || r.purpose }, { label: 'Durum', render: (r) => orderBadge(r.status) }, { label: 'Adet', num: true, key: 'n' },
+      ], data.outbox)),
+      card('L3 Testnet sapmaları', kv([
+        ['Borsa reddi', String(dev.exchange_rejected ?? 0)], ['Filtre reddi (gönderilmedi)', String(dev.filter_rejected ?? 0)],
+        ['Dolmayan IOC giriş', String(dev.ioc_unfilled ?? 0)], ['Kısmi dolum', String(dev.partial_fills ?? 0)],
+        ['STOP_LOSS_LIMIT yedeği', String(dev.stop_limit_fallback ?? 0)], ['Borsaya ulaşmayan', String(dev.never_accepted ?? 0)],
+        ['Stop seviyesinin altında dolan stop', String(dev.stop_fills_below_level ?? 0)], ['Stop kayması (bps, ort.)', dev.stop_slippage_bps === null || dev.stop_slippage_bps === undefined ? '—' : num(dev.stop_slippage_bps, 2)],
+      ]), el('p', { class: 'note', text: 'Bilgilendiricidir; doğrulamaya girmez (ADR-0015).' }))),
+    scrollCard('Son emirler', table([
+      { label: '#', key: 'id', num: true }, { label: 'Zaman', render: (o) => time(o.created_at) }, { label: 'Parite', render: (o) => el('strong', { text: o.symbol }) },
+      { label: 'Amaç', render: (o) => PURPOSE_TEXT[o.purpose] || o.purpose }, { label: 'Tip', key: 'order_type' }, { label: 'Yön', key: 'side' },
+      { label: 'Miktar', num: true, render: (o) => num(o.quantity, 6) }, { label: 'Limit', num: true, render: (o) => price(o.price) }, { label: 'Stop', num: true, render: (o) => price(o.stop_price) },
+      { label: 'Durum', render: (o) => orderBadge(o.status) }, { label: 'Gerekçe', render: (o) => o.reason || '' },
+      { label: 'clientOrderId', render: (o) => el('span', { class: 'mono muted', text: o.client_order_id }) },
+    ], data.recentOrders)),
+    scrollCard('Testnet run\'ları', table([
+      { label: 'Run', key: 'run_id', num: true }, { label: 'Kohort', render: (r) => (r.cohort_ids || []).map((c) => cohortLabel(c)).join(', ') },
+      { label: 'İşlem başlangıcı', render: (r) => time(r.trading_start) },
+      { label: 'Durum', render: (r) => (r.closed_at ? badge(`Kapandı (${r.closed_reason})`, 'muted') : badge('Açık', 'good')) },
+    ], data.runs)));
 }
 
 // ---------- sleeves ----------
@@ -587,7 +667,7 @@ async function renderSystem(view) {
 }
 
 // ---------- shell ----------
-const renderers = { overview: renderOverview, sleeves: renderSleeves, radar: renderRadar, trace: renderTrace, system: renderSystem };
+const renderers = { overview: renderOverview, sleeves: renderSleeves, radar: renderRadar, testnet: renderTestnet, trace: renderTrace, system: renderSystem };
 
 function showLogin(message) {
   sessionStorage.removeItem(TOKEN_KEY);

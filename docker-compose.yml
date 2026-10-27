@@ -37,6 +37,12 @@ secrets:
     file: ./secrets/ops_api_token
   research_app:
     file: ./secrets/research_app
+  # Binance Spot Testnet key (M6, D33): Trading.Host only; written by the user's scripts/m6-testnet-key.ps1 (empty
+  # placeholders until then, so Testnet stays off).
+  testnet_api_key:
+    file: ./secrets/testnet_api_key
+  testnet_api_secret:
+    file: ./secrets/testnet_api_secret
 
 services:
   postgres:
@@ -89,10 +95,12 @@ services:
       ConnectionStrings__OpsApi: Host=postgres;Database=ops;Username=ops_api
       Trading__SecretsDirectory: /run/secrets
       Trading__LiveData: ${PI_TRADING_LIVE_DATA:-disabled}
+      # Testnet execution (M6, ADR-0021): set only by the user's scripts/m6-update.ps1; off by default.
+      Trading__Testnet: ${PI_TRADING_TESTNET:-disabled}
       OpsApi__TokenFile: /run/secrets/ops_api_token
       # Signal radar watch list (ADR-0020 §5): the E1 subset of docs/m3-e1-subset.md; fetched and shown only, never traded.
       Radar__WatchSymbols: WIFUSDT,ORDIUSDT,GMTUSDT,BONKUSDT,BOMEUSDT
-    secrets: [trading_app, ops_api, ops_api_token]
+    secrets: [trading_app, ops_api, ops_api_token, testnet_api_key, testnet_api_secret]
     ports:
       - "127.0.0.1:55490:8080"   # Ops API, loopback only
     networks:

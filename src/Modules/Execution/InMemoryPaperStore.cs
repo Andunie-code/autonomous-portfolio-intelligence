@@ -41,6 +41,10 @@ public sealed class InMemoryPaperStore(IReadOnlyList<FrozenRecord> frozen, IRead
 
     public Task<long> LastActionIdAsync(CancellationToken ct) => Task.FromResult(0L);
 
+    public Task<IReadOnlySet<long>> ClosedRunsAsync(CancellationToken ct) => Task.FromResult<IReadOnlySet<long>>(new HashSet<long>());
+
+    public Task CloseRunAsync(long runId, string reason, CancellationToken ct) => throw new NotSupportedException("Parity replay runs are never closed.");
+
     public Task<IReadOnlyDictionary<long, RiskConfigDocument>> RiskVersionsAsync(CancellationToken ct) =>
         Task.FromResult<IReadOnlyDictionary<long, RiskConfigDocument>>(new Dictionary<long, RiskConfigDocument>());
 

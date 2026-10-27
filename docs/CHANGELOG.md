@@ -2,6 +2,73 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-27 — M6 Kapı B: çevrimdışı kod ve testler (`verify.ps1` yeşil, 598 test)
+- **Kernel (ADR-0021 §3):**
+  - `PortfolioEngine`'e harici dolum modu eklendi.
+  - Simüle mod değişmedi: M2 hash'leri, motor regresyonu ve Kohort 0/1 parity testleri değişmeden geçti (Backtest 119/119).
+- **Execution:**
+  - `IExchangeAdapter` ve `BinanceTestnetAdapter` (REST, HMAC-SHA256).
+  - `TestnetGuardHandler`: yalnızca `testnet.binance.vision`, yol/metot/sembol allowlist'i, 3xx reddi, 418 ve 429.
+  - Yerel filtreler; deterministik `clientOrderId` (`pi-<p>-<h>`).
+  - Outbox (`ExchangeStore`):
+    - `Unknown` emir `origClientOrderId` ile çözülür;
+    - `NeverAccepted` için şart: `timestamp + recvWindow + 60 sn` sonrasında iki ardışık `-2013`.
+  - Koruyucu stop:
+    - giriş dolumundan hemen sonra `STOP_LOSS`, sembolde yoksa bantlı `STOP_LOSS_LIMIT`;
+    - yükseltmede cancel-replace;
+    - korumasız pozisyonda alarm ve giriş blokajı; güvenlik ağı çıkışı.
+  - Çıkışta önce stop iptal edilir, sonra `MARKET` satılır.
+  - Kill switch yalnızca giriş emirlerini iptal eder ve anında bir bakım geçişi tetikler.
+  - Testnet reconciliation (emirler ve bakiye tabanı); sıfırlama tespiti ve rebaseline.
+- **Testnet run'ı:** paper run'ı paralel sürer (U-M6-4). `TestnetActive` üye paper'da aktif kalır.
+- **Migration 0009:**
+  - outbox tabloları (append-only);
+  - "intent başına tek etkin emir" ve durum geçişi trigger'ları;
+  - `paper_runs.venue`;
+  - V10: `PaperTrading → TestnetActive` yalnızca `ops_api` ile, `d30` kanıtı ve `confirm = true` ile yazılabilir.
+- **Ops API ve dashboard:**
+  - `GET /testnet`, `GET /promotion`;
+  - `POST /strategies/{name}/testnet-activate` (`confirm`; 400 ve 409 yanıtları);
+  - `POST /testnet/rebaseline`;
+  - "Testnet" sekmesi ve özette D30 ilerleme çubukları.
+- **D30 hesaplayıcısı (U-M6-3):** takvim günü, catch-up dahil mum sayısı, son 7 günde kritik hata, kesinti oranı.
+- **Trading.Host:**
+  - `Trading:Testnet` ayarı; Docker secret'ları `testnet_api_key` ve `testnet_api_secret` (yalnızca trading-host);
+  - `testnet-drill` alt komutu;
+  - dosya secret'larının literal maskelenmesi; `signature=` ve `X-MBX-APIKEY` desenleri.
+- **Script'ler (kullanıcı):**
+  - yeni: `m6-testnet-key.ps1`, `m6-testnet-drill.ps1`, `m6-testnet-activate.ps1` (`-Rebaseline` dahil), `m6-update.ps1` (`-ChecksOnly`);
+  - `m5-paper-start.ps1` artık boş Testnet secret yer tutucularını oluşturuyor.
+- **Testler (m6-protocol §9):**
+  - guard, HMAC (Binance belge vektörü) ve adapter hata semantiği;
+  - filtre property testleri;
+  - fault injection (zaman aşımı, 5xx, -1007, bağlantı kopması, gecikmeli görünürlük, ulaşmayan emir, -1021, 429, 418, cancel-replace -2021);
+  - restart; kill switch; çıkış yarışı;
+  - reconciliation ve sıfırlama/rebaseline;
+  - V10/D30;
+  - kernel eşdeğerliği;
+  - uçtan uca Testnet akışı (duplicate emir 0, her holding'de stop, kısmi dolum, `STOP_LOSS_LIMIT` yedeği, korumasız stop akışı);
+  - tatbikat; Trading testleri için ağa çıkmama taraması;
+  - Testnet izolasyonu (mimari) ve M6 deny kuralları.
+- **Kapı B'de bulunan ve düzeltilen hatalar:**
+  - Harici modda stop dolumları girişlerden önce uygulanıyordu; aynı açılışta giren pozisyonun stop dolumu kayboluyordu. Sıra artık simüle modla aynı.
+  - Tek dolumlu girişte decimal yuvarlaması fiyatı değiştiriyordu.
+  - Worker, bakım sinyalini kaçırabiliyordu.
+- **`verify.ps1`:** test projeleri sırayla koşulur; sayılar TRX'ten toplanır. Paralel Testcontainers örnekleri 16 GB makinede belleği tüketiyordu (ilk koşu bu yüzden durdu).
+- **Sonuç:** `verify.ps1` yeşil. Build 0 uyarı / 0 hata; secret scan geçti. Test sayıları:
+
+  | Proje | Test |
+  |---|---|
+  | Ai | 111 |
+  | Architecture | 102 |
+  | Backtest | 119 |
+  | HoldoutEvaluator | 46 |
+  | Infrastructure | 27 |
+  | MarketData | 97 |
+  | Trading | 96 |
+  | **Toplam** | **598** |
+- Evaluator ve `*Holdout*` dosyaları değişmedi. Gerçek Testnet'e istek atılmadı.
+
 ## 2026-10-26 — M6 Kapı A (kullanıcı onayı): Testnet ön kaydı, ADR-0021, D33
 - **Kullanıcı kararları (U):**
   - M6 başlatıldı; kapılar A, B ve C (`m6-protocol.md` U-M6-1).

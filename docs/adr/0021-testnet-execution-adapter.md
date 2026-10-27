@@ -2,7 +2,33 @@
 
 - Durum: **Kabul edildi (Kapı A, kullanıcı onayı 2026-10-26)** · Tarih: 2026-10-26
 - Karar türü: **U** (D33; `m6-protocol.md` U-M6-1…U-M6-6) ve **T** (adapter yapısı, outbox, Kernel harici dolum modu, guard, route değişikliği).
-- Uygulama durumu: **Planlandı.** Kapı B'de çevrimdışı, Kapı C'de kullanıcının gerçek Testnet koşularıyla uygulanır.
+- Uygulama durumu: **Kapı B'de çevrimdışı uygulandı (2026-10-27; `verify.ps1` yeşil, 598 test).** Gerçek Testnet, Kapı C'de kullanıcının koşularıyla denenir.
+- Uygulama notları (Kapı B):
+  - **Kod yerleşimi:**
+    - `Execution/Exchange`: `IExchangeAdapter`, `ExchangeFilters`, `ClientOrderIds`, `ExchangeStore` (outbox), `TestnetExecutor`, `TestnetDrill`, `ExchangeClock`;
+    - `Exchange/Binance`: `TestnetGuardHandler`, `HmacSigningHandler`, `BinanceTestnetAdapter`;
+    - Kernel: `PortfolioEngine` harici dolum modu (`PortfolioSetup.ExternalFills`, `StepContext.External`, `PendingOrders()`, `ProtectiveStopFor()`).
+  - **Migration 0009:**
+    - `paper_runs.venue`;
+    - `run_closures`, `exchange_orders`, `exchange_order_events`, `exchange_fills`, `exchange_symbol_rules`, `testnet_baselines` (hepsi append-only);
+    - "intent başına tek etkin emir" ve durum geçişi trigger'ları;
+    - `lifecycle_rules()`'a V10 kuralı.
+  - **Harici modda sıra:** sıra simüle modla aynıdır: açılış çıkışları → girişler → stop dolumları. Böylece aynı açılışta giren ve borsada stop'a takılan pozisyonun stop dolumu kaybolmaz; bu, eşdeğerlik testinde bulunan bir hataydı. Tek dolumlu giriş, fiyatı aynen alır (`x·q/q` decimal'de kesin değildir).
+  - **Eşdeğerlik testi:** simüle motorun dolumlarıyla beslenen harici mod, her adımın durum hash'ini ve L1/L2 akışlarını birebir üretir. Tek fark açılıştaki dolmayan girişin kaydıdır: harici mod bunu `Canceled` ve borsa nedeniyle yazar.
+  - **Dolumun adımı** (`exchange_fills.step_bar`), dolum kaydedilirken sabitlenir:
+    - giriş, çıkış ve kapatma emirleri için karar mumu + 4h;
+    - stop için tetiklendiği mum;
+    - işlenmiş bir mumdan sonra bulunan dolum, sıradaki işlenmemiş muma yazılır.
+    - Bir mumun adımı, o açılış için gönderilen emirler çözülene kadar bekler (`orders-pending`).
+  - **Koruyucu stop:**
+    - Giriş dolumundan hemen sonra, motorun bir sonraki adımda koyacağı seviyeyle (`ProtectiveStopFor`) gönderilir.
+    - Stop miktarı, borsadaki holding'in lot adımına yuvarlanmış halidir.
+    - Aynı karar mumunda yeniden yerleştirme gerekirse cancel-replace yerine önce iptal edilir, sonra yeniden konur; çünkü intent anahtarı aynıdır.
+  - **Yeniden gönderim:** yalnızca `NeverAccepted` ile `-1021`/429 retleri yeni denemeyle tekrar gönderilebilir; bu retlerde emir eşleştirme motoruna hiç ulaşmamıştır (`TestnetExecutor.Retryable`).
+  - **Girişe kapalı sleeve'in L2 nedeni:** `TestnetActive` olmayan üyenin Testnet run'ındaki sleeve'i protokolde `sleeve-not-testnet` olarak geçer; kodda mevcut `sleeve-disabled` nedeni kullanılır.
+  - **Kill switch:** `POST /kill-switch`, `MaintenanceSignal` ile worker'ı uyandırır; worker'da her zaman tek bir bekleyen sinyal okuması tutulur, böylece istek kaybolmaz. HTTP 418, kill switch'i açar (`exchange_ip_banned`).
+  - **Redaction:** dosyadan okunan secret'lar (Testnet anahtarı, Ops token, login parolaları) literal olarak maskelenir; `signature=` ve `X-MBX-APIKEY` desenleri eklendi.
+  - **`verify.ps1`:** test projeleri artık sırayla koşulur ve sayılar TRX dosyalarından toplanır. Projeler paralel koşulduğunda Testcontainers örnekleri üst üste biniyor ve 16 GB makinede bellek tükeniyordu (ADR-0013).
 - İlgili: ADR-0002, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0018, ADR-0019, ADR-0020; `m6-protocol.md`; `architecture.md` §5, §10; `risk-model.md` §2–§4; `sources.md` S-B11…S-B24; D3, D6, D9, D11, D25, D30, D33.
 
 ## Bağlam

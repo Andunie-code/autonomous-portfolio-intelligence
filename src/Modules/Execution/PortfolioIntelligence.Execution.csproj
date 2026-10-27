@@ -9,4 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Npgsql" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="PortfolioIntelligence.Trading.Tests" />
+  </ItemGroup>
 </Project>

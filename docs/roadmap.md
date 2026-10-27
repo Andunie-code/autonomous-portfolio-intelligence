@@ -190,7 +190,8 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Güvenlik: H24 route testi genişletildi (yeni POST yok, yasaklı kelime yok, tüm veri uç noktalarında 401, güvenlik başlıkları, yanlış `Host` → 421); `research_app` izinleri değişmedi; yanıtlarda secret yok.
 
 ### M6 — Binance Testnet execution (M) — başladı (2026-10-26, U)
-- **Ön kayıt:** [`m6-protocol.md`](m6-protocol.md) v1 ve ADR-0021 (Kapı A, kullanıcı onayı 2026-10-26). Kapı B henüz başlamadı.
+- **Ön kayıt:** [`m6-protocol.md`](m6-protocol.md) v1 ve ADR-0021 (Kapı A, kullanıcı onayı 2026-10-26).
+- **Durum (2026-10-27):** Kapı B tamamlandı. Çevrimdışı kod ve testler hazır; `verify.ps1` yeşil (598 test). Sırada Kapı C var (kullanıcı): anahtar, ≥ 20 emirlik tatbikat, `m6-update.ps1`, D30 dolunca terfi.
 - **Kapılar (U):**
   - **A:** Binance belgelerinin doğrulanması (`sources.md` S-B11…S-B24), protokol ve ADR.
   - **B:** çevrimdışı kod ve testler (sahte handler, fault injection); `verify.ps1` yeşil.

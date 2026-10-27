@@ -18,18 +18,64 @@ public sealed record PortfolioSetup(
     CandleInterval Interval,
     DateTimeOffset TradingStart,
     IReadOnlySet<string>? ExperimentalSymbols = null,
-    bool RecordEvents = false);
+    bool RecordEvents = false,
+    bool ExternalFills = false);
+
+public enum ExternalFillKind
+{
+    Entry,
+    Exit,
+    Stop,
+}
+
+/// <summary>
+/// An exchange fill applied in the external fill mode (ADR-0021 §3), aggregated per order. <see cref="Quantity"/> is
+/// the base quantity the position gains or loses (net of a commission paid in the base asset), <see cref="Notional"/>
+/// the quote amount paid or received and <see cref="Fee"/> a commission paid in the quote asset. An exit with
+/// <see cref="ClosesPosition"/> ends the position even if an unsellable remainder (dust) stays on the exchange.
+/// </summary>
+public sealed record ExternalFill(
+    int Sleeve,
+    string Symbol,
+    ExternalFillKind Kind,
+    DateTimeOffset Time,
+    decimal Price,
+    decimal Quantity,
+    decimal Notional,
+    decimal Fee,
+    ExitReason Reason = ExitReason.Signal,
+    bool ClosesPosition = false);
+
+/// <summary>Why a pending entry of the previous close did not fill (local filter rejection, exchange rejection, IOC expiry, …).</summary>
+public sealed record ExternalOutcome(int Sleeve, string Symbol, string Reason);
+
+/// <summary>A position whose protective stop order is not on the exchange (m6-protocol §5.3).</summary>
+public sealed record ExternalPosition(int Sleeve, string Symbol);
+
+/// <summary>What the exchange did since the previous step; recorded with the step so a replay rebuilds the same state.</summary>
+public sealed record ExternalExecution(
+    IReadOnlyList<ExternalFill> Fills,
+    IReadOnlyList<ExternalOutcome>? Outcomes = null,
+    IReadOnlyList<ExternalPosition>? Unprotected = null)
+{
+    public static ExternalExecution None { get; } = new([]);
+}
+
+/// <summary>An order the engine wants at the next open: an entry with its notional, or an exit with its reason.</summary>
+public sealed record EngineOrder(int Sleeve, string Symbol, bool Entry, decimal Notional, ExitReason Reason);
 
 /// <summary>
 /// Operational inputs of one step (m5-protocol §2.4). They are not part of the strategy and exist only in paper and
-/// replay; the backtest always passes <see cref="Normal"/> (and <see cref="Final"/> on its last bar).
+/// replay; the backtest always passes <see cref="Normal"/> (and <see cref="Final"/> on its last bar). In the external
+/// fill mode <see cref="External"/> carries the exchange's fills instead of the simulated open and stop fills.
 /// </summary>
 public sealed record StepContext(
     string? EntriesBlockedReason = null,
     IReadOnlySet<int>? DisabledSleeves = null,
     IReadOnlySet<(int Sleeve, string Symbol)>? ManualCloses = null,
     bool CloseAll = false,
-    bool IsFinal = false)
+    bool IsFinal = false,
+    ExternalExecution? External = null)
 {
     public static StepContext Normal { get; } = new();
 
@@ -150,6 +196,21 @@ public sealed class PortfolioEngine
 
     public decimal TotalEquity => _sleeves.Sum(s => s.Cash + s.MarketValue());
 
+    /// <summary>
+    /// The effective protective stop (D25) the next step gives an entry filled at <paramref name="entryPrice"/>: read-only,
+    /// from the indicator state of the last close. The exchange stop is placed with it right after the entry fill
+    /// (m6-protocol §5.1), before the step that applies the fill.
+    /// </summary>
+    public decimal ProtectiveStopFor(int sleeve, string symbol, decimal entryPrice) =>
+        ProtectiveStop.Effective(_sleeves[sleeve].States[symbol].Instance.InitialStop(entryPrice), entryPrice, _setup.Risk.Settings.MaxPositionLoss);
+
+    /// <summary>Orders for the next open: pending exits (sleeve order, then symbol rank) and pending entries with their notional.</summary>
+    public IReadOnlyList<EngineOrder> PendingOrders() =>
+        _sleeves.SelectMany((s, k) => s.PendingExits.OrderBy(x => _index[x])
+                .Select(x => new EngineOrder(k, x, false, 0, s.ExitReasons.GetValueOrDefault(x, ExitReason.Signal)))
+                .Concat(s.PendingEntries.Select(e => new EngineOrder(k, e.Symbol, true, e.Notional, ExitReason.Signal))))
+            .ToList();
+
     public IEnumerable<PositionView> Positions() =>
         _sleeves.SelectMany((s, i) => s.Positions.OrderBy(p => _index[p.Key]).Select(p =>
             new PositionView(i, p.Key, p.Value.EntryTime, p.Value.EntryPrice, p.Value.Quantity, p.Value.Stop, s.States[p.Key].LastClose ?? p.Value.EntryPrice)));
@@ -181,6 +242,21 @@ public sealed class PortfolioEngine
             }
         }
 
+        if (_setup.ExternalFills)
+        {
+            // 1–2. Open and intrabar stop from the exchange's fills (ADR-0021 §3).
+            ApplyExternal(t, bars, context);
+        }
+        else
+        {
+            StepOpenAndStop(t, bars, context, risk, costs);
+        }
+
+        CloseStep(t, bars, reference, context, risk, costs);
+    }
+
+    private void StepOpenAndStop(DateTimeOffset t, IReadOnlyDictionary<string, Candle> bars, StepContext context, RiskSettings risk, CostModel costs)
+    {
         // 1. Open: exits first (signal, then manual), then entries unless blocked.
         var enteredNow = new HashSet<string>[_sleeves.Length];
         for (var k = 0; k < _sleeves.Length; k++)
@@ -258,7 +334,130 @@ public sealed class PortfolioEngine
                 }
             }
         }
+    }
 
+    /// <summary>
+    /// External fill mode (ADR-0021 §3, m6-protocol §4.1): the exchange fills replace the simulated open fills and the
+    /// OHLC stop rule. Exit and stop fills close (or reduce) the positions they name; a pending exit without a fill
+    /// stays pending; a pending entry fills only with its exchange fill and is otherwise canceled with the outcome's
+    /// reason. Manual closes and close-all become pending exits sent at this step's close. The order is the simulated
+    /// one: exits at the open, entries, then stops (a stop may hit a position entered at this open).
+    /// </summary>
+    private void ApplyExternal(DateTimeOffset t, IReadOnlyDictionary<string, Candle> bars, StepContext context)
+    {
+        var external = context.External ?? ExternalExecution.None;
+        var risk = _setup.Risk.Settings;
+        void Apply(int k, ExternalFillKind kind)
+        {
+            var sleeve = _sleeves[k];
+            foreach (var fill in external.Fills.Where(f => f.Sleeve == k && f.Kind == kind).OrderBy(f => f.Time).ThenBy(f => _index.GetValueOrDefault(f.Symbol)))
+            {
+                if (sleeve.Positions.ContainsKey(fill.Symbol))
+                {
+                    ApplyExit(k, fill, t);
+                }
+            }
+
+            foreach (var symbol in sleeve.PendingExits.Where(s => !sleeve.Positions.ContainsKey(s)).ToList())
+            {
+                sleeve.PendingExits.Remove(symbol);
+                sleeve.ExitReasons.Remove(symbol);
+            }
+        }
+
+        for (var k = 0; k < _sleeves.Length; k++)
+        {
+            var sleeve = _sleeves[k];
+            Apply(k, ExternalFillKind.Exit);
+
+            foreach (var symbol in sleeve.Positions.Keys.OrderBy(s => _index[s]).ToList())
+            {
+                if ((context.CloseAll || context.ManualCloses?.Contains((k, symbol)) == true) && sleeve.PendingExits.Add(symbol))
+                {
+                    sleeve.ExitReasons[symbol] = ExitReason.Manual;
+                }
+            }
+
+            foreach (var entry in sleeve.PendingEntries)
+            {
+                var fills = external.Fills.Where(f => f.Sleeve == k && f.Symbol == entry.Symbol && f.Kind == ExternalFillKind.Entry).ToList();
+                var quantity = fills.Sum(f => f.Quantity);
+                if (quantity <= 0 || sleeve.Positions.ContainsKey(entry.Symbol))
+                {
+                    var reason = external.Outcomes?.FirstOrDefault(o => o.Sleeve == k && o.Symbol == entry.Symbol)?.Reason ?? "not-filled";
+                    Record(t, k, entry.Symbol, EngineEventKind.Canceled, 0, reason, entry.Notional, 0);
+                    continue;
+                }
+
+                var notional = fills.Sum(f => f.Notional);
+                var fee = fills.Sum(f => f.Fee);
+                // One fill keeps its exact price; several are volume-weighted (x · q / q is not exact in decimal).
+                var price = fills.Count == 1 ? fills[0].Price : fills.Sum(f => f.Price * f.Quantity) / quantity;
+                sleeve.Cash -= notional + fee;
+                var strategyStop = sleeve.States[entry.Symbol].Instance.InitialStop(price);
+                var position = new Position
+                {
+                    EntryTime = t,
+                    EntryPrice = price,
+                    Quantity = quantity,
+                    EntryFee = fee,
+                    EntrySlippage = bars.TryGetValue(entry.Symbol, out var bar) ? quantity * (price - bar.Open) : 0,
+                    StrategyStop = strategyStop,
+                    Stop = ProtectiveStop.Effective(strategyStop, price, risk.MaxPositionLoss),
+                };
+                sleeve.Positions[entry.Symbol] = position;
+                Record(t, k, entry.Symbol, EngineEventKind.EntryFill, price, "exchange", 0, quantity);
+                if (_setup.RecordEvents)
+                {
+                    _fills.Add(new FillRecord(fills.Min(f => f.Time), k, entry.Symbol, true, price, quantity, notional, fee, "Entry"));
+                }
+
+                Record(t, k, entry.Symbol, EngineEventKind.StopSet, position.Stop, string.Create(CultureInfo.InvariantCulture, $"strategy={strategyStop}"));
+            }
+
+            sleeve.PendingEntries.Clear();
+        }
+
+        // 2. Protective stops that triggered on the exchange during the bar.
+        for (var k = 0; k < _sleeves.Length; k++)
+        {
+            Apply(k, ExternalFillKind.Stop);
+        }
+    }
+
+    /// <summary>One exit or stop fill from the exchange: the position shrinks by the filled quantity or ends.</summary>
+    private void ApplyExit(int k, ExternalFill fill, DateTimeOffset t)
+    {
+        var sleeve = _sleeves[k];
+        var position = sleeve.Positions[fill.Symbol];
+        var quantity = Math.Min(fill.Quantity, position.Quantity);
+        var closes = fill.ClosesPosition || quantity >= position.Quantity;
+        var share = position.Quantity == 0 ? 1 : quantity / position.Quantity;
+        var entryFee = closes ? position.EntryFee : position.EntryFee * share;
+        var reason = fill.Kind == ExternalFillKind.Stop ? ExitReason.Stop : fill.Reason;
+        sleeve.Trades.Add(new Trade(fill.Symbol, position.EntryTime, position.EntryPrice, quantity, fill.Time, fill.Price, reason,
+            entryFee + fill.Fee, (closes ? position.EntrySlippage : position.EntrySlippage * share)));
+        sleeve.Cash += fill.Notional - fill.Fee;
+        if (closes)
+        {
+            sleeve.Positions.Remove(fill.Symbol);
+        }
+        else
+        {
+            position.Quantity -= quantity;
+            position.EntryFee -= entryFee;
+            position.EntrySlippage -= position.EntrySlippage * share;
+        }
+
+        Record(t, k, fill.Symbol, EngineEventKind.ExitFill, fill.Price, reason.ToString(), 0, quantity);
+        if (_setup.RecordEvents)
+        {
+            _fills.Add(new FillRecord(fill.Time, k, fill.Symbol, false, fill.Price, quantity, fill.Notional, fill.Fee, reason.ToString()));
+        }
+    }
+
+    private void CloseStep(DateTimeOffset t, IReadOnlyDictionary<string, Candle> bars, Candle? reference, StepContext context, RiskSettings risk, CostModel costs)
+    {
         // 3. Close: indicators, equity, risk, signals.
         var closeTime = t + _length;
         foreach (var sleeve in _sleeves)
@@ -332,6 +531,19 @@ public sealed class PortfolioEngine
         if (closeTime.TimeOfDay == TimeSpan.Zero)
         {
             _dayStartEquity = currentEquity;
+        }
+
+        // External fill mode, safety net (m6-protocol §5.3): a position without a protective stop on the exchange whose
+        // closed bar reached its stop leaves at the next open with a market order.
+        foreach (var (k, symbol) in context.External?.Unprotected?.Select(p => (p.Sleeve, p.Symbol)) ?? [])
+        {
+            var sleeve = _sleeves[k];
+            if (_setup.ExternalFills && sleeve.Positions.TryGetValue(symbol, out var position) && bars.TryGetValue(symbol, out var bar)
+                && bar.Low <= position.Stop && sleeve.PendingExits.Add(symbol))
+            {
+                sleeve.ExitReasons[symbol] = ExitReason.Stop;
+                Record(closeTime, k, symbol, EngineEventKind.ExitSignal, position.Stop, "unprotected-stop");
+            }
         }
 
         var ready = new List<string>[_sleeves.Length];
@@ -489,7 +701,13 @@ public sealed class PortfolioEngine
 
             foreach (var symbol in sleeve.PendingExits.OrderBy(x => _index[x]))
             {
-                s.Append("exit=").Append(symbol).Append('\n');
+                s.Append("exit=").Append(symbol);
+                if (sleeve.ExitReasons.TryGetValue(symbol, out var reason))
+                {
+                    s.Append(';').Append(reason); // external fill mode only: simulated hashes are unchanged
+                }
+
+                s.Append('\n');
             }
 
             foreach (var entry in sleeve.PendingEntries)
@@ -553,9 +771,9 @@ public sealed class PortfolioEngine
     {
         public required DateTimeOffset EntryTime { get; init; }
         public required decimal EntryPrice { get; init; }
-        public required decimal Quantity { get; init; }
-        public required decimal EntryFee { get; init; }
-        public required decimal EntrySlippage { get; init; }
+        public required decimal Quantity { get; set; }
+        public required decimal EntryFee { get; set; }
+        public required decimal EntrySlippage { get; set; }
         public required decimal StrategyStop { get; set; }
         public required decimal Stop { get; set; }
     }
@@ -585,6 +803,9 @@ public sealed class PortfolioEngine
         public Dictionary<string, Position> Positions { get; } = [];
 
         public HashSet<string> PendingExits { get; } = [];
+
+        /// <summary>External fill mode: why a pending exit is pending when it is not a strategy signal (manual close, unprotected stop).</summary>
+        public Dictionary<string, ExitReason> ExitReasons { get; } = [];
 
         public List<PendingEntry> PendingEntries { get; } = [];
 

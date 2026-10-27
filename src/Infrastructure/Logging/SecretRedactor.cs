@@ -8,6 +8,8 @@ namespace PortfolioIntelligence.Infrastructure.Logging;
 /// 1. Value-based: every configuration value whose key looks secret (password, token, api key, ...)
 ///    is masked wherever it appears.
 /// 2. Pattern-based: well-known credential shapes are masked even if they never came from configuration.
+/// Secrets read from files (Docker secrets: the Ops API token, the Testnet key, login passwords) are passed as
+/// additional values, since they never enter the configuration (M6, m6-protocol §8.2).
 /// </summary>
 public sealed partial class SecretRedactor
 {
@@ -27,9 +29,9 @@ public sealed partial class SecretRedactor
             .ToArray();
     }
 
-    public static SecretRedactor FromConfiguration(IConfiguration configuration)
+    public static SecretRedactor FromConfiguration(IConfiguration configuration, IEnumerable<string>? additionalSecrets = null)
     {
-        var values = new List<string>();
+        var values = new List<string>(additionalSecrets ?? []);
         foreach (var (key, value) in configuration.AsEnumerable())
         {
             if (string.IsNullOrEmpty(value))
@@ -83,6 +85,8 @@ public sealed partial class SecretRedactor
         GitHubToken(),
         BearerToken(),
         PrivateKeyBlock(),
+        RequestSignature(),
+        ExchangeApiKeyHeader(),
     ];
 
     [GeneratedRegex(@"(?i)(password|passwd|pwd|secret|token|apikey|api_key|privatekey|private_key|credential)")]
@@ -105,4 +109,11 @@ public sealed partial class SecretRedactor
 
     [GeneratedRegex(@"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(-----END [A-Z ]*PRIVATE KEY-----|$)")]
     private static partial Regex PrivateKeyBlock();
+
+    // A signed exchange request's HMAC (S-B11): masked wherever a URL is logged.
+    [GeneratedRegex(@"(?i)signature=[0-9a-f]{16,}")]
+    private static partial Regex RequestSignature();
+
+    [GeneratedRegex(@"(?i)X-MBX-APIKEY[""':=\s]+[^\s""',;]+")]
+    private static partial Regex ExchangeApiKeyHeader();
 }

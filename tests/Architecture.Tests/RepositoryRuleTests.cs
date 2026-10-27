@@ -65,6 +65,12 @@ public class RepositoryRuleTests
     [InlineData("PowerShell(docker compose*trading-host*)")]
     [InlineData("PowerShell(docker compose*--profile*)")]
     [InlineData("PowerShell(*psql*holdout*)")]
+    [InlineData("WebFetch(domain:testnet.binance.vision)")]
+    [InlineData("Bash(curl *testnet.binance.vision*)")]
+    [InlineData("Bash(wget *testnet.binance.vision*)")]
+    [InlineData("PowerShell(*testnet.binance.vision*)")]
+    [InlineData("PowerShell(*-File*m6-*)")]
+    [InlineData("Bash(*-File*m6-*)")]
     public void Claude_project_settings_deny_holdout_and_secret_access(string rule)
     {
         Assert.Contains(rule, ReadPermissionList("deny"));
@@ -90,6 +96,7 @@ public class RepositoryRuleTests
     [InlineData("## Holdout kuralları")]
     [InlineData("## Sırlar")]
     [InlineData("## Onay gerektiren işlemler")]
+    [InlineData("**M6 Testnet (m6-protocol §1, §8, §11; D33):**")]
     public void Claude_instructions_contain_required_sections(string heading)
     {
         Assert.Contains(heading, File.ReadAllText(Path.Combine(RepositoryRoot.Path, "CLAUDE.md")));

@@ -47,6 +47,14 @@ function Ensure-Secret([string] $Directory, [string] $Name) {
     return $path
 }
 
+# An empty placeholder secret file (Docker Compose needs the file; an empty Testnet key keeps Testnet off).
+function Ensure-EmptySecret([string] $Directory, [string] $Name) {
+    if (-not (Test-Path $Directory)) { New-Item -ItemType Directory -Path $Directory | Out-Null }
+    $path = Join-Path $Directory $Name
+    if (-not (Test-Path $path)) { [System.IO.File]::WriteAllText($path, '') }
+    return $path
+}
+
 function Get-Secret([string] $Directory, [string] $Name) {
     return ([System.IO.File]::ReadAllText((Join-Path $Directory $Name))).Trim()
 }

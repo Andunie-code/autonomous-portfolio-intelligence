@@ -28,6 +28,31 @@ public class SecretRedactorTests
     }
 
     [Fact]
+    public void Secrets_read_from_files_are_masked_as_literals()
+    {
+        // Docker secret files (the Testnet key, the Ops API token) never enter the configuration (m6-protocol §8.2).
+        var canary = "FILE-SECRET-" + Guid.NewGuid().ToString("N");
+        var redactor = SecretRedactor.FromConfiguration(Config(), [canary, "short"]);
+
+        Assert.Equal($"key {SecretRedactor.Mask} used", redactor.Redact($"key {canary} used"));
+        Assert.Equal("short", redactor.Redact("short")); // values under six characters are not registered
+    }
+
+    [Fact]
+    public void Signed_exchange_requests_lose_their_signature_and_key_header()
+    {
+        var redactor = SecretRedactor.FromConfiguration(Config());
+        var signature = new string('a', 32) + new string('7', 32);
+
+        var url = redactor.Redact($"GET https://testnet.binance.vision/api/v3/account?recvWindow=5000&timestamp=1&signature={signature}");
+        var header = redactor.Redact("X-MBX-APIKEY: abcDEF0123456789abcDEF0123456789");
+
+        Assert.DoesNotContain(signature, url);
+        Assert.Contains("recvWindow=5000", url);
+        Assert.DoesNotContain("abcDEF0123456789", header);
+    }
+
+    [Fact]
     public void Connection_string_password_is_masked_even_when_logged_alone()
     {
         var password = "Pw-" + Guid.NewGuid().ToString("N");

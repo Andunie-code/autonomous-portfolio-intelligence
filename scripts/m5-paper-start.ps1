@@ -10,6 +10,9 @@
 param([switch] $Stop)
 . "$PSScriptRoot\lib\m5-common.ps1"
 Set-Location $script:Root
+# M6: the compose file names the Testnet key secrets; empty placeholders keep Testnet off (scripts/m6-testnet-key.ps1).
+Ensure-EmptySecret $script:OpsSecrets 'testnet_api_key' | Out-Null
+Ensure-EmptySecret $script:OpsSecrets 'testnet_api_secret' | Out-Null
 
 if ($Stop) {
     $env:PI_TRADING_LIVE_DATA = 'disabled'

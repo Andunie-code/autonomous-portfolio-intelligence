@@ -427,6 +427,97 @@ public sealed class DashboardQueries(string connectionString)
         });
     }
 
+    /// <summary>
+    /// Testnet execution (m6-protocol §7): the Testnet runs, outbox counts by purpose and state, Unknown orders, each
+    /// position's protective stop on the exchange (or none), recent orders with their reason, the latest Testnet
+    /// reconciliation, rules snapshot and balance baseline, and the L3 Testnet deviation categories (ADR-0014, ADR-0015).
+    /// </summary>
+    public async Task<string> TestnetAsync(bool enabled, CancellationToken ct)
+    {
+        await using var connection = await OpenAsync(ct);
+        var runs = (await RunsAsync(connection, ct)).Where(r => r.Config.IsTestnet).ToList();
+        var ids = runs.Select(r => r.Id).ToArray();
+        var balances = (await LatestBalancesAsync(connection, ct)).Where(b => ids.Contains(b["run_id"]!.GetValue<long>())).ToList();
+        var stops = await RowsAsync(connection, """
+            SELECT o.run_id, o.sleeve, o.symbol, o.order_type, o.stop_price, o.quantity, o.client_order_id, trading.order_status(o.id) AS status, o.created_at
+            FROM trading.exchange_orders o WHERE o.purpose = 'Stop' AND o.run_id = ANY($1)
+              AND trading.order_status(o.id) IN ('Accepted', 'PartiallyFilled', 'Unknown', 'Submitting', 'CancelRequested')
+            ORDER BY o.id
+            """, ct, ids);
+        var positions = new JsonArray();
+        foreach (var row in balances)
+        {
+            var runId = row["run_id"]!.GetValue<long>();
+            var sleeve = row["sleeve"]!.GetValue<int>();
+            var run = runs.Single(r => r.Id == runId);
+            foreach (var p in row["positions"]!.AsArray().Select(n => n!.AsObject()))
+            {
+                var symbol = p["symbol"]!.GetValue<string>();
+                var stop = stops.LastOrDefault(s => s["run_id"]!.GetValue<long>() == runId && s["sleeve"]!.GetValue<int>() == sleeve && s["symbol"]!.GetValue<string>() == symbol);
+                var accepted = stop?["status"]?.GetValue<string>() is "Accepted" or "PartiallyFilled";
+                positions.Add(new JsonObject
+                {
+                    ["runId"] = runId,
+                    ["sleeve"] = sleeve,
+                    ["strategy"] = run.Config.Sleeves[sleeve].Name,
+                    ["cohortId"] = run.Config.Sleeves[sleeve].CohortId,
+                    ["symbol"] = symbol,
+                    ["quantity"] = p["quantity"]!.DeepClone(),
+                    ["engineStop"] = p["stop"]!.DeepClone(),
+                    ["exchangeStop"] = stop?["stop_price"]?.DeepClone(),
+                    ["stopType"] = stop?["order_type"]?.DeepClone(),
+                    ["stopStatus"] = stop?["status"]?.DeepClone() ?? "none",
+                    ["protected"] = accepted,
+                });
+            }
+        }
+
+        return Json(new JsonObject
+        {
+            ["enabled"] = enabled,
+            ["runs"] = new JsonArray([.. await RowsAsync(connection, """
+                SELECT p.id AS run_id, p.trading_start, p.created_at, c.closed_at, c.reason AS closed_reason,
+                       (SELECT jsonb_agg(DISTINCT (x ->> 'cohortId')::bigint) FROM jsonb_array_elements(p.config -> 'sleeves') x) AS cohort_ids
+                FROM trading.paper_runs p LEFT JOIN trading.run_closures c ON c.run_id = p.id WHERE p.venue = 'testnet' ORDER BY p.id
+                """, ct)]),
+            ["outbox"] = new JsonArray([.. await RowsAsync(connection, """
+                SELECT o.purpose, trading.order_status(o.id) AS status, count(*) AS n FROM trading.exchange_orders o GROUP BY 1, 2 ORDER BY 1, 2
+                """, ct)]),
+            ["unknown"] = First(await RowsAsync(connection,
+                "SELECT count(*) AS n FROM trading.exchange_orders o WHERE trading.order_status(o.id) IN ('Unknown', 'Submitting')", ct))?["n"]?.DeepClone(),
+            ["positions"] = positions,
+            ["unprotected"] = positions.Count(p => p!["protected"]!.GetValue<bool>() == false),
+            ["recentOrders"] = new JsonArray([.. await RowsAsync(connection, """
+                SELECT o.id, o.created_at, o.run_id, o.sleeve, o.symbol, o.purpose, o.side, o.order_type, o.quantity, o.price, o.stop_price, o.attempt,
+                       o.client_order_id, e.status, e.executed_quantity, e.detail ->> 'reason' AS reason, e.recorded_at AS status_at
+                FROM trading.exchange_orders o
+                JOIN LATERAL (SELECT * FROM trading.exchange_order_events x WHERE x.order_id = o.id ORDER BY x.id DESC LIMIT 1) e ON true
+                ORDER BY o.id DESC LIMIT 50
+                """, ct)]),
+            ["reconciliation"] = First(await RowsAsync(connection, """
+                SELECT r.run_id, r.checked_at, r.ok, r.detail ->> 'reason' AS reason FROM trading.reconciliation_runs r
+                JOIN trading.paper_runs p ON p.id = r.run_id WHERE p.venue = 'testnet' ORDER BY r.id DESC LIMIT 1
+                """, ct)),
+            ["rules"] = First(await RowsAsync(connection, "SELECT recorded_at, rules_hash FROM trading.exchange_symbol_rules ORDER BY id DESC LIMIT 1", ct)),
+            ["baseline"] = First(await RowsAsync(connection, "SELECT recorded_at, run_id, source FROM trading.testnet_baselines ORDER BY id DESC LIMIT 1", ct)),
+            ["deviations"] = First(await RowsAsync(connection, TestnetDeviations.Sql, ct)),
+        });
+
+        static JsonNode? First(List<JsonObject> rows) => rows.FirstOrDefault()?.DeepClone();
+    }
+
+    /// <summary>D30 progress of every frozen strategy (m6-protocol §6.1, §7): days, bars, critical errors, outage ratio, eligibility.</summary>
+    public async Task<string> PromotionAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        await using var connection = await OpenAsync(ct);
+        return JsonSerializer.Serialize(new
+        {
+            minimumDays = Promotion.MinimumDays,
+            minimumBars = Promotion.MinimumBars,
+            strategies = await Promotion.ReadAsync(connection, now, null, ct),
+        }, JsonSerializerOptions.Web);
+    }
+
     /// <summary>Monthly AI cost by task class (settlements and open reservations), from ai.cost_ledger.</summary>
     public async Task<string> AiCostsAsync(CancellationToken ct)
     {

@@ -12,6 +12,7 @@ public sealed record SleeveConfig(long CohortId, int MemberIndex, string Name, s
 /// Immutable configuration of a paper run; its hash is stored with the run (trading.paper_runs). Since ADR-0019 a
 /// new run holds one cohort. <see cref="ActionsAfter"/> is the last operational action before the run was created:
 /// the run applies only later ones. It is not written when absent, so runs created before M5b keep their JSON and hash.
+/// <see cref="Venue"/> is "testnet" for a Testnet run (M6), which mirrors its cohort's paper run.
 /// </summary>
 public sealed record PaperRunConfig(
     string ManifestHash,
@@ -22,9 +23,16 @@ public sealed record PaperRunConfig(
     string? ReferenceSymbol,
     string CostModel,
     RiskConfigDocument InitialRisk,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] long? ActionsAfter = null)
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] long? ActionsAfter = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Venue = null)
 {
     public const decimal NominalCapital = 10_000m;
+
+    public const string TestnetVenue = "testnet";
+
+    /// <summary>A Testnet run (M6, m6-protocol §4.1); paper runs have no venue field, so their JSON and hash are unchanged.</summary>
+    [JsonIgnore]
+    public bool IsTestnet => Venue == TestnetVenue;
 
     public string Json() => JsonSerializer.Serialize(this, PaperJson.Options);
 
@@ -37,7 +45,8 @@ public sealed record PaperRun(long Id, DateTimeOffset TradingStart, DateTimeOffs
 
 /// <summary>
 /// The recorded operational inputs of one step. Replaying the stored candles of <see cref="Symbols"/> with these
-/// contexts must rebuild the stored state hash (ADR-0018 §1); this is the restart and reconciliation rule.
+/// contexts must rebuild the stored state hash (ADR-0018 §1); this is the restart and reconciliation rule. A Testnet
+/// step also records the exchange's fills (<see cref="External"/>, ADR-0021 §3); paper steps keep their JSON.
 /// </summary>
 public sealed record StepInputs(
     string? Blocked,
@@ -46,13 +55,15 @@ public sealed record StepInputs(
     bool CloseAll,
     IReadOnlyList<string> Symbols,
     long LastActionId,
-    long RiskVersion)
+    long RiskVersion,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ExternalExecution? External = null)
 {
     public StepContext ToContext() => new(
         Blocked,
         Disabled.Count == 0 ? null : Disabled.ToHashSet(),
         Manual.Count == 0 ? null : Manual.Select(m => (m.Sleeve, m.Symbol)).ToHashSet(),
-        CloseAll);
+        CloseAll,
+        External: External);
 
     public string Json() => JsonSerializer.Serialize(this, PaperJson.Options);
 

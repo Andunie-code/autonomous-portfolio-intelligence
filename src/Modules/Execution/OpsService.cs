@@ -1,18 +1,23 @@
 using System.Text.Json;
 using Npgsql;
+using PortfolioIntelligence.Kernel.Backtest;
 using PortfolioIntelligence.Kernel.Dsl;
 
 namespace PortfolioIntelligence.Execution;
 
 public sealed class OpsRequestException(string message) : Exception(message);
 
+/// <summary>The request is well formed but the system's state does not allow it (HTTP 409).</summary>
+public sealed class OpsConflictException(string message) : Exception(message);
+
 /// <summary>
 /// The user's operational interface (m5-protocol §3; H23, H24), on the ops_api database role. Reads paper state,
 /// positions, PnL by strategy and cohort (open cohorts included, D23), RiskConfig, correlation and lifecycle;
 /// writes only kill switch events, operational actions, Disabled transitions, RiskConfig versions and audit.
-/// It has no operation on manifests, results, validation status or cohort registration.
+/// It has no operation on manifests, results, validation status or cohort registration. M6: the user's
+/// PaperTrading → TestnetActive transition (V10, D30) and the Testnet rebaseline (m6-protocol §4.4, §6.2).
 /// </summary>
-public sealed class OpsService(string connectionString)
+public sealed class OpsService(string connectionString, TimeProvider? time = null, bool testnetEnabled = false)
 {
     private async Task<NpgsqlConnection> OpenAsync(CancellationToken ct)
     {
@@ -211,6 +216,90 @@ public sealed class OpsService(string connectionString)
                             (SELECT (config -> 'initialRisk')::text FROM trading.paper_runs ORDER BY id DESC LIMIT 1))
             """, connection);
         return await command.ExecuteScalarAsync(ct) is string json ? JsonSerializer.Deserialize<RiskConfigDocument>(json, PaperJson.Options) : null;
+    }
+
+    /// <summary>
+    /// PaperTrading → TestnetActive (V10; m6-protocol §6.2): only with confirm = true (400 otherwise), only from
+    /// PaperTrading, only with Testnet enabled, only when D30 holds and the definition matches its manifest hash (409
+    /// otherwise). The lifecycle event carries the D30 snapshot; the database trigger checks role and evidence again.
+    /// </summary>
+    public async Task<PromotionStatus> ActivateTestnetAsync(string name, string reason, bool confirm, CancellationToken ct)
+    {
+        Require(reason);
+        if (!confirm)
+        {
+            throw new OpsRequestException("PaperTrading -> TestnetActive needs confirm = true");
+        }
+
+        var now = (time ?? TimeProvider.System).GetUtcNow();
+        await using var connection = await OpenAsync(ct);
+        var status = (await Promotion.ReadAsync(connection, now, name, ct)).LastOrDefault() ?? throw new OpsRequestException($"unknown strategy {name}");
+        if (status.State != "PaperTrading")
+        {
+            throw new OpsConflictException($"{name} is {status.State}; only a PaperTrading strategy can become TestnetActive");
+        }
+
+        if (!testnetEnabled)
+        {
+            throw new OpsConflictException("Testnet is not enabled on Trading.Host (Trading:Testnet and the Testnet key)");
+        }
+
+        if (!status.Eligible)
+        {
+            throw new OpsConflictException($"D30 is not met for {name}: {string.Join(", ", status.Missing)} (days {status.Days}/{Promotion.MinimumDays}, bars {status.Bars}/{Promotion.MinimumBars}, critical errors in 7 days {status.CriticalErrors7d})");
+        }
+
+        // V14: the definition run on Testnet must still match its manifest hash.
+        await using (var find = new NpgsqlCommand("""
+            SELECT f.manifest, f.member_index, v.definition::text FROM research.frozen_strategies f
+            LEFT JOIN research.strategy_versions v ON v.definition_hash = f.definition_hash WHERE f.id = $1
+            """, connection))
+        {
+            find.Parameters.AddWithValue(status.FrozenId);
+            await using var reader = await find.ExecuteReaderAsync(ct);
+            await reader.ReadAsync(ct);
+            try
+            {
+                var manifest = CohortManifestReader.Read(reader.GetString(0));
+                var expected = manifest.Members.Single(m => m.Index == reader.GetInt32(1)).DefinitionHash;
+                StrategyHashGuard.LoadVerified(reader.IsDBNull(2) ? "{}" : reader.GetString(2), expected);
+            }
+            catch (Exception e) when (e is StrategyHashMismatchException or FormatException or InvalidOperationException or JsonException)
+            {
+                throw new OpsConflictException($"{name}: the definition does not match its manifest hash (V14)");
+            }
+        }
+
+        var evidence = JsonSerializer.Serialize(new
+        {
+            d30 = new { status.PaperSince, status.Days, status.Bars, status.CriticalErrors7d, status.OutageRatio, checkedAt = now },
+            confirm = true,
+            reason,
+            experimental = status.Experimental,
+        }, PaperJson.Options);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+        await Execute(connection, transaction, "INSERT INTO research.lifecycle_events (frozen_id, from_state, to_state, actor, evidence) VALUES ($1, 'PaperTrading', 'TestnetActive', 'user', $2::jsonb)",
+            ct, status.FrozenId, evidence);
+        await Execute(connection, transaction, "INSERT INTO trading.ops_actions (actor, action, reason) VALUES ('user', 'testnet-activate', $1)", ct, $"{name}: {reason}");
+        await Audit(connection, transaction, "strategy_testnet_activated", new { name, reason, status.Days, status.Bars, status.Experimental }, ct);
+        await transaction.CommitAsync(ct);
+        return status;
+    }
+
+    /// <summary>After a Testnet reset (m6-protocol §4.4): the next cycle closes the open Testnet runs and starts new ones with a new baseline.</summary>
+    public async Task RebaselineTestnetAsync(string reason, bool confirm, CancellationToken ct)
+    {
+        Require(reason);
+        if (!confirm)
+        {
+            throw new OpsRequestException("a Testnet rebaseline needs confirm = true");
+        }
+
+        await using var connection = await OpenAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+        await Execute(connection, transaction, "INSERT INTO trading.ops_actions (actor, action, reason) VALUES ('user', 'testnet-rebaseline', $1)", ct, reason);
+        await Audit(connection, transaction, "testnet_rebaseline_requested", new { reason }, ct);
+        await transaction.CommitAsync(ct);
     }
 
     private static void Require(string reason)
