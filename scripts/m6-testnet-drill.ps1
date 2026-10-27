@@ -6,6 +6,8 @@
   Rebuilds the trading-host image from the committed code, then runs the Testnet drill in a one-off trading-host
   container (same image and secrets as Trading.Host): at least 20
   full order lifecycles with small notionals on one symbol, the injected timeout recovery and the kill switch rule.
+  The running Trading.Host is paused for the drill (the one-off container needs its static address on the ops
+  network) and started again afterwards with its own image and settings; missed paper bars are processed on restart.
   Real orders go to testnet.binance.vision (virtual funds). Run it before the first PaperTrading -> TestnetActive
   activation: with an active Testnet run the drill refuses (its trades would change the account balance).
   The report has operational fields only (no price, quantity, balance or PnL). It is saved outside the repository with
@@ -28,8 +30,27 @@ Invoke-Native 'docker' @('compose', '--profile', 'trading', 'build', 'trading-ho
 if ($LASTEXITCODE -ne 0) { throw 'The trading-host image did not build.' }
 $arguments = @('compose', '--profile', 'trading', 'run', '--rm', '--no-deps', 'trading-host', 'testnet-drill',
     '--symbol', $Symbol, '--rounds', "$Rounds", '--capital', $Capital.ToString([Globalization.CultureInfo]::InvariantCulture))
-$lines = Invoke-Native 'docker' $arguments
-$exit = $LASTEXITCODE
+
+# The service has a static address (172.30.1.20, pg_hba): a second container cannot start while it runs.
+$running = @(Invoke-Native 'docker' @('compose', '--profile', 'trading', 'ps', '--status', 'running', '--services')) -contains 'trading-host'
+if ($running) {
+    Write-Host 'Pausing the running Trading.Host for the drill...'
+    Invoke-Native 'docker' @('compose', '--profile', 'trading', 'stop', 'trading-host') | ForEach-Object { Write-Host "  $_" }
+    if ($LASTEXITCODE -ne 0) { throw 'Trading.Host did not stop; the drill was not run.' }
+}
+
+try {
+    $lines = Invoke-Native 'docker' $arguments
+    $exit = $LASTEXITCODE
+} finally {
+    if ($running) {
+        # start, not up: the same container (image and settings, live data included) comes back; the image built above
+        # is taken into service only by scripts/m6-update.ps1.
+        Write-Host 'Starting Trading.Host again...'
+        Invoke-Native 'docker' @('compose', '--profile', 'trading', 'start', 'trading-host') | ForEach-Object { Write-Host "  $_" }
+        if ($LASTEXITCODE -ne 0) { Write-Host 'Trading.Host did not start again: run docker compose --profile trading start trading-host.' -ForegroundColor Red }
+    }
+}
 $json = ($lines | Where-Object { $_ -ne $null }) -join "`n"
 $start = $json.IndexOf('{')
 if ($start -lt 0) { throw "The drill produced no report (exit $exit)." }

@@ -10,6 +10,11 @@ M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar
   - Secret dosyaları diğer `secrets/` dosyalarıyla aynı, miras alınan izinlerle yazılıyor.
   - Yeni `Reset-SecretAcl` yardımcısı (`icacls /reset`) mevcut dosyaları içeriğe dokunmadan düzeltir; anahtarın yeniden girilmesi gerekmez. Key, drill ve update script'lerinin üçü de bu yardımcıyı çağırıyor.
   - `m6-testnet-drill.ps1` artık commit'lenmiş kodla `docker compose build trading-host` yapıyor; `src/` ya da `scripts/` temiz değilse durur.
+- **İkinci koşu (kullanıcı):** imaj derlendi, ancak `docker compose run` "Address already in use" hatasıyla durdu. Neden: `trading-host`'un `ops` ağındaki statik IP'si (172.30.1.20, `pg_hba`) çalışan container'da kullanılıyordu.
+- **Düzeltme:**
+  - Tatbikat, çalışan Trading.Host'u `stop` ile duraklatır ve `finally` içinde `start` ile aynı container'ı (aynı imaj ve ayarlar, canlı veri dahil) geri başlatır.
+  - `up -d` kullanılmaz: yeni imaj ancak `m6-update.ps1` ile devreye girer.
+  - Durma süresi kesinti olarak kaydedilir; kaçırılan mum olursa açılışta sırayla işlenir.
 - Ağa istek atılmadı; Testnet'e emir gönderilmedi.
 
 ## 2026-10-27 — M6 Kapı B: çevrimdışı kod ve testler (`verify.ps1` yeşil, 598 test)
