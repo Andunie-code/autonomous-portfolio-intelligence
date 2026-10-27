@@ -23,8 +23,8 @@ public sealed record CycleOutcome(int BarsProcessed, bool CatchUp, bool Stale, b
 /// unchanged); a new instance is a restart. <paramref name="warmup"/> overrides the indicator warm-up before the
 /// trading start (by default <see cref="WarmupFor"/>: at least 45 days).
 /// With <paramref name="testnet"/> (M6, m6-protocol §4): a cohort with TestnetActive members also gets a Testnet run,
-/// a copy of its paper run's sleeves that runs the same engine with the exchange's fills; the paper run goes on
-/// unchanged. Each cycle first maintains the Testnet orders and reconciles the account, then steps the runs.
+/// a copy of its paper run's sleeves (capital scaled to 5,000 USDT, A-4 v1.1) that runs the same engine with the
+/// exchange's fills; the paper run goes on unchanged. Each cycle first maintains the Testnet orders and reconciles the account, then steps the runs.
 /// </summary>
 public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostModel costs, TimeSpan? warmup = null, TestnetExecutor? testnet = null)
 {
@@ -239,7 +239,7 @@ public sealed class PaperTrader(IPaperStore store, ICandleSource candles, CostMo
 
             var start = NextBoundary(now);
             var lastAction = await store.LastActionIdAsync(ct);
-            var config = paper.Config with { Venue = PaperRunConfig.TestnetVenue, ActionsAfter = lastAction == 0 ? null : lastAction };
+            var config = paper.Config.ForTestnet(lastAction == 0 ? null : lastAction);
             var run = await store.CreateRunAsync(start, start - (warmup ?? WarmupFor(members.Select(m => m.Strategy))), config, ct);
             await testnet.BaselineAsync(run.Id, source ?? $"run-start:{run.Id}", await testnet.AccountAsync(ct), ct);
             await store.AuditAsync("trading", "testnet_run_created", new { run.Id, cohortId, paperRunId = paper.Id, run.TradingStart, configHash = run.Config.Hash() }, ct);

@@ -30,6 +30,20 @@ public sealed record PaperRunConfig(
 
     public const string TestnetVenue = "testnet";
 
+    /// <summary>
+    /// Nominal capital of a Testnet run per cohort (A-4, m6-protocol v1.1, U 2026-10-28): half of paper's, so two cohorts
+    /// at the 80 % exposure limit (≈ 8,000 USDT) fit the Testnet account's USDT allowance (≈ 10,000, restored at each reset).
+    /// </summary>
+    public const decimal TestnetNominalCapital = 5_000m;
+
+    /// <summary>The Testnet copy of a paper run: same sleeves and rules, capital scaled to <see cref="TestnetNominalCapital"/>.</summary>
+    public PaperRunConfig ForTestnet(long? actionsAfter) => this with
+    {
+        Venue = TestnetVenue,
+        ActionsAfter = actionsAfter,
+        Sleeves = Sleeves.Select(s => s with { Capital = Math.Round(TestnetNominalCapital / Sleeves.Count, 8) }).ToList(),
+    };
+
     /// <summary>A Testnet run (M6, m6-protocol §4.1); paper runs have no venue field, so their JSON and hash are unchanged.</summary>
     [JsonIgnore]
     public bool IsTestnet => Venue == TestnetVenue;

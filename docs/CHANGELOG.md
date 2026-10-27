@@ -2,6 +2,20 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-28 — M6: Testnet sermayesi 5.000 USDT (m6-protocol v1.1, A-4; U)
+- **Kullanıcı kararı (U):** seçenek A. Testnet run sermayesi kohort başına 5.000 USDT nominal. Paper run'ları 10.000 ile sürer.
+- **Gerekçe:** Testnet'teki USDT bakiyesi yaklaşık 10.000 (kullanıcı beyanı; aylık sıfırlamada geri döner). %80 maruziyet sınırıyla iki kohort artık en fazla yaklaşık 8.000 USDT tutar.
+- **Kod:**
+  - `PaperRunConfig.ForTestnet` (sleeve'ler aynı, sermaye ölçekli);
+  - tatbikatın sermaye kontrolü `kohort × 5.000 × 0,80` (`TestnetDrillCommand.RequiredCapital`); script'teki 20.000 varsayılanı kaldırıldı;
+  - dashboard özet toplamları yalnızca paper run'larını içerir; Testnet run kartında rozet var.
+- **Testler:** Testnet run'ının sleeve'leri paperla aynı, sermayesi 5.000; paper 10.000; özet toplamı yalnızca paper; tatbikat eşiği 2 kohort için 8.000.
+- `verify.ps1` yeşil: **599 test** (Trading 97); build 0 uyarı / 0 hata; secret scan geçti.
+- **Belgeler:**
+  - `m6-protocol.md` v1.1 (§0.2 A-4, §4.1, yeni §13);
+  - `m6-acceptance-report.md` §3;
+  - ADR-0021 uygulama notu.
+
 ## 2026-10-28 — M6 Kapı C: C1 ve C2 tamamlandı (tatbikat PASS)
 - **C1 (kullanıcı):** Testnet anahtarı kaydedildi.
 - **C2 (kullanıcı):** tatbikat PASS. Rapor SHA-256 `0d82ad11…2ccc`.

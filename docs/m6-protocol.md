@@ -1,6 +1,7 @@
-# M6 Protokolü — Binance Spot Testnet execution (v1)
+# M6 Protokolü — Binance Spot Testnet execution (v1.1)
 
 - Durum: **Ön kayıt — kullanıcı tarafından onaylandı (Kapı A, 2026-10-26, U; §0.2 A-1…A-6 dahil).** Ön kayıt kanıtı, bu belgenin onaylandığı git commit'idir. O commit'ten önce M6 kodu yazılmaz.
+- **v1.1 (2026-10-28, U):** A-4 değişti: Testnet run sermayesi kohort başına 5.000 USDT nominal (§13). Değişiklik, Testnet'te henüz hiçbir run açılmamışken (C3'ten önce) yapıldı; v1'in diğer bütün hükümleri aynen geçerli.
 - Karar türleri: **U** = kullanıcı, **T** = teknik lider, **P** = öneri (kullanıcı onayı gerekir).
 - İlgili: ADR-0002, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0018, ADR-0019, ADR-0020, **ADR-0021**; `architecture.md` §5, §10; `risk-model.md` §2–§4; `testing-strategy.md` §5, V10; `sources.md` S-B1…S-B5, S-B11…S-B24; D3, D6, D7, D11, D25, D29, D30, **D33**.
 - Değiştirilmeyenler:
@@ -29,7 +30,7 @@
 | A-1 | Giriş IOC koruma bandı | Referans fiyatın **+%1,0**'ı (alış limiti) | §2.2 |
 | A-2 | `STOP_LOSS_LIMIT` (yedek) limit bandı | Stop fiyatının **−%2,0**'ı | §2.2 |
 | A-3 | `recvWindow` ve `Unknown` çözüm ufku | 5.000 ms; `NeverAccepted` için 60 sn ek pay ve iki ardışık `-2013` | §3.3 |
-| A-4 | Testnet run sermayesi | Paper ile aynı: kohort run'ı başına 10.000 USDT nominal, aynı sleeve yapısı | §4.1 |
+| A-4 | Testnet run sermayesi | ~~Paper ile aynı: kohort run'ı başına 10.000 USDT nominal~~ → **v1.1: kohort run'ı başına 5.000 USDT nominal**, paperla aynı sleeve yapısı (§13) | §4.1 |
 | A-5 | Exchange bakımı sıklığı | Saatlik döngü + kill switch'te anında bir bakım geçişi | §3.1, §5 |
 | A-6 | Testnet sıfırlaması | Reconciliation ile tespit; kullanıcının onaylı "yeniden taban" eylemi | §4.4 |
 
@@ -140,7 +141,7 @@ Accepted | PartiallyFilled --iptal isteği--> CancelRequested --> Canceled | Fil
 
 ### 4.1 Run modeli (U-M6-4; A-4; ADR-0019 ile tutarlı)
 - `trading.paper_runs.venue ∈ {paper, testnet}`.
-- Bir kohortun ilk üyesi `TestnetActive` olduğunda o kohort için bir **Testnet run'ı** açılır. Sleeve yapısı paper run'ınınkiyle aynıdır (10.000 USDT nominal, eşit sleeve'ler). `TestnetActive` olmayan üyelerin sleeve'i girişe kapalıdır (`sleeve-not-testnet`). Sonradan aktive edilen üyenin sleeve'i açılır.
+- Bir kohortun ilk üyesi `TestnetActive` olduğunda o kohort için bir **Testnet run'ı** açılır. Sleeve yapısı paper run'ınınkiyle aynıdır (eşit sleeve'ler); nominal sermaye v1.1'de 5.000 USDT'dir (§13). `TestnetActive` olmayan üyelerin sleeve'i girişe kapalıdır (`sleeve-not-testnet`). Sonradan aktive edilen üyenin sleeve'i açılır.
 - **Paper run'ı değişmeden sürer.** `TestnetActive` üye paper'da aktif sayılır. Bugünkü kod `PaperTrading` dışındaki üyeleri devre dışı sayıyor; bu düzeltilir.
 - Testnet run'ı aynı Kernel motorunu **harici dolum modunda** kullanır (ADR-0021 §3):
   - açılış dolumları ve mum içi stop simüle edilmez;
@@ -382,3 +383,15 @@ Accepted | PartiallyFilled --iptal isteği--> CancelRequested --> Canceled | Fil
 | Filtre ihlali yapan emir borsaya gitmeden reddediliyor | §9 filtre testleri; C2 senaryosu 7 |
 | Anahtar yalnızca Trading.Host'ta | §8.2; compose ve mimari testleri |
 | `PaperTrading → TestnetActive` yalnızca `Frozen` soyundaki stratejiler için ve kullanıcı oturumuyla; doğrulama gerektirmiyor; `experimental` etiketi | §6; V10 testleri; C4 |
+
+## 13. Ek v1.1 — Testnet sermayesi (A-4; U, 2026-10-28)
+- **Gözlem (C2 tatbikatı, rapor `0d82ad11…2ccc`):** tatbikat başında serbest USDT < 20.000 (`capitalSufficient=false`). Hesaptaki varsayılan USDT bakiyesi kullanıcı beyanına göre yaklaşık 10.000'dir ve aylık sıfırlamada bu değere döner (S-B19).
+- **Gereksinim:** bir run en fazla %80 maruziyetle (D7) pozisyon tutar. Kohort başına 10.000 nominal ile iki kohort yaklaşık 16.000 USDT ister; bakiyeye sığmaz.
+- **Karar (kullanıcı, seçenek A):** Testnet run'ı, kohortunun paper run'ındaki sleeve'lerin aynısıyla açılır. Nominal sermaye **5.000 USDT**'dir ve üyelere eşit bölünür.
+  - İki kohortun en fazla maruziyeti yaklaşık 8.000 USDT'dir.
+  - Paper run'ları 10.000 USDT ile değişmeden sürer.
+  - L3 karşılaştırması normalize değerlerle yapıldığından (ADR-0015) mutlak büyüklük farkı analizi etkilemez; mutlak emir büyüklükleri zaten karşılaştırılmaz.
+- **Sonuçlar:**
+  - Tatbikatın sermaye kontrolü artık `kohort × 5.000 × 0,80` ile ölçülür (`--capital` ile değiştirilebilir).
+  - Dashboard'un özet toplamları yalnızca paper run'larını içerir; Testnet run'ları ayrı kartta gösterilir.
+- **Değişmeyenler:** risk limitleri (D7, D22, D25, D29), emir tipleri ve bantlar (A-1, A-2), D30, kabul kriterleri.

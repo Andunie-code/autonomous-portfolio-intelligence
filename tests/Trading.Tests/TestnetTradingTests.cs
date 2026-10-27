@@ -65,6 +65,14 @@ public class TestnetTradingTests(OpsDatabase fixture) : IClassFixture<OpsDatabas
 
         // The Testnet run mirrors the paper run's sleeves; the paper run keeps trading both members (shadow, U-M6-4).
         Assert.Equal(1L, await h.Db.ScalarAsync<long>("SELECT count(*) FROM trading.testnet_baselines"));
+        // A-4 v1.1: the Testnet run has the paper run's sleeves with 5,000 USDT nominal; the paper run keeps 10,000.
+        Assert.Equal(5_000m, await h.Db.ScalarAsync<decimal>($"SELECT sum((s ->> 'capital')::numeric) FROM trading.paper_runs r, jsonb_array_elements(r.config -> 'sleeves') s WHERE r.id = {testnetRun}"));
+        Assert.Equal(10_000m, await h.Db.ScalarAsync<decimal>($"SELECT sum((s ->> 'capital')::numeric) FROM trading.paper_runs r, jsonb_array_elements(r.config -> 'sleeves') s WHERE r.id = {paperRun}"));
+        const string SleevesWithoutCapital = "SELECT jsonb_agg(s - 'capital')::text FROM trading.paper_runs r, jsonb_array_elements(r.config -> 'sleeves') s WHERE r.id = ";
+        Assert.Equal(await h.Db.ScalarAsync<string>(SleevesWithoutCapital + paperRun), await h.Db.ScalarAsync<string>(SleevesWithoutCapital + testnetRun));
+        var overview = JsonDocument.Parse(await new DashboardQueries(h.Db.As("ops_api")).OverviewAsync(default)).RootElement;
+        Assert.Equal(10_000m, overview.GetProperty("total").GetProperty("capital").GetDecimal()); // paper totals only
+        Assert.Equal(["paper", "testnet"], overview.GetProperty("runs").EnumerateArray().Select(r => r.GetProperty("venue").GetString()));
         Assert.Equal(0L, await h.Db.ScalarAsync<long>($"SELECT count(*) FROM trading.steps WHERE run_id = {paperRun} AND processed_at IS NOT NULL AND jsonb_array_length(context -> 'disabled') > 0"));
         Assert.True(await h.Db.ScalarAsync<long>($"SELECT count(*) FROM trading.steps WHERE run_id = {paperRun} AND bar_time > '{activated:O}'") > 100);
 

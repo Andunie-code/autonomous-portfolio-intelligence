@@ -60,6 +60,14 @@ public class TestnetDrillTests
     }
 
     [Fact]
+    public void The_capital_check_expects_the_exposure_limit_of_the_scaled_testnet_runs()
+    {
+        // A-4 v1.1: cohorts × 5,000 USDT × 80 % (D7) — two cohorts need 8,000 USDT free, within the ≈ 10,000 allowance.
+        Assert.Equal(8_000m, PortfolioIntelligence.Trading.Host.TestnetDrillCommand.RequiredCapital(2));
+        Assert.Equal(4_000m, PortfolioIntelligence.Trading.Host.TestnetDrillCommand.RequiredCapital(1));
+    }
+
+    [Fact]
     public async Task The_report_has_operational_fields_only()
     {
         var (report, _) = await RunAsync(TimeSpan.Zero);

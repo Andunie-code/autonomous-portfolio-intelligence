@@ -8,20 +8,26 @@ using PortfolioIntelligence.Kernel.Backtest;
 namespace PortfolioIntelligence.Trading.Host;
 
 /// <summary>
-/// <c>testnet-drill [--symbol BTCUSDT] [--rounds 4] [--capital 20000]</c> (Gate C, m6-protocol §8.3), run by the user
+/// <c>testnet-drill [--symbol BTCUSDT] [--rounds 4] [--capital N]</c> (Gate C, m6-protocol §8.3), run by the user
 /// in the trading-host container with its secrets (scripts/m6-testnet-drill.ps1). Writes the operational JSON report to
 /// stdout. Exit codes: 0 PASS, 1 FAIL, 2 not run (Testnet key missing, or a Testnet run is active: the drill's trades
 /// would break the account reconciliation; run it before the activation, or rebaseline afterwards).
 /// </summary>
 public static class TestnetDrillCommand
 {
+    /// <summary>
+    /// USDT the Testnet runs can hold in positions (A-4 v1.1): cohorts × 5,000 nominal × the 80 % total exposure limit
+    /// (D7). Entries never cost more than their notional (m6-protocol §2.2).
+    /// </summary>
+    public static decimal RequiredCapital(int cohorts) => cohorts * PaperRunConfig.TestnetNominalCapital * RiskSettings.Policy.MaxTotalExposure;
+
     public static async Task<int> RunAsync(string[] args)
     {
         var configuration = new ConfigurationBuilder().AddEnvironmentVariables().AddCommandLine(args.Where(a => a.Contains('=', StringComparison.Ordinal)).ToArray()).Build();
         string Option(string name, string fallback) => args.SkipWhile(a => a != $"--{name}").Skip(1).FirstOrDefault() ?? fallback;
         var symbol = Option("symbol", "BTCUSDT");
         var rounds = int.Parse(Option("rounds", "4"), System.Globalization.CultureInfo.InvariantCulture);
-        var capital = decimal.Parse(Option("capital", "20000"), System.Globalization.CultureInfo.InvariantCulture);
+        var requested = Option("capital", "");
 
         var enabled = new ConfigurationBuilder().AddConfiguration(configuration).AddInMemoryCollection(new Dictionary<string, string?> { ["Trading:Testnet"] = "enabled" }).Build();
         if (TradingHost.TestnetCredentialsFrom(enabled) is not { } credentials)
@@ -31,6 +37,7 @@ public static class TestnetDrillCommand
         }
 
         IReadOnlyList<string> manifestSymbols = [];
+        var cohorts = 2;
         if (configuration.GetConnectionString("Trading") is { Length: > 0 } connection)
         {
             var builder = new Npgsql.NpgsqlConnectionStringBuilder(connection);
@@ -47,14 +54,16 @@ public static class TestnetDrillCommand
                 return 2;
             }
 
-            manifestSymbols = (await store.FrozenAsync(CancellationToken.None)).SelectMany(f => CohortManifestReader.Read(f.Manifest).Pairs.Select(p => p.Symbol))
-                .Distinct(StringComparer.Ordinal).ToList();
+            var frozen = await store.FrozenAsync(CancellationToken.None);
+            manifestSymbols = frozen.SelectMany(f => CohortManifestReader.Read(f.Manifest).Pairs.Select(p => p.Symbol)).Distinct(StringComparer.Ordinal).ToList();
+            cohorts = Math.Max(1, frozen.Where(f => PaperTrader.PaperStates.Contains(f.State)).Select(f => f.CohortId).Distinct().Count());
         }
 
         var clock = new ExchangeClock(TimeProvider.System);
         var allowed = manifestSymbols.Append(symbol).ToHashSet(StringComparer.Ordinal);
         using var http = BinanceTestnetAdapter.CreateClient(credentials, clock, allowed, TestnetGuardHandler.CreateNetworkHandler());
         var drill = new TestnetDrill(new BinanceTestnetAdapter(http, clock), clock, (wait, ct) => Task.Delay(wait, ct));
+        var capital = requested.Length > 0 ? decimal.Parse(requested, System.Globalization.CultureInfo.InvariantCulture) : RequiredCapital(cohorts);
         var report = await drill.RunAsync(symbol, manifestSymbols, rounds, capital, CancellationToken.None);
         Console.WriteLine(JsonSerializer.Serialize(report, new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true }));
         return report.Pass ? 0 : 1;

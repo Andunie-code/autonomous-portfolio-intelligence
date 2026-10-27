@@ -156,6 +156,7 @@ public sealed class DashboardQueries(string connectionString)
             result.Add(new JsonObject
             {
                 ["runId"] = run.Id,
+                ["venue"] = run.Config.IsTestnet ? PaperRunConfig.TestnetVenue : "paper",
                 ["cohortIds"] = new JsonArray(run.Config.Sleeves.Select(s => s.CohortId).Distinct().Select(id => (JsonNode)JsonValue.Create(id)).ToArray()),
                 ["manifestHash"] = run.Config.ManifestHash,
                 ["tradingStart"] = run.TradingStart,
@@ -175,6 +176,11 @@ public sealed class DashboardQueries(string connectionString)
                 ["maxClusterShare"] = c?["max_cluster_share"]?.DeepClone(),
                 ["clusterThreshold"] = c?["threshold"]?.DeepClone(),
             });
+            if (run.Config.IsTestnet)
+            {
+                continue; // paper totals only: Testnet runs have their own, smaller capital (A-4 v1.1)
+            }
+
             capitalTotal += capital;
             cashTotal += cash;
             equityTotal += equity;

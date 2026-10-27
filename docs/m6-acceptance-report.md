@@ -1,6 +1,6 @@
 # M6 Kabul Raporu — Binance Spot Testnet execution
 
-- Durum: **Kapı C sürüyor.** C1 ve C2 tamamlandı; C3 (`m6-update.ps1`), C4 (terfi, D30) ve C5 (kabul) bekliyor.
+- Durum: **Kapı C sürüyor.** C1 ve C2 tamamlandı; A-4 v1.1 ile güncellendi (§3); C3 (`m6-update.ps1`), C4 (terfi, D30) ve C5 (kabul) bekliyor.
 - Ön kayıt: [`m6-protocol.md`](m6-protocol.md) v1 (`b2433bc`). ADR-0021. Kapı B: `a19a5e4` (`verify.ps1` yeşil, 598 test).
 - Claude Code bu rapora yalnızca operasyonel alanları yazar (m6-protocol §8.3). Fiyat, miktar, bakiye tutarı ve PnL içermez.
 
@@ -36,9 +36,13 @@
   - `canTrade=true`;
   - saat ofseti 433 ms;
   - gecikme medyanı 264 ms, p95 503 ms.
-- **`capitalSufficient=false`:** tatbikat başında serbest USDT < 20.000 (iki kohort × 10.000 nominal). Karar bekleyen konu, §3.
+- **`capitalSufficient=false`:** tatbikat başında serbest USDT < 20.000 (iki kohort × 10.000 nominal). Karar: §3 (v1.1, 5.000 USDT).
 
 **Roadmap kriteri "Testnet'te ≥ 20 emrin tam yaşam döngüsü tamamlandı"** bu raporla karşılandı (23 ≥ 20).
 
-## 3. Açık karar: Testnet sermayesi (A-4)
-A-4: Testnet run sermayesi paperla aynıdır, kohort run'ı başına 10.000 USDT nominal. Testnet hesabının USDT bakiyesi (kullanıcı beyanı: yaklaşık 10.000, aylık sıfırlamada yeniden bu değere döner) iki kohortu karşılamıyor. Seçenekler ve öneri kullanıcıya sunuldu (2026-10-28); karar verilince buraya ve CHANGELOG'a işlenir.
+## 3. Karar: Testnet sermayesi (A-4 → v1.1; U, 2026-10-28)
+- **Sorun:** Testnet hesabının USDT bakiyesi (kullanıcı beyanı: yaklaşık 10.000, aylık sıfırlamada yeniden bu değere döner), kohort başına 10.000 nominalle iki kohortu karşılamıyordu (en fazla maruziyet yaklaşık 16.000).
+- **Karar:** kullanıcı seçenek A'yı seçti: Testnet run sermayesi kohort başına **5.000 USDT** (m6-protocol §13). İki kohortun en fazla maruziyeti yaklaşık 8.000 USDT'dir.
+- **Değerlendirilip seçilmeyenler:**
+  - B: A-4 aynı kalsın; önce yalnızca Kohort 0 terfi etsin;
+  - C: Testnet'teki sanal varlıkları USDT'ye çevirmek (her sıfırlamada tekrar gerekirdi).

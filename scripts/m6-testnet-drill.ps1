@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
   M6 Gate C step C2 (docs/m6-protocol.md §8.3, §10). User only:
-    powershell -ExecutionPolicy Bypass -File scripts/m6-testnet-drill.ps1 [-Symbol BTCUSDT] [-Rounds 4] [-Capital 20000]
+    powershell -ExecutionPolicy Bypass -File scripts/m6-testnet-drill.ps1 [-Symbol BTCUSDT] [-Rounds 4] [-Capital <USDT>]
 .DESCRIPTION
   Rebuilds the trading-host image from the committed code, then runs the Testnet drill in a one-off trading-host
   container (same image and secrets as Trading.Host): at least 20
@@ -13,7 +13,8 @@
   The report has operational fields only (no price, quantity, balance or PnL). It is saved outside the repository with
   its SHA-256; share the summary lines (or the file) with Claude Code.
 #>
-param([string] $Symbol = 'BTCUSDT', [int] $Rounds = 4, [decimal] $Capital = 20000)
+# -Capital: free USDT the check expects; by default the drill computes it (cohorts x 5,000 x 80 %, A-4 v1.1).
+param([string] $Symbol = 'BTCUSDT', [int] $Rounds = 4, [decimal] $Capital = 0)
 . "$PSScriptRoot\lib\m5-common.ps1"
 Set-Location $script:Root
 
@@ -28,8 +29,8 @@ Confirm-Interactive "Run the Testnet drill on $Symbol ($Rounds rounds, real Test
 Write-Host "Building the trading-host image (commit $((git rev-parse --short HEAD).Trim()))..."
 Invoke-Native 'docker' @('compose', '--profile', 'trading', 'build', 'trading-host') | ForEach-Object { Write-Host "  $_" }
 if ($LASTEXITCODE -ne 0) { throw 'The trading-host image did not build.' }
-$arguments = @('compose', '--profile', 'trading', 'run', '--rm', '--no-deps', 'trading-host', 'testnet-drill',
-    '--symbol', $Symbol, '--rounds', "$Rounds", '--capital', $Capital.ToString([Globalization.CultureInfo]::InvariantCulture))
+$arguments = @('compose', '--profile', 'trading', 'run', '--rm', '--no-deps', 'trading-host', 'testnet-drill', '--symbol', $Symbol, '--rounds', "$Rounds")
+if ($Capital -gt 0) { $arguments += @('--capital', $Capital.ToString([Globalization.CultureInfo]::InvariantCulture)) }
 
 # The service has a static address (172.30.1.20, pg_hba): a second container cannot start while it runs.
 $running = @(Invoke-Native 'docker' @('compose', '--profile', 'trading', 'ps', '--status', 'running', '--services')) -contains 'trading-host'

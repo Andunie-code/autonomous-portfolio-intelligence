@@ -28,6 +28,7 @@
   - **Girişe kapalı sleeve'in L2 nedeni:** `TestnetActive` olmayan üyenin Testnet run'ındaki sleeve'i protokolde `sleeve-not-testnet` olarak geçer; kodda mevcut `sleeve-disabled` nedeni kullanılır.
   - **Kill switch:** `POST /kill-switch`, `MaintenanceSignal` ile worker'ı uyandırır; worker'da her zaman tek bir bekleyen sinyal okuması tutulur, böylece istek kaybolmaz. HTTP 418, kill switch'i açar (`exchange_ip_banned`).
   - **Redaction:** dosyadan okunan secret'lar (Testnet anahtarı, Ops token, login parolaları) literal olarak maskelenir; `signature=` ve `X-MBX-APIKEY` desenleri eklendi.
+  - **Sermaye (A-4 v1.1, U 2026-10-28):** Testnet run'ı `PaperRunConfig.ForTestnet` ile açılır: paper run'ın sleeve'leri, kohort başına 5.000 USDT nominal. Dashboard özet toplamları yalnızca paper run'larını içerir. Tatbikatın sermaye kontrolü `kohort × 5.000 × 0,80` ile ölçülür.
   - **`verify.ps1`:** test projeleri artık sırayla koşulur ve sayılar TRX dosyalarından toplanır. Projeler paralel koşulduğunda Testcontainers örnekleri üst üste biniyor ve 16 GB makinede bellek tükeniyordu (ADR-0013).
 - İlgili: ADR-0002, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0018, ADR-0019, ADR-0020; `m6-protocol.md`; `architecture.md` §5, §10; `risk-model.md` §2–§4; `sources.md` S-B11…S-B24; D3, D6, D9, D11, D25, D30, D33.
 

@@ -256,7 +256,7 @@ async function renderOverview(view) {
   const t = data.total; const limits = data.limits || {};
   const waiting = data.runs.filter((r) => r.awaitingFirstBar).length;
   show(view, 
-    callout('Bu ekran tüm paper run\'ların toplamını ve her run\'ın risk limitlerine göre durumunu gösterir. Sistem her 4h mum kapanışında stratejileri çalıştırır; '
+    callout('Bu ekran paper run\'larının toplamını (Testnet run\'ları ayrı kartlarda, toplama girmez) ve her run\'ın risk limitlerine göre durumunu gösterir. Sistem her 4h mum kapanışında stratejileri çalıştırır; '
       + 'kararlar risk kurallarından (toplam maruziyet, drawdown, D29 korelasyon kümesi tavanı) geçer ve emir bir sonraki mumun açılışında dolar.'),
     el('div', { class: 'kpis' },
       kpi('Toplam equity', money(t.equity), '', `sermaye ${money(t.capital)}`),
@@ -267,7 +267,8 @@ async function renderOverview(view) {
       kpi('Toplam maruziyet', pct(t.exposure), '', limits.maxTotalExposure ? `tavan ${pct(limits.maxTotalExposure, 0)}` : '')),
     el('div', { class: 'grid2' }, data.runs.map((run) => el('div', { class: 'card' },
       el('div', { class: 'card-head' },
-        el('div', { class: 'run-head' }, el('h2', { text: `Run ${run.runId}` }), run.cohortIds.map((c) => badge(`Kohort ${cohortLabel(c).slice(1)} · #${c}`, 'accent'))),
+        el('div', { class: 'run-head' }, el('h2', { text: `Run ${run.runId}` }), run.venue === 'testnet' ? badge('Testnet', 'warn') : null,
+          run.cohortIds.map((c) => badge(`Kohort ${cohortLabel(c).slice(1)} · #${c}`, 'accent'))),
         run.awaitingFirstBar ? badge('İlk 4h mum kapanışı bekleniyor', 'warn', 'clock') : badge(`Son mum ${time(run.barTime)}`, 'muted', 'clock')),
       run.awaitingFirstBar ? callout('Bu run henüz ilk mumunu işlemedi: sermayenin tamamı nakitte, pozisyon yok. İlk adım, işlem başlangıcından sonraki ilk 4h mum kapanışında çalışır.', 'warn') : null,
       kv([
