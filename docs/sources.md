@@ -48,11 +48,17 @@ Yalnızca `developers.binance.com` belge sayfaları ve arama sonuçları okundu 
 | S-B24 | Testnet veri sıfırlamaları (CHANGELOG): 2026-10-07, 2026-09-09, 2026-08-05, 2026-06-03, 2026-05-06, 2026-02-04, 2026-01-07, 2025-11-05, 2025-10-01, 2025-09-05, 2025-07-02, 2025-06-04. Çoğu ayın ilk haftasında; bu bir garanti değildir | testnet CHANGELOG |
 
 **M6 için doğrulanamayanlar (Kapı C tatbikatında gözlenecek):**
-- `STOP_LOSS` tetiğinin hangi fiyata göre çalıştığı ve bekleyen stop emrinin bakiyeyi kilitleyip kilitlemediği (S-B18);
-- çekirdek parite evreninin Testnet'te listelenip listelenmediği ve her sembolün `orderTypes` listesinde `STOP_LOSS` bulunup bulunmadığı;
-- Testnet USDT bakiyesinin, kohort run'ı başına 10.000 USDT nominal sermayeye yetip yetmediği;
-- Testnet likiditesi ve IOC dolum oranı;
-- anahtar oluşturulurken yalnızca işlem izninin seçilebildiği (S-B11 işlemin varsayılan olarak kapalı olduğunu söylüyor; diğer izinlerin seçimi belgede yok).
+Kaynak: tatbikat raporu 2026-10-27T22:35Z, SHA-256 `0d82ad11…2ccc` (`m6-acceptance-report.md` §2). Bu kaynaktaki gözlemler 2026-10-28'de işlendi.
+- `STOP_LOSS` tetiğinin hangi fiyata göre çalıştığı — **hâlâ gözlenmedi** (tatbikatta hiçbir stop tetiklenmedi). Bekleyen stop emrinin bakiyeyi kilitleyip kilitlemediği — **gözlenmedi**; tatbikat satıştan önce stop'u iptal ediyor (m6-protocol §5.4), bu sıra kilit olsa da olmasa da çalışır (S-B18).
+- ~~Çekirdek parite evreninin Testnet'te listelenmesi ve `STOP_LOSS` desteği~~ — **gözlendi:** 20/20 sembol listelenmiş ve `orderTypes` listesinde `STOP_LOSS` var. Yedek `STOP_LOSS_LIMIT`'e gerek yok.
+- Testnet USDT bakiyesinin kohort run'ı başına 10.000 USDT nominal sermayeye yetip yetmediği — **gözlendi: iki kohort için yetmiyor.** Tatbikat başında serbest USDT < 20.000 (`capitalSufficient=false`). Hesaptaki varsayılan USDT bakiyesinin yaklaşık 10.000 olduğu kullanıcı beyanıdır; raporda bakiye tutarı yer almaz.
+- Testnet likiditesi ve IOC dolum oranı — **kısmen gözlendi:** tatbikattaki 5 IOC alımı (küçük notional) doldu. Strateji büyüklüğündeki emirlerde dolum oranı Kapı C4'te L3 sapma kategorilerinden izlenir.
+- Anahtar ve işlem izni — **gözlendi:** `canTrade=true`. Diğer izin seçenekleri belgede yok; Testnet'te para çekme yok (S-B19).
+- **Ek gözlemler:**
+  - Saat ofseti 433 ms (borsa önde); S-B11'deki "1 sn'den fazla ileride" sınırının içinde, imzalı istekler sunucu saati tahminiyle gidiyor.
+  - Gecikme medyanı 264 ms, p95 503 ms.
+  - Enjekte edilen 1 ms istemci zaman aşımında istek borsaya ulaşmadı. Emir, `recvWindow` ufkundan sonra iki ardışık "yok" yanıtıyla `NeverAccepted` oldu (S-B11'deki Matching Engine öncesi kontrolle tutarlı).
+  - Açık bir emirle aynı `newClientOrderId` borsada reddedildi (`-2010`; S-B13).
 - .NET 10'da Ed25519 desteği doğrulanmadı; HMAC seçildiği için gerekmiyor (U-M6-6).
 
 ## Google Gemini (ilk doğrulama: 2026-10-12; M4 öncesi yeniden doğrulama: 2026-10-18)

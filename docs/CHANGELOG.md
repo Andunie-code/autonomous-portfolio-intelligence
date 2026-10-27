@@ -2,6 +2,18 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-28 — M6 Kapı C: C1 ve C2 tamamlandı (tatbikat PASS)
+- **C1 (kullanıcı):** Testnet anahtarı kaydedildi.
+- **C2 (kullanıcı):** tatbikat PASS. Rapor SHA-256 `0d82ad11…2ccc`.
+  - 24 emir; 23 tam yaşam döngüsü; duplicate 0.
+  - `Unknown` 1/1 çözüldü (`NeverAccepted`, gerçek borsada).
+  - `STOP_LOSS` 20/20 sembolde destekleniyor; `canTrade=true`.
+  - Saat ofseti 433 ms; gecikme medyanı 264 ms, p95 503 ms.
+- **Roadmap M6 kriteri "≥ 20 emrin tam yaşam döngüsü" karşılandı.**
+- **Bulgu:** `capitalSufficient=false`. Serbest USDT, iki kohort × 10.000 nominal için yetmiyor; A-4 kararı bekliyor (`m6-acceptance-report.md` §3).
+- **Yeni belge:** `docs/m6-acceptance-report.md` (Kapı C sürüyor).
+- **Güncellenen belge:** `sources.md` M6 doğrulanamayanlar listesi (gözlenenler işaretlendi; stop tetik fiyatı ve bakiye kilidi hâlâ açık).
+
 ## 2026-10-28 — M6 Kapı C: tatbikat script düzeltmeleri (kullanıcının ilk koşusu)
 - **İlk `m6-testnet-drill.ps1` koşusu (kullanıcı) "Erişim engellendi" ile durdu.** İki neden vardı:
   1. `m6-testnet-key.ps1`, secret dosyalarının miras alınan izinlerini kaldırmıştı (`icacls /inheritance:r`). Docker Desktop bu dosyaları mount edemedi.
