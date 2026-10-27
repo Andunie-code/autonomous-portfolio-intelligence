@@ -62,6 +62,8 @@ Run-Script 'm5-migrate.ps1' @()
 Step '3/5 Trading.Host rebuilt (live data; Testnet when the key is stored)'
 $keyFile = Ensure-EmptySecret $script:OpsSecrets 'testnet_api_key'
 $secretFile = Ensure-EmptySecret $script:OpsSecrets 'testnet_api_secret'
+Reset-SecretAcl $script:OpsSecrets 'testnet_api_key'
+Reset-SecretAcl $script:OpsSecrets 'testnet_api_secret'
 $testnet = ((Get-Item $keyFile).Length -gt 0) -and ((Get-Item $secretFile).Length -gt 0)
 if ($testnet) {
     Confirm-Interactive 'Start Trading.Host with live klines and Testnet execution enabled (orders to testnet.binance.vision only for TestnetActive strategies)?'

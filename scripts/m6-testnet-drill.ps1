@@ -3,7 +3,8 @@
   M6 Gate C step C2 (docs/m6-protocol.md §8.3, §10). User only:
     powershell -ExecutionPolicy Bypass -File scripts/m6-testnet-drill.ps1 [-Symbol BTCUSDT] [-Rounds 4] [-Capital 20000]
 .DESCRIPTION
-  Runs the Testnet drill in a one-off trading-host container (same image and secrets as Trading.Host): at least 20
+  Rebuilds the trading-host image from the committed code, then runs the Testnet drill in a one-off trading-host
+  container (same image and secrets as Trading.Host): at least 20
   full order lifecycles with small notionals on one symbol, the injected timeout recovery and the kill switch rule.
   Real orders go to testnet.binance.vision (virtual funds). Run it before the first PaperTrading -> TestnetActive
   activation: with an active Testnet run the drill refuses (its trades would change the account balance).
@@ -14,12 +15,17 @@ param([string] $Symbol = 'BTCUSDT', [int] $Rounds = 4, [decimal] $Capital = 2000
 . "$PSScriptRoot\lib\m5-common.ps1"
 Set-Location $script:Root
 
+if (git status --porcelain -- src scripts) { throw 'src/ or scripts/ has uncommitted changes: the drill image is built only from committed code.' }
 foreach ($name in @('testnet_api_key', 'testnet_api_secret')) {
     $path = Ensure-EmptySecret $script:OpsSecrets $name
     if ((Get-Item $path).Length -eq 0) { throw "secrets/$name is empty: run scripts/m6-testnet-key.ps1 first." }
+    Reset-SecretAcl $script:OpsSecrets $name
 }
 
 Confirm-Interactive "Run the Testnet drill on $Symbol ($Rounds rounds, real Testnet orders with virtual funds)?"
+Write-Host "Building the trading-host image (commit $((git rev-parse --short HEAD).Trim()))..."
+Invoke-Native 'docker' @('compose', '--profile', 'trading', 'build', 'trading-host') | ForEach-Object { Write-Host "  $_" }
+if ($LASTEXITCODE -ne 0) { throw 'The trading-host image did not build.' }
 $arguments = @('compose', '--profile', 'trading', 'run', '--rm', '--no-deps', 'trading-host', 'testnet-drill',
     '--symbol', $Symbol, '--rounds', "$Rounds", '--capital', $Capital.ToString([Globalization.CultureInfo]::InvariantCulture))
 $lines = Invoke-Native 'docker' $arguments

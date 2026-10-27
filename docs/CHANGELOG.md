@@ -2,6 +2,16 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-28 — M6 Kapı C: tatbikat script düzeltmeleri (kullanıcının ilk koşusu)
+- **İlk `m6-testnet-drill.ps1` koşusu (kullanıcı) "Erişim engellendi" ile durdu.** İki neden vardı:
+  1. `m6-testnet-key.ps1`, secret dosyalarının miras alınan izinlerini kaldırmıştı (`icacls /inheritance:r`). Docker Desktop bu dosyaları mount edemedi.
+  2. Tatbikat, M5b'den kalan `trading-host` imajıyla koştu; bu imajda `testnet-drill` komutu yok.
+- **Düzeltmeler:**
+  - Secret dosyaları diğer `secrets/` dosyalarıyla aynı, miras alınan izinlerle yazılıyor.
+  - Yeni `Reset-SecretAcl` yardımcısı (`icacls /reset`) mevcut dosyaları içeriğe dokunmadan düzeltir; anahtarın yeniden girilmesi gerekmez. Key, drill ve update script'lerinin üçü de bu yardımcıyı çağırıyor.
+  - `m6-testnet-drill.ps1` artık commit'lenmiş kodla `docker compose build trading-host` yapıyor; `src/` ya da `scripts/` temiz değilse durur.
+- Ağa istek atılmadı; Testnet'e emir gönderilmedi.
+
 ## 2026-10-27 — M6 Kapı B: çevrimdışı kod ve testler (`verify.ps1` yeşil, 598 test)
 - **Kernel (ADR-0021 §3):**
   - `PortfolioEngine`'e harici dolum modu eklendi.

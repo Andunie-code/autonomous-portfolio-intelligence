@@ -55,6 +55,16 @@ function Ensure-EmptySecret([string] $Directory, [string] $Name) {
     return $path
 }
 
+# Restores the inherited permissions of a secret file (icacls /reset). Docker Desktop must read every compose secret
+# to mount it; a file without inherited ACLs fails with "access denied" (first M6 drill, 2026-10-28). Content untouched.
+function Reset-SecretAcl([string] $Directory, [string] $Name) {
+    $path = Join-Path $Directory $Name
+    if (Test-Path $path) {
+        $output = & icacls $path /reset 2>&1
+        if ($LASTEXITCODE -ne 0) { throw "icacls /reset failed on secrets/${Name}: $output" }
+    }
+}
+
 function Get-Secret([string] $Directory, [string] $Name) {
     return ([System.IO.File]::ReadAllText((Join-Path $Directory $Name))).Trim()
 }

@@ -23,8 +23,8 @@ function Read-Hidden([string] $Prompt) {
 function Write-SecretFile([string] $Name, [string] $Value) {
     $path = Ensure-EmptySecret $script:OpsSecrets $Name
     [System.IO.File]::WriteAllText($path, $Value)
-    # Only the current user may read the file.
-    & icacls $path /inheritance:r /grant:r "$($env:USERNAME):(R,W)" | Out-Null
+    # Same permissions as the other secrets/ files (inherited): Docker Desktop must be able to mount it.
+    Reset-SecretAcl $script:OpsSecrets $Name
 }
 
 if ($Clear) {
