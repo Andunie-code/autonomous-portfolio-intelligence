@@ -35,6 +35,10 @@ Kullanıcıdan açık onay alınmadan yapılmaz:
   - `scripts/m6-*.ps1` (testnet-key, testnet-drill, testnet-activate, update) ve Testnet tatbikatı **yalnızca kullanıcı** tarafından çalıştırılır.
   - Tatbikat ve Testnet raporlarından yalnızca operasyonel alanlar (m6-protocol §8.3) görülür.
   - Testnet anahtarı yalnızca `secrets/` altındadır ve okunmaz.
+- **M7 web araştırması (m7-protocol §11; ADR-0022):**
+  - Claude Code, arXiv makale içeriğini (`arxiv.org/abs/`, `arxiv.org/pdf/`) ve `export.arxiv.org` API yanıtlarını hiçbir yolla çekmez ve okumaz. Yalnızca belge ve koşul sayfaları (`info.arxiv.org`) okunabilir.
+  - Kaynak önbelleği (`%LOCALAPPDATA%\PortfolioIntelligence\source-cache`) ve `sources.*` tablolarındaki metin alanları (`claim`, `quote`, başlıklar) incelenmez. Kaynak raporlarından yalnızca operasyonel alanlar görülür (sayılar, hash'ler, tarihler, durum kodları, ret nedenleri, maliyet).
+  - `scripts/m7-*.ps1`, kaynak çekme (`fetch`, `extract`) ve FindingExtraction pilot/yeterlilik koşuları **yalnızca kullanıcı** tarafından çalıştırılır.
 - Holdout ortamına ait sır adları (`tests/Architecture.Tests/HoldoutSecretReferenceTests.cs`) evaluator projesi dışında hiçbir kaynak, config ya da script dosyasında kullanılmaz.
 
 ## Sırlar

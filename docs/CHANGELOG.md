@@ -2,6 +2,42 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-28 — M7 Kapı A: kaynak koşulları, protokol v1 ve ADR-0022 (kullanıcı onayı)
+- **Kullanıcı kararı (U):** `m7-protocol.md` v1, A-1…A-9, §11 (içerik görünürlüğü), §13 (akış sonucu) ve ADR-0022 onaylandı. Ön kayıt kanıtı bu commit'tir.
+- **Ön kontrol:** M6 commit'leri zaten `origin/main`'deydi (`dc6b483`, fetch ile doğrulandı). Push yapılmadı.
+- **Kullanıcı kararları (U, `m7-protocol.md` §0.1):**
+  - **U-M7-2:** yalnızca `published` ve `updated` tarihi `< C` olan arXiv sürümleri kabul edilir.
+  - **U-M7-3:** Semantic Scholar M7'de kullanılmaz.
+  - **U-M7-4:** FindingExtraction modeli `gemini-3.5-flash-lite`.
+  - **U-M7-5:** bütçe pilot 0,50 USD, yeterlilik 3,00 USD.
+  - **U-M7-6:** arXiv API'si `robots.txt` yerine API koşullarına tabidir; diğer yollar için `robots.txt` bağlayıcıdır.
+- **Kaynak doğrulaması (`sources.md` S-X1…S-X12):**
+  - arXiv API koşulları: 3 sn'de bir istek ve tek bağlantı; metadata CC0; içerik yalnızca kişisel ve araştırma kullanımı için.
+  - API kılavuzu ve Atom alanları: `updated`, alınan sürümün tarihidir.
+  - **`export.arxiv.org/robots.txt` `Disallow: /`** diyor. `arxiv.org/robots.txt` okunamadı (503).
+  - Erişim ve toplu veri politikaları, lisanslar, Semantic Scholar limitleri, `developers.binance.com/robots.txt` (404).
+  - Paketler: PdfPig 0.1.16, AngleSharp 1.8.4.
+  - S-G3 ve S-G5 (grounding) yeniden doğrulandı; T13'ün dayanağı değişmedi.
+  - Makale içeriği ve API yanıtı okunmadı.
+- **Yeni belgeler:**
+  - `m7-protocol.md` v1 (taslak):
+    - allowlist ve erişim kuralları;
+    - metin çıkarma ve normalizer;
+    - `finding-extraction v1` şeması ve kabul hattı;
+    - `fe-synthetic v1` seti (normal, I1–I5 injection, negatif kontrol);
+    - tek kollu karar kuralı (H0: p ≤ 0,80);
+    - pilot ön kaydı, örneklem ve bütçe kuralı;
+    - Researcher tool'ları ve bulgu → hipotez yolu;
+    - Kapı C adımları.
+  - ADR-0022 (önerildi).
+- **TBD kapandı:** PDF metin çıkarma kütüphanesi (requirements §8).
+- **Korkuluklar (T17 eki):**
+  - `.claude/settings.json` deny kuralları: `export.arxiv.org`, `arxiv.org/pdf`, `m7-*.ps1`;
+  - `CLAUDE.md`'ye M7 maddesi eklendi;
+  - `RepositoryRuleTests` Kapı B'de genişletilir.
+- **Güncellenen belgeler:** `requirements.md` (rev. 5.7; D14 notu, §8), `architecture.md` §8, `roadmap.md` M7, `testing-strategy.md` §6.2 ve §6.4, `risk-model.md`, ADR-0008 uygulama notu.
+- **Kod değişikliği yok.**
+
 ## 2026-10-28 — M6 tamamlandı (kullanıcı kabulü)
 - **Kullanıcı kararı (U):** M6, C1–C3 kanıtlarıyla kapatıldı.
   - **Kabul edilen sapma:** gerçek `PaperTrading → TestnetActive` terfisi (C4), D30 dolunca (en erken Kohort 0 için 2026-11-03, Kohort 1 için 2026-11-04) operasyonel adım olarak yapılır. M5'teki paper gözlemiyle aynı biçimde ele alındı.

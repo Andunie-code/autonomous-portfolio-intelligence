@@ -374,6 +374,11 @@ Deneme sayacı, menşeinden bağımsız olarak (LLM, grid, insan, `dev-assisted`
 - Extractor **tool'suz** çalışır ve yalnızca FindingExtraction için nitelikli bir model varsa devreye girer. Çıktısı `Finding[]` şemasıyla sınırlıdır. Alıntılar, kendi çıkardığımız metinde deterministik olarak aranarak doğrulanır.
 - Researcher ham metni görmez. Bulgular yalnızca hipotez üretir; hattın hiçbir adımı atlanamaz.
 - **Google Search grounding ve URL context otonom hatta kullanılmaz (T13).** Grounding şartları (görüntüleme, saklama, "learn from" yasağı; S-G5) kalıcı otonom hafızayla bağdaşmıyor. URL context, getirmeyi Google'a bıraktığı için redirect allowlist'ini, içerik hash'ini ve alıntı doğrulamasını devre dışı bırakır; aynı veriyi kendi getiricimiz zaten sağlıyor. Etkileşimli grounding modu: P2.
+- **M7 uygulama ayrıntıları** (`m7-protocol.md`, ADR-0022; Kapı A onayı 2026-10-28):
+  - yalnızca kesim öncesi arXiv sürümleri kabul edilir (`published` ve `updated` `< C`);
+  - her 3xx reddedilir;
+  - arXiv API'si `robots.txt` yerine API koşullarına, diğer yollar `robots.txt`'ye tabidir;
+  - `arxiv.org/robots.txt` okunamazsa yalnızca özet (CC0) kullanılır.
 - Kaynak güven seviyeleri (T1: arXiv q-fin, resmi dokümantasyon; T2: kullanıcının tek tek onayladığı kaynaklar) yalnızca önceliği belirler; kanıt değeri taşımaz. Allowlist'i yalnızca kullanıcı değiştirir.
 
 ## 9. Hata yönetimi

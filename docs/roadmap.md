@@ -208,7 +208,12 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Anahtar yalnızca Trading.Host'ta.
   - `PaperTrading → TestnetActive` geçişi yalnızca `Frozen` stratejiler için ve kullanıcı oturumuyla mümkün; **doğrulama gerektirmiyor** (ADR-0012). `Validated` olmayan stratejiler "deneysel" etiketi taşıyor.
 
-### M7 — Kontrollü web araştırması (M)
+### M7 — Kontrollü web araştırması (M) — Kapı A tamamlandı; Kapı B sürüyor
+- **Ön kayıt:** [`m7-protocol.md`](m7-protocol.md) v1 ve ADR-0022 (Kapı A, kullanıcı onayı 2026-10-28).
+- **Kapılar (U):**
+  - **A:** arXiv ve Semantic Scholar koşullarının doğrulanması (`sources.md` S-X1…S-X12), allowlist, PDF kütüphanesi, protokol ve ADR.
+  - **B:** çevrimdışı kod ve testler; `verify.ps1` yeşil; API maliyeti 0.
+  - **C:** kullanıcının koşuları: ≤ 10 T1 makale ve provenance; FindingExtraction pilotu ve yeterliliği; nitelik varsa bulgu → hipotez ve karşılaştırma raporu; mutabakat.
 - **Ön koşul:** allowlist kesinleşmiş; arXiv ve Semantic Scholar koşulları doğrulanmış; PDF kütüphanesi seçilmiş.
 - **Kabul kriterleri:**
   - Allowlist dışı ve redirect'le ulaşılan URL'lere erişilemiyor.

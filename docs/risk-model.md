@@ -61,7 +61,7 @@ LLM'in durdurulması trading'i durdurmaz. Operasyon varsayılan deterministik po
 | Restart | Önce reconciliation. İşler idempotent |
 | **LLM hatası, geçersiz çıktı, nitelikli model yok, bütçe aşımı ya da LLM acil durdurma** | **Varsayılan deterministik allocation politikası** (T11, ADR-0011): onaylı tavanlar içinde ters volatilite ağırlıklandırma. Backtest'te ve paper'da doğrulanmış olan aynı politika. Olay audit'e yazılır. Önceki onaysız "tavanların yarısı" kuralı kaldırıldı |
 | Research'te LLM yok | Grid/parametrik arama ve insan onaylı hipotezler. Danışma amaçlı metinler yerine şablon kullanılır |
-| Web kaynağına erişilemiyor (M7) | Önbellek kullanılır; yoksa iş atlanır |
+| Web kaynağına erişilemiyor (M7) | Önbellek kullanılır; yoksa iş atlanır. `robots.txt` okunamazsa host yasak sayılır; arXiv'de yalnızca API özeti kullanılır. 403'ten sonra o host'a istek gönderilmez (ADR-0022) |
 | Evaluator'a erişilemiyor ya da `HoldoutEnvironmentVerified = false` | Paper ve Testnet devam eder (ADR-0012). `Validated` sonucu yazılamaz; değerlendirme ortam doğrulandıktan sonra aynı girdilerle yapılır |
 | Operasyonel güvenlik eylemi (devre dışı bırakma, kill switch, pozisyon kapatma) | Her zaman serbesttir ve audit'e yazılır. Doğrulama durumundan ve kohort yaşam döngüsünden bağımsızdır; kohort kayıtlarını değiştirmez |
 
@@ -79,7 +79,8 @@ LLM'in durdurulması trading'i durdurmaz. Operasyon varsayılan deterministik po
 | Makine yöneticisi ya da saat manipülasyonu | Audit, kaynak dosyaların tarih başlıkları | Kabul edilmiş artık risk (yerel tek makine, ADR-0013) |
 | Runtime anahtarlarının Claude Code ile aynı makinede olması | Process ayrımı (D9), Docker secret dosyaları, `Read(**/secrets/**)` deny kuralı, trade-only ve withdrawal'sız Testnet anahtarı; IP kısıtı yerine `TestnetGuardHandler` host allowlist'i (D33) | Kabul edilmiş artık risk (ADR-0013). Ağ düzeyinde egress kısıtı yok; sınır koddaki guard'dır (ADR-0021) |
 | Bellek baskısı (16 GB, IDE ve Claude Code ile ortak) | Servis başına `mem_limit`/`cpus`, iş bazlı Research.Host ve Evaluator, ağır işlerin sırayla çalışması (ADR-0013) | Ağır iş sırasında Trading.Host'un gecikmesi; döngü süreleri metrik olarak izlenir |
-| Prompt injection (M7) | Tool'suz Extractor, şema, alıntı doğrulaması | — |
+| Prompt injection (M7) | Tool'suz Extractor, sınırlayıcılı girdi, şema; normalize metinde tam alt dizgi olarak alıntı doğrulaması; sayısal kontrol; sanitizer. Yeterlilikte injection seti ve sıfır toleranslı değişmezler. Bulgunun tek etkisi bir hipoteze kaynak olmaktır (ADR-0022) | Belgede düz metin olarak geçen injection içeriği doğrulanabilir bir alıntıdır; kod tek başına yakalayamaz. Dış CSS ya da üst üste binen nesnelerle gizlenmiş metin süzülmez |
+| Kesim sonrası yayınla holdout bilgisinin sızması (M7) | Yalnızca `published` ve `updated` tarihi `< C` olan arXiv sürümleri kabul edilir. Kontrol istemcide, DB `CHECK` kısıtında ve hipotez kaydında tekrarlanır (U-M7-2) | Kesim öncesi bir sürümün sonradan yayımlanmış bilgiye atıf yapamayacağı varsayılır |
 | Nitelikli olmayan modelin kullanılması | Görev politikası; downgrade yasağı test edilir | — |
 | AI maliyetinin kontrolden çıkması | Rezervasyon, çok katmanlı tavanlar, LLM acil durdurma, aylık mutabakat | Aynı makinedeki API anahtarlarının kodu atlayarak kullanılması. Google tarafındaki limitler ve mutabakat ile yakalanır |
 

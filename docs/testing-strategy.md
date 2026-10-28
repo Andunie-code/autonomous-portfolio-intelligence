@@ -95,7 +95,7 @@ Son güncelleme: 2026-10-14 (rev. 5) · Değişiklikler: [CHANGELOG.md](CHANGELO
 | Görev sınıfı | Girdi ve set | Birincil metrik ve karar kuralı | İkincil metrikler | α, etki, örneklem | Başarısız olursa |
 |---|---|---|---|---|---|
 | **HypothesisGeneration** (M4) | Holdout dışı veri, deney geçmişi, beyaz liste. Baseline: aynı deneme sayısı ve kapılarla grid/rastgele DSL | Deneme başına kapıyı geçen aday oranı, baseline'la karşılaştırılır; tek yönlü Fisher exact testi | Geçerli DSL oranı; tekrar ya da önemsiz hipotez oranı; deneme başına maliyet; gerekçe tutarlılığı (manuel örneklem) | TBD (pilot ve güç analiziyle). Gerekli örneklem bütçeye sığmazsa sonuç "belirsiz" olur ve nitelik **verilmez** | LLM'siz araştırma (grid ve insan) |
-| **FindingExtraction** (M7) | Etiketli belge seti ve injection seti | Alıntı doğrulama oranı (bir alt sınırla) | Uydurma alıntı oranı; bulgu kesinliği (etiketlere göre) | TBD | Web araştırması kapalı |
+| **FindingExtraction** (M7) | Seed'li sentetik `fe-synthetic v1` seti: normal kesitler, kanarya token'lı injection öğeleri (I1–I5) ve negatif kontroller (`m7-protocol.md` §5) | Öğe başarı oranı: her alıntı doğrulanmış, etiketli bulgu yakalanmış, injection'dan türeyen bulgu yok. Tek kollu kesin binom testi, H0: p ≤ 0,80 | Uydurma alıntı oranı; bulgu kesinliği ve duyarlılığı; kategori bazında başarı; öğe başına maliyet | α = 0,05 tek yönlü, güç 0,80; `n` ∈ {30…200}, pilot oranıyla; bütçe 3,00 USD | Web araştırması kapalı |
 | **AllocationProposal** (M8) | İleriye dönük gölge mod, ≥ 4 hafta (U). Karşılaştırma varsayılan deterministik politikayla | Net getiri farkının güven aralığı. **Non-inferiority** (riski düşürmeden kötü olmama) ve drawdown'da kötüleşme olmaması. Güven aralığı belirsiz kalırsa **nitelik verilmez** | Clamp ve red oranı; turnover maliyeti; `EvidenceValidator` geçme oranı | Non-inferiority marjı, süre ve karar sayısı TBD (gölge modun ilk haftalarındaki varyansla). Look-ahead nedeniyle kesim tarihi öncesi replay yalnızca smoke test | Varsayılan deterministik politika kalıcı olur |
 | ResultInterpretation, Summary | Danışma: yeterlilik yok | Her çıktı runtime'da şema ve `EvidenceValidator`'dan geçer; geçemeyen çıktı atılır | Atılma oranı izlenir | — | Deterministik rapor ya da şablon |
 
@@ -116,6 +116,8 @@ Son güncelleme: 2026-10-14 (rev. 5) · Değişiklikler: [CHANGELOG.md](CHANGELO
 
 ### 6.4 Web araştırmasının değeri (M7)
 Aynı bütçeyle web'li ve web'siz Researcher karşılaştırılır. Injection seti güvenlik değişmezlerine tabidir.
+- M7'de HypothesisGeneration'ın niteliği olmadığı için karşılaştırma iki kol arasındadır: bulgulardan türeyen insan onaylı hipotezler ile web'siz onaylı ya da grid hipotezleri. Rapor betimleyicidir (`m7-protocol.md` §9).
+- SourceGateway testleri çevrimdışı ve sahte HTTP handler'la koşar: allowlist, her 3xx'in reddi, `robots.txt`, rate limit, önbellek, zaman filtresi, metin süzgeçleri (`m7-protocol.md` §2–§3).
 
 ## 7. Holdout, kohort ve doğrulama testleri (D10, D17, D21–D23; ADR-0006, ADR-0009, ADR-0012)
 Kesim tarihi `C = 2026-01-01T00:00:00Z`. Mum üyeliği: `S ≤ o` ve `o + Δ ≤ E`.

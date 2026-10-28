@@ -1,6 +1,7 @@
 # ADR-0008: Kontrollü web araştırması (kendi getiricimiz ve karantina altında extraction)
 
 - Durum: Kabul edildi (implementasyon M7) · Tarih: 2026-10-12 · Revizyon: 2026-10-13 (rev. 3: grounding ve URL context yeniden değerlendirildi, T13)
+- Uygulama: ADR-0022 ve `m7-protocol.md` (M7 Kapı A, kullanıcı onayı 2026-10-28). S-G3 ve S-G5 2026-10-28'de yeniden doğrulandı; T13'ün dayanağı değişmedi.
 
 ## Bağlam
 Researcher'ın uzun vadede web'deki teknik ve nicel kaynakları kullanması isteniyor. Riskler: prompt injection, yanıltıcı iddialar, maliyet ve kaynak kullanım şartları. Kullanıcı, "Gemini'nin yeteneklerini kullanabiliyorsak kullanalım" yönünde tercih bildirdi. Bu yüzden grounding ve URL context yeniden değerlendirildi.

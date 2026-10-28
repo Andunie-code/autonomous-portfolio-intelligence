@@ -1,6 +1,6 @@
 # Gereksinimler
 
-Son güncelleme: 2026-10-26 (rev. 5.6; M6 Kapı A: D33, D30 sayımı) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-28 (rev. 5.7; M7 Kapı A: PDF/HTML kütüphanesi, M7 kararları) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: M0–M5 ve M5b (Kohort 1, M9a dashboard) tamamlandı (roadmap). M6 tamamlandı (kullanıcı kabulü 2026-10-28; gerçek Testnet terfisi D30 sonrasında, `m6-acceptance-report.md` §5). M7 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
 
@@ -58,7 +58,7 @@ Kârlılık varsayılmaz. Sistemin amacı, bir stratejinin avantajı olup olmad�
 | D11 | Kill switch (rev. 2026-10-14) | Pozisyonları tut, yeni emir açma; açık giriş emirleri iptal edilir. **Koruyucu stop emirleri iptal edilmez** (çıkışlar her zaman çalışır, ADR-0014). "Tümünü kapat" ayrı bir manuel eylem |
 | D12 | AI sağlayıcısı | **Geçici.** Runtime'da yetkili tek sağlayıcı Gemini (başlangıç modeli `gemini-3.5-flash-lite`). Uygulama şimdilik Anthropic API kullanmaz |
 | D13 | Maliyet ayrımı | **Geçici.** Ayrı bir Anthropic faturası yok. Claude Code aboneliğinin uygulamaya runtime API erişimi sağladığı varsayılmaz |
-| D14 | Web araştırması | İleride, kontrollü olarak (M7, ADR-0008) |
+| D14 | Web araştırması | İleride, kontrollü olarak (M7, ADR-0008). **M7 kararları (2026-10-28):**<br>- yalnızca kesim öncesi arXiv sürümleri;<br>- Semantic Scholar ertelendi;<br>- FindingExtraction modeli `gemini-3.5-flash-lite`; bütçe pilot 0,50 USD, yeterlilik 3,00 USD;<br>- arXiv API'si `robots.txt` yerine API koşullarına, diğer yollar `robots.txt`'ye tabi.<br>Ayrıntı: `m7-protocol.md` U-M7-1…U-M7-6, ADR-0022 |
 | D15 | İlk dikey dilim | M0–M2: veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli, deterministik backtest testleri. LLM, emir, Testnet ve dashboard yok |
 | D16 | Model yeterliliği | Erişilebilir ya da fonlanmış olmak uygunluk anlamına gelmez. Karar etkileyen görev sınıfları, ön kayıtlı yeterlilik testini geçmek zorundadır |
 | D17 | Holdout izolasyonu (rev. 2026-10-14) | Holdout verisi geliştirme makinesiyle **aynı fiziksel makinede** ve aynı PostgreSQL instance'ında, ayrı bir `holdout` veritabanında bulunur. Bu **kabul edilmiş artık risktir.** İzolasyon DB rolleri ve `CONNECT` yetkileri, `pg_hba` kuralları, Docker ağları, uygulama katmanı ve T17 ile sağlanır. Geliştirme kimlik bilgileriyle okunamaz; araştırma ve tuning iş akışları final değerlendirmeden önce erişemez (ADR-0013) |
@@ -139,7 +139,7 @@ Gerçek para ile işlem, futures/margin, birden fazla borsa, haber ve sentiment,
 | ~~Timeout, retry, eşzamanlılık değerleri~~ — **M4'te ölçüldü** (spike, pilot ve yeterlilik koşusu: gecikme 0,6–2,0 sn, retry ya da timeout olayı yok). Başlangıç değerleri (120 sn, en fazla 2 retry, eşzamanlılık 1) korundu (`m4-spike-results.md`) | — | — | — |
 | ~~Gemini fiyatları, rate limit'leri, kredi kapsamı~~ — **doğrulandı** (`sources.md` S-G1…S-G9, 2026-10-18/19; B1 kapandı, 2026-10-19) | — | — | — |
 | TL/USD mutabakatı | Defter, liste fiyatlarına göre USD tutar. Google faturasıyla aylık manuel mutabakat yapılır. Araç M4'te hazır (`m4-ai.ps1 reconcile`). 2026-10 ledger toplamı 0,146228 USD; fatura ay kapanınca girilir | Her ay sonu (ilki 2026-10) | Kullanıcı (fatura tutarı), teknik lider |
-| PDF metin çıkarma kütüphanesi | M7 başında küçük bir karşılaştırma | M7 | Teknik lider |
+| ~~PDF metin çıkarma kütüphanesi~~ — **seçildi** (M7 Kapı A, 2026-10-28): PDF için PdfPig 0.1.16 (Apache-2.0), HTML için AngleSharp 1.8.4 (MIT); native binary yok (ADR-0022, `sources.md` S-X12) | — | — | — |
 | Barındırılan CI | Ücretsiz seçenekler değerlendirilir; ücretliyse kullanıcı kararı | İhtiyaç olduğunda | Teknik lider |
 
 ## 9. Kullanıcı kararı bekleyen engeller

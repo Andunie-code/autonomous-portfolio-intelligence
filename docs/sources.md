@@ -1,6 +1,6 @@
 # Doğrulanmış Harici Bilgiler
 
-Son güncelleme: 2026-10-26 (S-B11…S-B24, M6 Kapı A)
+Son güncelleme: 2026-10-28 (S-X1…S-X12, M7 Kapı A; S-G3 ve S-G5 yeniden doğrulandı)
 
 Bu belgedeki bilgiler, aksi belirtilmedikçe, belirtilen tarihte resmi kaynaktan okunmuştur. Fiyatlar, limitler ve şartlar değişebilir. Her bilgi, ilgili milestone başlamadan önce yeniden doğrulanır.
 
@@ -85,6 +85,16 @@ Yalnızca resmi belge sayfaları okundu; API çağrısı yapılmadı.
 
 **Gemini kredisi (kullanıcı beyanı, 2026-10-13):** 12.000 TL Gemini kredisi mevcut. Kredinin Gemini API ücretli katmanına uygulanıp uygulanmadığı, kapsamı ve son kullanma tarihi **doğrulanmadı** (M4 öncesinde). Kredi bir finansman kaynağıdır, harcama onayı değildir (D4).
 
+**M7 öncesi yeniden doğrulama (2026-10-28):**
+- **S-G3 (grounding fiyatı):** geçerli. Gemini 3+ modellerinde, modelin çalıştırdığı her arama sorgusu faturalanır; aylık 5.000 ücretsiz sorgu tüm Gemini 3+ modelleri arasında paylaşılır; sonrası 1.000 sorgu başına 14 $ (sayfa güncellemesi 2026-10-13). https://ai.google.dev/gemini-api/docs/google-search
+- **S-G5 (grounding şartları):** geçerli (yürürlük 2026-03-23, güncelleme 2026-04-28):
+  - Grounded sonuçlar, istemi gönderen son kullanıcıya Search Suggestions ile birlikte gösterilir.
+  - Sonuçların önbelleğe alınması ya da saklanması yalnızca dar istisnalarla mümkündür.
+  - Son kullanıcıların ya da üçüncü tarafların "analyze, train on, or otherwise learn from" yapması yasaktır.
+  - Google, istem ve çıktıyı 30 gün saklar.
+
+  T13'ün dayanağı değişmedi (ADR-0008, ADR-0022).
+
 ## Anthropic: yalnızca gelecekteki bir seçenek için referans (doğrulama tarihi: 2026-10-13)
 > Anthropic runtime API kullanımı **yetkili değildir** (D12, D19). Bu bilgiler yalnızca ileride yapılacak bir değerlendirme için kaydedilmiştir ve o zaman yeniden doğrulanmalıdır.
 
@@ -100,7 +110,25 @@ Yalnızca resmi belge sayfaları okundu; API çağrısı yapılmadı.
 - Yeni bir organizasyonun rate limit katmanları.
 - Claude Code aboneliğinin uygulamaya runtime API erişimi sağlayıp sağlamadığı ya da headless kullanımla ilgili şartları. **Sağlamadığı varsayılır** (D13).
 
+## arXiv, Semantic Scholar ve metin çıkarma kütüphaneleri (doğrulama tarihi: 2026-10-28, M7 Kapı A)
+Yalnızca belge sayfaları ve `robots.txt` dosyaları okundu. **Makale içeriği ve API sorgusu okunmadı.**
+
+| ID | Bilgi | Kaynak |
+|---|---|---|
+| S-X1 | **API kullanım koşulları:**<br>- OAI-PMH, RSS ve arXiv API için "make no more than one request every three seconds, and limit requests to a single connection at a time".<br>- Limitler tüm makinelerin toplamına uygulanır ve değişebilir.<br>- Proje arXiv onaylıymış gibi sunulamaz.<br>- Sayfada User-Agent şartı ve güncelleme tarihi yok | https://info.arxiv.org/help/api/tou.html |
+| S-X2 | **Metadata ve içerik:**<br>- Açıklayıcı metadata CC0 1.0 kapsamındadır; alınabilir, saklanabilir, dönüştürülebilir ve paylaşılabilir.<br>- E-print içeriği "for your own personal use, or for research purposes" alınabilir, saklanabilir ve kullanılabilir.<br>- E-print'leri yeniden dağıtmak ve kendi sunucudan sunmak telif sahibinin iznini (ya da uygun lisansı) gerektirir.<br>- Kullanıcıya özet sayfasına link verilmesi teşvik edilir.<br>Sistemin uygulaması: önbellek yerel ve repo dışıdır; içerik dağıtılmaz; provenance'ta `/abs/` linki tutulur | aynı |
+| S-X3 | **API (`/api/query`):**<br>- Parametreler: `search_query`, `id_list`, `start`, `max_results` (varsayılan 10; çağrı başına en fazla 2.000; toplam 30.000), `sortBy` (`relevance`, `lastUpdatedDate`, `submittedDate`), `sortOrder`.<br>- Alan önekleri: `ti`, `au`, `abs`, `co`, `jr`, `cat`, `rn`, `all`.<br>- Tarih filtresi: `submittedDate:[YYYYMMDDTTTT+TO+YYYYMMDDTTTT]` (GMT).<br>- Ardışık çağrılar arasında 3 sn beklenmesi önerilir. Sonuçlar günde bir kez değiştiği için aynı sorgu günde birden fazla çalıştırılmamalı, sonuçlar önbelleğe alınmalıdır.<br>- Belgedeki örnek adres `http://export.arxiv.org/api/query`. HTTPS'in çalıştığı `https://export.arxiv.org/robots.txt` isteğiyle gözlendi | https://info.arxiv.org/help/api/user-manual.html |
+| S-X4 | **Atom yanıtı:**<br>- `id`: özet URL'si; `published`: **v1'in** gönderim tarihi; `updated`: **alınan sürümün** gönderim tarihi (v1'de `published` ile aynı).<br>- Ayrıca `title`, `summary`, `author`, `category` (`term`), `arxiv:primary_category`, `arxiv:comment`, `arxiv:journal_ref`, `arxiv:doi`.<br>- `link rel="alternate"` özet sayfasını, `link title="pdf"` PDF'i gösterir.<br>- `id_list`'e sürümsüz kimlik verilirse son sürüm, `…vN` verilirse N. sürüm döner. Belgedeki PDF linki sürümlüdür (`hep-ex/0307015v1`) | aynı |
+| S-X5 | **`export.arxiv.org/robots.txt`:** `User-agent: *` / `Disallow: /` (2026-10-28'de okundu). API'nin programatik erişim için ayrılmış host'u olarak gösterilmesiyle çelişir. **Karar (U, 2026-10-28):** `/api/query`, `robots.txt` yerine API kullanım koşullarına (S-X1) tabidir; bu muafiyet ADR-0022'dedir | https://export.arxiv.org/robots.txt |
+| S-X6 | **`arxiv.org/robots.txt`:** 2026-10-28'de iki denemede de HTTP 503 (`Retry-After: 0`) döndü; içerik okunamadı. Sistem bunu çalışma anında okur. Okunamazsa ya da `/pdf/` yasaksa PDF indirilmez ve yalnızca API'den gelen özet kullanılır (U, ADR-0022) | https://arxiv.org/robots.txt |
+| S-X7 | **Otomatik erişim politikası:**<br>- İzinli arayüzler OAI-PMH, arXiv API ve RSS; toplu indirmeler kendi kılavuzlarına tabidir. "Indiscriminate automated downloads from this site are not permitted."<br>- Öncelik insan kullanıcılarıdır.<br>- 403 "Access denied" sonrasında süren hızlı istekler saldırı sayılır ve uyarısız engellenir.<br>- Sınırların gevşetilmesi için önceden yöneticilerle iletişim istenir.<br>- Sayısal limit ve User-Agent kılavuzu yok | https://info.arxiv.org/help/robots.html |
+| S-X8 | **Toplu veri:**<br>- Programatik erişim için `export.arxiv.org` kullanılır.<br>- Harvester için "reasonable rate": saniyede 4 isteklik patlamalar ve her patlamadan sonra 1 sn bekleme. Bu, API'nin 3 sn kuralından gevşektir; sistem sıkı olanı uygular.<br>- Tüm korpusu programatik olarak indirmek yasaktır; tam metin için kabul edilen yol Amazon S3'tür.<br>- Tam metinden araç ya da indeks kurulursa indirmeler için arXiv'e link verilmelidir | https://info.arxiv.org/help/bulk_data.html |
+| S-X9 | **Makale lisansları:**<br>- Varsayılan lisans "arXiv.org perpetual, non-exclusive license 1.0": dağıtım hakkı yalnızca arXiv'dedir ve başkalarının yeniden kullanımını sınırlar.<br>- Seçenekler: CC BY 4.0, CC BY-SA 4.0, CC BY-NC-SA 4.0, CC BY-NC-ND 4.0, CC0.<br>- Lisans geri alınamaz; sürümlerin lisansı farklı olabilir; metadata CC0 kapsamındadır.<br>Sistem, alıntıları yalnızca yerel araştırma kaydında tutar ve yayımlamaz | https://info.arxiv.org/help/license/index.html |
+| S-X10 | **Semantic Scholar Academic Graph API:**<br>- Anahtarsız kullanım: tüm anahtarsız kullanıcılar arasında paylaşılan saniyede 1.000 istek; yoğunlukta kısıtlama artabilir.<br>- Anahtarla başlangıç limiti 1 RPS; anahtar e-postayla verilir ve paylaşılmaz.<br>- Kullanım: API License Agreement (`/product/api/license`) ve AI2 Terms.<br>**M7'de kullanılmaz (U, 2026-10-28);** lisans sözleşmesi kullanılmaya karar verilirse okunur | https://www.semanticscholar.org/product/api |
+| S-X11 | **`developers.binance.com/robots.txt`:** HTTP 404 (2026-10-28). Robots kuralı yok sayılır (404 = kısıt yok; 5xx ya da erişilemez = yasak, ADR-0022) | https://developers.binance.com/robots.txt |
+| S-X12 | **Metin çıkarma paketleri (NuGet, 2026-10-28):**<br>- **PdfPig** (`PdfPig`): en yeni kararlı sürüm 0.1.16 (2026-08-22); sonraki sürümler yalnızca 0.1.17-alpha. Lisans Apache-2.0. Hedefler net6.0/net8.0/net9.0/netstandard2.0/2.1. netstandard2.1 ve net6.0+ için bağımlılık yok. Saf managed; native kütüphane yok.<br>- **AngleSharp:** kararlı sürümler 1.8.6 (2026-10-25), 1.8.5 (2026-10-15), 1.8.4 (2026-10-07). Lisans MIT. net8.0/net10.0 için bağımlılık yok.<br>ADR-0017'deki "en az 14 gün önce yayımlanmış en yeni kararlı sürüm" kuralına göre seçilenler **PdfPig 0.1.16** ve **AngleSharp 1.8.4** | https://www.nuget.org/packages/PdfPig · https://www.nuget.org/packages/AngleSharp |
+
 ## Henüz doğrulanmayanlar (M7 öncesinde)
-- arXiv API ve Semantic Scholar API: kullanım koşulları, rate limit'ler, ücretsiz erişim.
+- ~~arXiv API ve Semantic Scholar API: kullanım koşulları, rate limit'ler, ücretsiz erişim~~ — **doğrulandı** (S-X1…S-X10, 2026-10-28). `arxiv.org/robots.txt` okunamadı (S-X6); sistem çalışma anında okur.
 - ~~VPS fiyatları~~ — gerekmiyor (2026-10-14, D5 rev.: VPS yok).
 - ~~Binance Spot'ta koruyucu stop emir tipleri ve Testnet desteği~~ — **belgeden doğrulandı** (S-B14, S-B18; 2026-10-26). Sembol bazında destek Kapı C'de gözlenir.
