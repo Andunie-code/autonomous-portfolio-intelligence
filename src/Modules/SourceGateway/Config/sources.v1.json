@@ -1,0 +1,22 @@
+{
+  "version": "sources v1",
+  "userAgent": "PortfolioIntelligence-SourceGateway/1.0 (personal research)",
+  "minIntervalSeconds": 3,
+  "requestTimeoutSeconds": 60,
+  "maxRetries": 2,
+  "maxRetryAfterSeconds": 60,
+  "maxBytes": { "Atom": 2097152, "Pdf": 20971520, "Html": 2097152, "Robots": 524288 },
+  "maxExtractedCharacters": 400000,
+  "maxPdfPages": 60,
+  "cacheTtlDays": 30,
+  "robotsTtlHours": 24,
+  "maxApiResults": 50,
+  "maxApiStart": 1000,
+  "arxivCategories": [ "q-fin.*", "stat.ML", "cs.CE", "cs.LG" ],
+  "sources": [
+    { "kind": "ArxivApi", "host": "export.arxiv.org", "tier": "T1", "robots": "ApiTerms" },
+    { "kind": "ArxivAbstract", "host": "arxiv.org", "tier": "T1", "robots": "Binding" },
+    { "kind": "ArxivPdf", "host": "arxiv.org", "tier": "T1", "robots": "Binding" },
+    { "kind": "BinanceDocs", "host": "developers.binance.com", "tier": "T1", "robots": "Binding" }
+  ]
+}

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- M7 sources command line (m7-protocol §10): search, fetch and extract need the allow-network flag and an interactive
+       confirmation (user's runs only); docs and provenance-report work on the local database and cache. Output holds
+       operational fields only (m7-protocol §11); titles are printed only on request. The Gemini key for extract is read from
+       the user's own environment (same user-secrets as AiCli) and never printed. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>portfolio-intelligence-aicli</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Modules\Ai\PortfolioIntelligence.Ai.csproj" />
+    <ProjectReference Include="..\..\Modules\Ai.Gemini\PortfolioIntelligence.Ai.Gemini.csproj" />
+    <ProjectReference Include="..\..\Modules\Research\PortfolioIntelligence.Research.csproj" />
+    <ProjectReference Include="..\..\Modules\SourceGateway\PortfolioIntelligence.SourceGateway.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+</Project>

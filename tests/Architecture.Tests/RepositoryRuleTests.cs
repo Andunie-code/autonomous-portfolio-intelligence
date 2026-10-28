@@ -71,6 +71,13 @@ public class RepositoryRuleTests
     [InlineData("PowerShell(*testnet.binance.vision*)")]
     [InlineData("PowerShell(*-File*m6-*)")]
     [InlineData("Bash(*-File*m6-*)")]
+    [InlineData("WebFetch(domain:export.arxiv.org)")]
+    [InlineData("Bash(*export.arxiv.org*)")]
+    [InlineData("PowerShell(*export.arxiv.org*)")]
+    [InlineData("Bash(*arxiv.org/pdf*)")]
+    [InlineData("PowerShell(*arxiv.org/pdf*)")]
+    [InlineData("Bash(*-File*m7-*)")]
+    [InlineData("PowerShell(*-File*m7-*)")]
     public void Claude_project_settings_deny_holdout_and_secret_access(string rule)
     {
         Assert.Contains(rule, ReadPermissionList("deny"));

@@ -4,7 +4,7 @@ using PortfolioIntelligence.Kernel.Dsl;
 
 namespace PortfolioIntelligence.Researcher;
 
-/// <summary>The Researcher's complete tool list (architecture §4). M7 adds SearchFindings and RequestSourceResearch.</summary>
+/// <summary>The Researcher's complete tool list (architecture §4): six M4 tools and the two M7 tools (m7-protocol §8.1).</summary>
 public static class ResearcherToolNames
 {
     public const string ListIndicators = "ListIndicators";
@@ -13,9 +13,11 @@ public static class ResearcherToolNames
     public const string ValidateStrategyDefinition = "ValidateStrategyDefinition";
     public const string SubmitExperiment = "SubmitExperiment";
     public const string GetExperimentResult = "GetExperimentResult";
+    public const string SearchFindings = "SearchFindings";
+    public const string RequestSourceResearch = "RequestSourceResearch";
 
     public static IReadOnlyList<string> All { get; } =
-        [ListIndicators, SearchExperiments, GetDatasetCatalog, ValidateStrategyDefinition, SubmitExperiment, GetExperimentResult];
+        [ListIndicators, SearchExperiments, GetDatasetCatalog, ValidateStrategyDefinition, SubmitExperiment, GetExperimentResult, SearchFindings, RequestSourceResearch];
 }
 
 public sealed record ExperimentSubmission(string HypothesisKey, string DefinitionJson, string Origin);
@@ -35,6 +37,30 @@ public interface IResearchToolBackend
     Task<JsonNode> SubmitExperimentAsync(ExperimentSubmission submission, CancellationToken ct);
 
     Task<JsonNode> GetExperimentResultAsync(long experimentId, CancellationToken ct);
+}
+
+/// <summary>
+/// The M7 window (m7-protocol §8.1): verified findings only (claim, quote, source id, tier, version date; never raw text,
+/// a document body or URL content) and recording a research request (no network, no Extractor, no trial, no budget).
+/// While web research is closed (D20) both answer with the closed note.
+/// </summary>
+public interface IFindingToolBackend
+{
+    Task<JsonNode> SearchFindingsAsync(string query, string? kind, int limit, CancellationToken ct);
+
+    Task<JsonNode> RequestSourceResearchAsync(string topic, IReadOnlyList<string> categories, CancellationToken ct);
+}
+
+/// <summary>Without a finding backend (no web research wired in) the M7 tools answer that web research is closed.</summary>
+public sealed class ClosedFindingBackend : IFindingToolBackend
+{
+    public const string Note = "web research is closed: FindingExtraction has no qualified model (D20)";
+
+    public Task<JsonNode> SearchFindingsAsync(string query, string? kind, int limit, CancellationToken ct) =>
+        Task.FromResult<JsonNode>(new JsonObject { ["findings"] = new JsonArray(), ["note"] = Note });
+
+    public Task<JsonNode> RequestSourceResearchAsync(string topic, IReadOnlyList<string> categories, CancellationToken ct) =>
+        Task.FromResult<JsonNode>(new JsonObject { ["error"] = Note });
 }
 
 /// <summary>Records safety violations (testing §6.1: tolerance 0).</summary>
@@ -57,13 +83,18 @@ public sealed class InMemorySafetyLog : ISafetyLog
 }
 
 /// <summary>
-/// The Researcher's toolbox: exactly the six tools, with neutral schemas, dispatched by name. It is the same path for
+/// The Researcher's toolbox: exactly the eight tools, with neutral schemas, dispatched by name. It is the same path for
 /// the LLM (as the router's tool executor) and for the LLM-less loop. A call to any other name is refused and recorded
-/// as a safety violation, even though the router already blocks it (defence in depth).
+/// as a safety violation, even though the router already blocks it (defence in depth). Without a finding backend the
+/// two M7 tools answer that web research is closed.
 /// </summary>
-public sealed class ResearcherToolbox(IResearchToolBackend backend, ISafetyLog safety) : IToolExecutor
+public sealed class ResearcherToolbox(IResearchToolBackend backend, ISafetyLog safety, IFindingToolBackend? findings = null) : IToolExecutor
 {
     public const int MaxSearchResults = 50;
+
+    public const int MaxFindingResults = 20;
+
+    private readonly IFindingToolBackend _findings = findings ?? new ClosedFindingBackend();
 
     public NeutralToolSet Tools { get; } = new([
         new NeutralTool(ResearcherToolNames.ListIndicators, "Lists the whitelisted DSL v1 indicators with parameter ranges and outputs.",
@@ -78,6 +109,10 @@ public sealed class ResearcherToolbox(IResearchToolBackend backend, ISafetyLog s
             NeutralSchema.Parse("""{"type":"object","properties":{"hypothesis":{"type":"string"},"definition":{"type":"string"},"origin":{"type":"string","enum":["llm","grid","human","dev-assisted"]}},"required":["hypothesis","definition","origin"],"additionalProperties":false}""")),
         new NeutralTool(ResearcherToolNames.GetExperimentResult, "Returns the metrics of a submitted experiment.",
             NeutralSchema.Parse("""{"type":"object","properties":{"experimentId":{"type":"integer","minimum":1}},"required":["experimentId"],"additionalProperties":false}""")),
+        new NeutralTool(ResearcherToolNames.SearchFindings, "Searches verified findings (claim and verbatim quote with its source id); never raw documents. Empty while web research is closed.",
+            NeutralSchema.Parse("""{"type":"object","properties":{"query":{"type":"string"},"kind":{"type":"string","enum":["empiricalResult","method","parameter","caveat"]},"limit":{"type":"integer","minimum":1,"maximum":20}},"required":["query"],"additionalProperties":false}""")),
+        new NeutralTool(ResearcherToolNames.RequestSourceResearch, "Records a request for source research on a topic; the user's run processes it. No network access, no trial.",
+            NeutralSchema.Parse("""{"type":"object","properties":{"topic":{"type":"string"},"categories":{"type":"array","maxItems":4,"items":{"type":"string","enum":["q-fin","stat.ML","cs.CE","cs.LG"]}}},"required":["topic"],"additionalProperties":false}""")),
     ]);
 
     public async Task<string> ExecuteAsync(AiToolCall call, CancellationToken ct) => (await InvokeAsync(call.Name, call.Arguments, ct)).ToJsonString();
@@ -105,6 +140,10 @@ public sealed class ResearcherToolbox(IResearchToolBackend backend, ISafetyLog s
             ResearcherToolNames.ValidateStrategyDefinition => Validate(arguments["definition"]!.GetValue<string>()),
             ResearcherToolNames.SubmitExperiment => await Submit(arguments, ct),
             ResearcherToolNames.GetExperimentResult => await backend.GetExperimentResultAsync(arguments["experimentId"]!.GetValue<long>(), ct),
+            ResearcherToolNames.SearchFindings => await _findings.SearchFindingsAsync(arguments["query"]!.GetValue<string>(), arguments["kind"]?.GetValue<string>(),
+                Math.Min(arguments["limit"]?.GetValue<int>() ?? 10, MaxFindingResults), ct),
+            ResearcherToolNames.RequestSourceResearch => await _findings.RequestSourceResearchAsync(arguments["topic"]!.GetValue<string>(),
+                arguments["categories"]?.AsArray().Select(c => c!.GetValue<string>()).ToList() ?? [], ct),
             _ => Error($"tool '{name}' is not implemented"),
         };
     }

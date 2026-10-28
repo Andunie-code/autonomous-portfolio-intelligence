@@ -6,7 +6,11 @@ namespace PortfolioIntelligence.Researcher;
 
 public sealed record HypothesisPoint(string Label, string DefinitionJson, string DefinitionHash);
 
-public sealed record Hypothesis(string Key, string Title, string StructureHash, IReadOnlyList<HypothesisPoint> Points);
+/// <summary>
+/// A hypothesis and its grid points. <see cref="SourceFindingIds"/> names the verified findings it was written from (M7,
+/// m7-protocol §8.2); the hypothesis store refuses unverified or post-cutoff findings. The pipeline is the same either way.
+/// </summary>
+public sealed record Hypothesis(string Key, string Title, string StructureHash, IReadOnlyList<HypothesisPoint> Points, IReadOnlyList<long>? SourceFindingIds = null);
 
 /// <summary>Who proposed a hypothesis and what the proposer could know (m4-protocol §3).</summary>
 public sealed record HypothesisProvenance(string Origin, string PointOrigin, string Author, DateOnly? KnowledgeCutoff, bool KnowledgeOverlapsDiagnostic, string? ApprovedBy);
@@ -57,7 +61,8 @@ public sealed record HypothesisList(string Version, IReadOnlyList<Hypothesis> Hy
                 points.Add(new HypothesisPoint(point["point"]!.GetValue<string>(), definitionJson, hash));
             }
 
-            hypotheses.Add(new Hypothesis(key, node["title"]!.GetValue<string>(), structure, points));
+            var findings = node["sourceFindingIds"]?.AsArray().Select(f => f!.GetValue<long>()).ToList();
+            hypotheses.Add(new Hypothesis(key, node["title"]!.GetValue<string>(), structure, points, findings));
         }
 
         if (hypotheses.Select(h => h.StructureHash).Distinct(StringComparer.Ordinal).Count() != hypotheses.Count)

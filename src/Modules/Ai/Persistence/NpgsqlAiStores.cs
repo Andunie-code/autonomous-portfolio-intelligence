@@ -208,11 +208,11 @@ public sealed class NpgsqlQualificationStore(string connectionString) : IQualifi
         await using var connection = await Db.OpenAsync(connectionString, ct);
         await using var command = new NpgsqlCommand("""
             INSERT INTO ai.qualification_protocols (protocol_hash, document_commit, task_class, provider, model, prompt_version, schema_hash,
-                pilot_set_hash, qualification_set_hash, alpha, minimum_effect, sample_per_arm, budget_usd)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                pilot_set_hash, qualification_set_hash, alpha, minimum_effect, sample_per_arm, budget_usd, design, p0)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             """, connection);
         foreach (var value in new object[] { p.ProtocolHash, p.DocumentCommit, p.Task.ToString(), p.Provider, p.Model, p.PromptVersion, p.SchemaHash,
-                     p.PilotSetHash, p.QualificationSetHash, p.Alpha, p.MinimumEffect, p.SamplePerArm, p.BudgetUsd })
+                     p.PilotSetHash, p.QualificationSetHash, p.Alpha, p.MinimumEffect, p.SamplePerArm, p.BudgetUsd, p.Design.ToString(), p.P0 })
         {
             command.Parameters.AddWithValue(value);
         }
@@ -225,7 +225,7 @@ public sealed class NpgsqlQualificationStore(string connectionString) : IQualifi
         await using var connection = await Db.OpenAsync(connectionString, ct);
         await using var command = new NpgsqlCommand("""
             SELECT protocol_hash, document_commit, task_class, provider, model, prompt_version, schema_hash, pilot_set_hash, qualification_set_hash,
-                alpha, minimum_effect, sample_per_arm, budget_usd
+                alpha, minimum_effect, sample_per_arm, budget_usd, design, p0
             FROM ai.qualification_protocols WHERE protocol_hash = $1
             """, connection);
         command.Parameters.AddWithValue(protocolHash);
@@ -233,7 +233,7 @@ public sealed class NpgsqlQualificationStore(string connectionString) : IQualifi
         return await reader.ReadAsync(ct)
             ? new QualificationProtocol(reader.GetString(0), reader.GetString(1), Enum.Parse<TaskClass>(reader.GetString(2)), reader.GetString(3),
                 reader.GetString(4), reader.GetString(5), reader.GetString(6), reader.GetString(7), reader.GetString(8), reader.GetDouble(9),
-                reader.GetDouble(10), reader.GetInt32(11), reader.GetDecimal(12))
+                reader.GetDouble(10), reader.GetInt32(11), reader.GetDecimal(12), Enum.Parse<QualificationDesign>(reader.GetString(13)), reader.GetDouble(14))
             : null;
     }
 

@@ -5,9 +5,20 @@ using PortfolioIntelligence.Kernel.Statistics;
 namespace PortfolioIntelligence.Ai;
 
 /// <summary>
+/// Decision design of a qualification (ADR-0022 §5): two arms with a one-sided Fisher exact test against the deterministic
+/// baseline (HypothesisGeneration), or one arm with a one-sided exact binomial test against a pre-registered rate p0 (tasks
+/// without a deterministic alternative, such as FindingExtraction).
+/// </summary>
+public enum QualificationDesign
+{
+    TwoArmFisher,
+    OneArmBinomial,
+}
+
+/// <summary>
 /// A pre-registered qualification protocol (ADR-0010, testing §6.1). <see cref="ProtocolHash"/> is the SHA-256 of
 /// the protocol document; the harness refuses to run without a registered hash that matches the document. Any change
-/// (model, prompt, schema, set) is a new protocol with a new set.
+/// (model, prompt, schema, set) is a new protocol with a new set. <see cref="P0"/> is used only by the one-arm design.
 /// </summary>
 public sealed record QualificationProtocol(
     string ProtocolHash,
@@ -22,7 +33,9 @@ public sealed record QualificationProtocol(
     double Alpha,
     double MinimumEffect,
     int SamplePerArm,
-    decimal BudgetUsd)
+    decimal BudgetUsd,
+    QualificationDesign Design = QualificationDesign.TwoArmFisher,
+    double P0 = 0)
 {
     public static string HashDocument(string document) => DslCanonical.Sha256(document.ReplaceLineEndings("\n"));
 }
@@ -139,6 +152,8 @@ public sealed record QualificationSession(QualificationProtocol Protocol, JobCon
 /// qualification job cap. Verdict: any safety violation → Failed; fewer completed items than the pre-registered
 /// sample (budget, kill switch) → Inconclusive; otherwise one-sided Fisher exact p &lt; α and a rate difference ≥ the
 /// minimum effect → Passed, else Failed. The result is always recorded.
+/// In the one-arm design (ADR-0022 §5) the baseline arm is not run and the test is the one-sided exact binomial test of
+/// H0: p ≤ p0; p &lt; α → Passed, else Failed (safety violations and an incomplete sample decide first, as above).
 /// </summary>
 public sealed class QualificationHarness(IQualificationStore store, ModelRouter router, ICostLedger ledger, TimeProvider time)
 {
@@ -188,19 +203,35 @@ public sealed class QualificationHarness(IQualificationStore store, ModelRouter 
             }
 
             var llm = await task.RunLlmAsync(session, item, ct);
-            var baseline = await task.RunBaselineAsync(item, ct);
-            violations += llm.SafetyViolations.Count + baseline.SafetyViolations.Count;
+            violations += llm.SafetyViolations.Count;
             llmTrials++;
-            baseTrials++;
             llmSuccesses += llm.Success ? 1 : 0;
-            baseSuccesses += baseline.Success ? 1 : 0;
+            if (protocol.Design == QualificationDesign.TwoArmFisher)
+            {
+                var baseline = await task.RunBaselineAsync(item, ct);
+                violations += baseline.SafetyViolations.Count;
+                baseTrials++;
+                baseSuccesses += baseline.Success ? 1 : 0;
+            }
         }
 
-        var p = llmTrials == 0 ? 1 : FisherExact.GreaterPValue(llmSuccesses, llmTrials, baseSuccesses, baseTrials);
-        var effect = llmTrials == 0 ? 0 : (double)llmSuccesses / llmTrials - (double)baseSuccesses / baseTrials;
+        bool passes;
+        double p;
+        if (protocol.Design == QualificationDesign.OneArmBinomial)
+        {
+            p = llmTrials == 0 ? 1 : BinomialExact.GreaterPValue(llmSuccesses, llmTrials, protocol.P0);
+            passes = p < protocol.Alpha;
+        }
+        else
+        {
+            p = llmTrials == 0 ? 1 : FisherExact.GreaterPValue(llmSuccesses, llmTrials, baseSuccesses, baseTrials);
+            var effect = llmTrials == 0 ? 0 : (double)llmSuccesses / llmTrials - (double)baseSuccesses / baseTrials;
+            passes = p < protocol.Alpha && effect >= protocol.MinimumEffect;
+        }
+
         var verdict = violations > 0 ? QualificationVerdict.Failed
             : llmTrials < protocol.SamplePerArm ? QualificationVerdict.Inconclusive
-            : p < protocol.Alpha && effect >= protocol.MinimumEffect ? QualificationVerdict.Passed
+            : passes ? QualificationVerdict.Passed
             : QualificationVerdict.Failed;
         if (violations > 0)
         {

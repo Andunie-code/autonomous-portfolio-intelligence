@@ -1,6 +1,7 @@
-# M7 Protokolü — Kontrollü web araştırması ve FindingExtraction yeterliliği (v1)
+# M7 Protokolü — Kontrollü web araştırması ve FindingExtraction yeterliliği (v1.1)
 
 - Durum: **Ön kayıt — kullanıcı tarafından onaylandı (Kapı A, 2026-10-28, U; §0.2 A-1…A-9, §11 ve §13 dahil).** Ön kayıt kanıtı, bu belgenin onaylandığı git commit'idir. O commit'ten önce M7 kodu yazılmaz.
+- **v1.1 (2026-10-28, Kapı B sonu; kullanıcı onayı U, 2026-10-28):** §6'daki pilot bloğuna şema, prompt ve set hash'leri eklendi; kalibrasyon sonucu (§5.6) ve Kapı B uygulama notları §14'te. §5–§7'deki kurallar değişmedi. Pilot bu commit'ten sonra koşulur.
 - **Pilot ön kaydının tamamlanması:** şema hash'i, prompt metni ve set hash'leri yalnızca kodla üretilebilir. Bu değerler Kapı B'nin sonunda §6'daki pilot bloğuna **v1.1** olarak eklenir. Pilot ancak o commit'ten sonra koşulur. v1.1, §5–§7'deki kuralları değiştiremez; yalnızca hash ve sayı ekler.
 - Karar türleri: **U** = kullanıcı, **T** = teknik lider, **P** = öneri (kullanıcı onayı gerekir).
 - İlgili: ADR-0006, ADR-0008, ADR-0010, ADR-0013, ADR-0016, ADR-0017, **ADR-0022**; `architecture.md` §2–§4, §8; `testing-strategy.md` §6.1, §6.2, §6.4; `risk-model.md` §4–§5; `sources.md` S-X1…S-X12, S-G3, S-G5; D4, D10, D14, D16, D20; T7–T10, T13, T17, T18.
@@ -246,9 +247,9 @@ Bir öğe, aşağıdakilerin **hepsi** sağlanırsa başarılıdır:
   "model": "gemini-3.5-flash-lite",
   "pilot": { "seedBase": 81000, "count": 20 },
   "budgetUsd": 0.50,
-  "schemaHash": null,
-  "promptHash": null,
-  "pilotSetHash": null
+  "schemaHash": "08cbe4adba9fc20c054a68c0051a82de0d46b47a6c803eb792606fe9d98abb63",
+  "promptHash": "8693c280ca6213d6a71e04bc687743838e2b9b77d5dedb381346970b295faf7a",
+  "pilotSetHash": "540265479ee30f1fd35555742b5685d8b5f07bede2f03e2cb71ee8b11f8c098c"
 }
 ```
 
@@ -340,3 +341,54 @@ Bir öğe, aşağıdakilerin **hepsi** sağlanırsa başarılıdır:
 | Bulgudan türeyen hipotez normal hattan geçiyor | Kapı B: sentetik bulguyla uçtan uca test (DSL, sayaç, G1–G6); C6 (nitelik varsa) |
 | FindingExtraction yeterliliği ön kayıtla yapıldı ve kaydedildi; nitelik yoksa web araştırması kapalı | C4 `TaskQualification`; Kapı B kapalılık testleri |
 | Web'li ve web'siz karşılaştırma raporu hazır | `web-compare` aracı ve testleri; C6 raporu ya da kapalılık notlu rapor |
+
+## 14. Ek v1.1 — Kapı B uygulama notları (T, 2026-10-28)
+§5–§7'deki kurallar değişmedi. Aşağıdakiler kodla üretilen değerler, uygulamanın netleştirdiği ayrıntılar ve iki uygulama sapmasıdır.
+
+### 14.1 Pilot bloğunun hash'leri (§6)
+- `schemaHash` = `FindingPrompt.Schema.Hash` (`finding-extraction v1`).
+- `promptHash` = sistem talimatının SHA-256'sı (`fe-synthetic-prompt v1`; satır sonları `
+`).
+- `pilotSetHash` = seed 81000–81019. Öğe içeriğinde metnin SHA-256'sı da vardır (`…; text=<sha256>`); böylece set hash'i üreticinin çıktısını da sabitler.
+- Komut: `AiCli fe-items --seed-base 81000 --count 20` (ağsız, veritabanısız). `fe-pilot`, bloktaki hash'ler koddakiyle aynı değilse çalışmaz.
+- **Pilot bileşimi:** 10 normal, 6 injection (I1 iki kez; I2, I3, I4, I5 birer kez), 4 negatif kontrol.
+- **Metin uzunluğu:** 693–1.209 kelime, ortalama 6.209 karakter. seed 80000–80199, 81000–81199 ve 82000–82199 aralıklarında 595–1.344 kelime; §5.1'deki "yaklaşık 600–1.500" ile uyumlu.
+
+### 14.2 Kalibrasyon (§5.6) — sonuç
+- **Komut ve tarih:** `AiCli fe-calibrate --seed-base 80000 --count 50`, 2026-10-28. Ağ, veritabanı ve model yok.
+- **Oracle:** 50/50 başarı, ihlal 0.
+- **Saldırgan:** 50 öğenin 15'i injection öğesi; ihlal 15/15. Injection içermeyen 35 öğede saldırgan kol oracle gibi davranır.
+- **Uydurucu:** başarı 0/50, kabul edilen bulgu 0, reddedilen 50.
+- **Çeldirici:** normal öğelerde başarı 0. Başarılı 10 öğenin tamamı negatif kontroldür; çeldirici kol bu öğelerde bulgu döndürmez.
+- **Dört beklenti de sağlandı.**
+- **Zamanlama:** kalibrasyon, öğe üreticisinin son hâliyle koşuldu. Üreticide, kalibrasyonun ilk denemelerinden sonra iki değişiklik yapıldı; ikisi de herhangi bir LLM koşusundan önceydi:
+  - metin, §5.1'deki uzunluğa ulaşsın diye nötr dolgu paragraflarıyla uzatıldı;
+  - paragraf ayracı normalizer'ın sabit noktasına getirildi (§14.4).
+  Kalibrasyon her değişiklikten sonra yeniden koşuldu; dört beklenti hep sağlandı.
+
+### 14.3 Örneklem ızgarası ve betimleyici notun düzeltilmesi (§7)
+- **Örneklem ızgarası:** `n` ∈ {30, 40, …, 200}, 10'luk adımlarla (HypothesisGeneration'daki ızgarayla aynı biçim).
+- **§7'deki betimleyici not yanlıştı; kesin değerler:** p̂ = 0,95 için `n` = 30 (güç 0,81), p̂ = 0,90 için `n` = 90. Kural (en küçük güçlü `n`) değişmedi; yalnızca örnek değerler düzeltildi.
+
+### 14.4 Uygulama sapmaları (T; ADR-0022 uygulama notu)
+- **NFKC (§3):** uygulama `InvariantGlobalization` ile derlenir. Bu modda .NET'in `string.Normalize` çağrısı NFKC verisine sahip değildir ve metni değiştirmeden döndürür; testte gözlendi. Normalizer bu yüzden açık bir uyumluluk tablosu kullanır:
+  - ligatürler U+FB00–U+FB06;
+  - tam genişlikli ASCII U+FF01–U+FF5E;
+  - Unicode boşlukları (U+00A0, U+2000–U+200A, U+202F, U+205F, U+3000);
+  - üç nokta ve noktalı ayraçlar (U+2024–U+2026);
+  - üst simge rakamlar.
+  Tabloda olmayan karakterler olduğu gibi kalır. Normalizer her iki tarafa (Extractor girdisi ve alıntı) aynı şekilde uygulandığı için alıntı doğrulamasının tutarlılığı etkilenmez. Etkisi şudur: tabloda olmayan bir uyumluluk biçimi (ör. matematik alfanümerik semboller) birebir eşleşme gerektirir.
+- **Paragraf ayracı (§3):** boş satır içeren bir boşluk dizisi `
+
+` olur (§3'te "tek satır sonu" yazıyordu). Böylece normalizer idempotenttir: normalize metin yeniden normalize edildiğinde değişmez. Alıntı eşleşmesinde satır sonları boşluk sayılır; paragraflar arası alıntı iki boşluk içerir ve bu nedenle eşleşmez (alıntılar tek cümlelik beklenir).
+
+### 14.5 Diğer ayrıntılar
+- **robots.txt:** süreç içinde 24 saat tutulur; diske yazılmaz. Önbelleğe yalnızca 2xx ve beklenen içerik türündeki gövdeler girer.
+- **API yanıtlarının yeniden kullanımı:** ağ açıkken bir gün; ağ kapalı yeniden kontrollerde (provenance raporu, extract) önbellek TTL'i (30 gün) içinde okunur.
+- **Gating:** `SourcesCli extract`, `WebResearchGate` kapalıysa çağrı yapmadan 3 koduyla çıkar.
+- **`web-compare` (§9):**
+  - G6'daki N = max(100, koşudan önceki global sayaç + planlanan nokta sayısı);
+  - global tavan = koşudan önceki sayaç + planlanan nokta sayısı;
+  - web'li kol en fazla 5 hipotezdir, her hipotez kaynak bulgularını adlandırır; iki kolun hipotez sayısı aynıdır;
+  - komut yalnızca kullanıcının script'iyle çalışır (`scripts/m7-web-compare.ps1`).
+- **Bulgu → hipotez (§8.2):** bulgu kimlikleri hipotez listesinin hash'ine girmez; liste hash'inin tanımı M4 ile aynı kalır. Kimlikler `research.hypotheses.source_finding_ids`'te append-only olarak kaydedilir ve DB trigger'ı ile uygulamada iki kez denetlenir.

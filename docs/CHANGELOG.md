@@ -2,6 +2,52 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-28 — M7 Kapı B: SourceGateway, Extractor ve doğrulama, Researcher tool'ları, migration 0010 (m7-protocol v1.1)
+- **Kod (çevrimdışı, API maliyeti 0; ADR-0022 uygulama notu):**
+  - Yeni `SourceGateway` modülü:
+    - allowlist (`sources.v1.json`) ve tüm 3xx'in reddi;
+    - host başına ≥ 3 sn ve tek bağlantı;
+    - robots.txt: arXiv API'si muaf; 404 = kısıt yok; diğer her durum = yasak;
+    - 403 sonrası host'a istek yok;
+    - boyut ve içerik türü sınırları;
+    - repo ve OneDrive dışında önbellek (SHA-256 ve TTL);
+    - arXiv sorgu kurucusu ve Atom ayrıştırıcı (DTD kapalı; `published` ve `updated` `< C`);
+    - PDF (PdfPig) ve HTML (AngleSharp) gizli metin süzgeçleri;
+    - normalizer ve ofset haritası;
+    - `SourceDocument` / `Finding` provenance.
+  - **Research:**
+    - tool'suz `FindingExtractor`;
+    - `QuoteVerifier` (normalize metinde tam alt dizgi), sayısal doğrulayıcı, sanitizer;
+    - `WebResearchGate` (nitelik yoksa kapalı);
+    - Researcher'a `SearchFindings` ve `RequestSourceResearch` (tool sayısı 8);
+    - bulgu → hipotez (`Hypothesis.SourceFindingIds`; doğrulanmamış ya da kesim sonrası bulgu reddedilir);
+    - `web-compare` rapor aracı.
+  - **Yeterlilik:**
+    - `fe-synthetic v1` üreticisi (normal, I1–I5 injection, negatif kontrol);
+    - `FindingExtractionTask` ve modelsiz kalibrasyon kolları;
+    - harness'ta tek kollu kesin binom tasarımı (`QualificationProtocol.Design`, `P0`; HypothesisGeneration yolu değişmedi).
+  - **Migration 0010:**
+    - `sources` şeması (append-only; arXiv sürümleri için `< C` CHECK; bulgu tutarlılık CHECK'i);
+    - `research.hypotheses.source_finding_ids` ve doğrulayan trigger;
+    - `ai.qualification_protocols.design` / `p0`;
+    - yalnızca `research_app` için `SELECT, INSERT`.
+  - **Araçlar:** `SourcesCli`, `AiCli fe-items|fe-calibrate|fe-pilot`, `scripts/m7-sources.ps1` ve `scripts/m7-web-compare.ps1` (yalnızca kullanıcı).
+  - Arşiv önbelleğinin repo/OneDrive kuralı Kernel'e taşındı (`LocalCacheRoot`); `ArchiveCacheDirectory` davranışı değişmedi.
+- **Paketler:** PdfPig 0.1.16 ve AngleSharp 1.8.4 (`Directory.Packages.props`); net8.0+ için geçişli bağımlılık yok.
+- **Protokol v1.1 (`m7-protocol.md` §6, §14):**
+  - pilot bloğunun hash'leri: şema `08cbe4ad…`, prompt `8693c280…`, set `54026547…`;
+  - kalibrasyon sonucu: dört beklenti de sağlandı;
+  - örneklem ızgarası {30, 40, …, 200}; §7'deki betimleyici not düzeltildi (p̂ 0,95 → `n` 30; p̂ 0,90 → `n` 90);
+  - iki uygulama sapması:
+    - `InvariantGlobalization` nedeniyle NFKC yerine açık uyumluluk tablosu;
+    - paragraf ayracı `
+
+` (idempotent normalizer).
+- **Kullanıcı kararı (U):** v1.1'deki iki uygulama sapması ve örneklem notunun düzeltilmesi onaylandı.
+- **Testler:** yeni proje `SourceGateway.Tests`; Ai, Backtest, Architecture ve Trading testlerine eklemeler.
+- `verify.ps1` yeşil: **711 test** (önceki 599; Ai 137, Architecture 115, Backtest 123, HoldoutEvaluator 46, Infrastructure 27, MarketData 97, SourceGateway 68, Trading 98); build 0 uyarı / 0 hata; secret scan geçti.
+- **Güncellenen belgeler:** ADR-0022 uygulama notu, `roadmap.md` M7 durumu, `scripts/m4-ai.ps1` yardım metni.
+
 ## 2026-10-28 — M7 Kapı A: kaynak koşulları, protokol v1 ve ADR-0022 (kullanıcı onayı)
 - **Kullanıcı kararı (U):** `m7-protocol.md` v1, A-1…A-9, §11 (içerik görünürlüğü), §13 (akış sonucu) ve ADR-0022 onaylandı. Ön kayıt kanıtı bu commit'tir.
 - **Ön kontrol:** M6 commit'leri zaten `origin/main`'deydi (`dc6b483`, fetch ile doğrulandı). Push yapılmadı.

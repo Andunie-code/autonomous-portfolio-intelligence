@@ -1,3 +1,5 @@
+using PortfolioIntelligence.Kernel.Storage;
+
 namespace PortfolioIntelligence.MarketData.Archive;
 
 /// <summary>
@@ -8,28 +10,7 @@ public sealed class ArchiveCacheDirectory
 {
     public ArchiveCacheDirectory(string root, string repositoryRoot)
     {
-        var full = Path.GetFullPath(root);
-        if (IsInside(full, Path.GetFullPath(repositoryRoot)))
-        {
-            throw new ArgumentException("The archive cache must be outside the repository.", nameof(root));
-        }
-
-        foreach (var variable in new[] { "OneDrive", "OneDriveConsumer", "OneDriveCommercial" })
-        {
-            var oneDrive = Environment.GetEnvironmentVariable(variable);
-            if (!string.IsNullOrWhiteSpace(oneDrive) && IsInside(full, Path.GetFullPath(oneDrive)))
-            {
-                throw new ArgumentException("The archive cache must be outside OneDrive.", nameof(root));
-            }
-        }
-
-        if (full.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-            .Any(segment => segment.StartsWith("OneDrive", StringComparison.OrdinalIgnoreCase)))
-        {
-            throw new ArgumentException("The archive cache must be outside OneDrive.", nameof(root));
-        }
-
-        Root = full;
+        Root = LocalCacheRoot.Validate(root, repositoryRoot, "archive cache", nameof(root));
         Directory.CreateDirectory(Root);
     }
 
@@ -43,10 +24,4 @@ public sealed class ArchiveCacheDirectory
     public string IncidentLogPath => Path.Combine(Root, "incidents.jsonl");
 
     public string ReportsDirectory => Directory.CreateDirectory(Path.Combine(Root, "reports")).FullName;
-
-    private static bool IsInside(string path, string parent)
-    {
-        var normalizedParent = parent.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        return (path + Path.DirectorySeparatorChar).StartsWith(normalizedParent, StringComparison.OrdinalIgnoreCase);
-    }
 }

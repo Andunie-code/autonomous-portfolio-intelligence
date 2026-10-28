@@ -18,7 +18,11 @@ using PortfolioIntelligence.Ai.Persistence;
 //   hg-baseline [--variant 2] --seed-base <n> [--count 50] — deterministic grid baseline only (no network, no database).
 //   traces --job <id>                     — decision traces of a job: outcome, reason, validator results (no network).
 //   qualify-register --protocol <path>    — registers a committed, unchanged qualification protocol (no network).
-//   qualify --allow-network --protocol <path> — the qualification run through the harness (registered protocol only).
+//   qualify --allow-network --protocol <path> — the qualification run through the harness (registered protocol only;
+//                                           HypothesisGeneration or FindingExtraction, from the protocol's task).
+//   fe-items [--seed-base <n>] [--count <n>] — M7: schema, prompt and set hashes of fe-synthetic v1 items (no network, no database).
+//   fe-calibrate [--seed-base 80000] [--count 50] — M7: model-free calibration arms (m7-protocol §5.6; no network, no database).
+//   fe-pilot --allow-network [--design <path>] — M7: FindingExtraction pilot (m7-protocol §6; no qualification).
 //                                           Model: --model, else Gemini:Model (Gemini__Model), else the configured default;
 //                                           it must have a list price in ai.v1.json (no call without a price).
 // The API key is never printed; output contains metrics only.
@@ -150,13 +154,34 @@ switch (command)
     case "traces":
         return await HgCommands.TracesAsync(RequireConnectionString(), RequireOption("--job"));
 
+    case "fe-items":
+        return FeCommands.Items(int.Parse(Option("--seed-base") ?? "81000", CultureInfo.InvariantCulture), int.Parse(Option("--count") ?? "20", CultureInfo.InvariantCulture));
+
+    case "fe-calibrate":
+        return await FeCommands.CalibrateAsync(int.Parse(Option("--seed-base") ?? "80000", CultureInfo.InvariantCulture),
+            int.Parse(Option("--count") ?? "50", CultureInfo.InvariantCulture), ReportsDirectory());
+
+    case "fe-pilot":
+    {
+        var design = Option("--design") ?? "docs/m7-protocol.md";
+        var pilot = await FeCommands.ReadPilotSpecAsync(design);
+        FeCommands.CheckPilotSpec(pilot);
+        if (Prepare($"FindingExtraction pilot: {pilot.Count} synthetic items (design {design}), budget {pilot.BudgetUsd} USD",
+                configuration.Spend.JobCap(JobKind.Qualification), fixedModel: pilot.Model) is not { } call)
+        {
+            return 1;
+        }
+
+        return await FeCommands.PilotAsync(configuration, RequireConnectionString(), call.ApiKey, design, ReportsDirectory(), time);
+    }
+
     case "qualify-register":
         return await HgCommands.RegisterAsync(RequireConnectionString(), RequireOption("--protocol"));
 
     case "qualify":
     {
         var protocolPath = RequireOption("--protocol");
-        if (Prepare($"HypothesisGeneration qualification run (protocol {protocolPath})", configuration.Spend.JobCap(JobKind.Qualification), modelFromProtocol: true) is not { } call)
+        if (Prepare($"Qualification run (protocol {protocolPath})", configuration.Spend.JobCap(JobKind.Qualification), modelFromProtocol: true) is not { } call)
         {
             return 1;
         }
@@ -171,7 +196,8 @@ switch (command)
 static int Usage()
 {
     Console.Error.WriteLine("Usage: killswitch status|trip|clear --reason <text> | ledger [--month yyyy-MM] | reconcile --month yyyy-MM [--invoice-try <x> --usd-try <rate>] | " +
-        "spike --allow-network [--model <id>] | hg-pilot --allow-network [--design <path>] [--model <id>] | qualify-register --protocol <path> | qualify --allow-network --protocol <path>");
+        "spike --allow-network [--model <id>] | hg-pilot --allow-network [--design <path>] [--model <id>] | fe-items | fe-calibrate | fe-pilot --allow-network [--design <path>] | " +
+        "qualify-register --protocol <path> | qualify --allow-network --protocol <path>");
     return 1;
 }
 

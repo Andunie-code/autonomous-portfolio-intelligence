@@ -1,9 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Research module: experiments registry (M2), trials and families (M3), the Researcher tool backend and hypothesis pipeline (M4).
+  <!-- Research module: experiments registry (M2), trials and families (M3), the Researcher tool backend and hypothesis pipeline (M4),
+       the Extractor, quote verification and finding tools (M7, ADR-0022).
        Must never reference Execution or Trading.Host (ADR-0001, enforced by architecture tests). -->
   <ItemGroup>
     <ProjectReference Include="..\..\Kernel\PortfolioIntelligence.Kernel.csproj" />
     <ProjectReference Include="..\Researcher\PortfolioIntelligence.Researcher.csproj" />
+    <ProjectReference Include="..\SourceGateway\PortfolioIntelligence.SourceGateway.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Npgsql" />

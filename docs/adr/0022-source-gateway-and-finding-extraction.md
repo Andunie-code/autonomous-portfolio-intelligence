@@ -4,7 +4,28 @@
 - Karar türü:
   - **U:** `m7-protocol.md` U-M7-1…U-M7-6 (zaman filtresi, Semantic Scholar'ın ertelenmesi, model, bütçe, `robots.txt` ele alışı).
   - **T:** modül yapısı, guard ve önbellek, kütüphaneler, normalizer, kabul hattı, harness'ın tek kollu modu, bulgu → hipotez yolu.
-- Uygulama durumu: henüz uygulanmadı (Kapı B).
+- Uygulama durumu: **Kapı B'de uygulandı (2026-10-28).** Çevrimdışı ve sahte HTTP handler ile; API maliyeti 0. Kapı C bekliyor.
+- Uygulama notları (Kapı B; ayrıntı `m7-protocol.md` §14):
+  - **Kod yerleşimi:**
+    - `SourceGateway`: `SourceConfiguration` (`Config/sources.v1.json`), `SourceRequestPolicy`, `SourceGuardHandler`, `DomainRateLimiter`, `SourceHttp`, `RobotsRules`/`RobotsPolicy`, `SourceCache`, `SourceFetcher`, `ArxivQuery`/`ArxivFeed`/`ArxivClient`, `DocumentIngestor`, `Text/` (`TextNormalizer`, `PdfTextExtractor`, `HtmlTextExtractor`), `Provenance` (`SourceDocument`, `Finding`, in-memory ve Npgsql store'ları);
+    - `Research/Sources`: `FindingPrompt`, `FindingAcceptance`, `QuoteVerifier`, `FindingNumericValidator`, `FindingSanitizer`, `FindingOutputValidator`, `WebResearchGate`, `FindingExtractor`, `FindingToolBackend`, `WebComparison`;
+    - `Research/Qualification/FindingExtractionQualification.cs`: `FeItem`, `FindingExtractionTask`, `FeCalibration`;
+    - Kernel: `Storage/LocalCacheRoot` (arşiv önbelleğiyle ortak repo/OneDrive kuralı; `ArchiveCacheDirectory` davranışı değişmedi) ve `Statistics/BinomialExact`;
+    - Ai: `QualificationDesign`, `QualificationProtocol.Design`/`P0`, harness'ta tek kollu yol;
+    - Researcher: `IFindingToolBackend`, `ClosedFindingBackend`, iki yeni tool; `Hypothesis.SourceFindingIds`;
+    - araçlar: `SourcesCli` (`search`, `fetch`, `extract`, `docs`, `provenance-report`), `AiCli fe-items|fe-calibrate|fe-pilot` (`qualify-register` ve `qualify` FindingExtraction protokolünü de alır), `BacktestCli web-compare`;
+    - script'ler: `scripts/m7-sources.ps1`, `scripts/m7-web-compare.ps1` (yalnızca kullanıcı).
+  - **Sapma 1 — NFKC:** uygulama `InvariantGlobalization` ile derlendiği için `string.Normalize(FormKC)` metni değiştirmiyor; normalizer, açık bir uyumluluk tablosu kullanıyor (`m7-protocol.md` §14.4).
+  - **Sapma 2 — paragraf ayracı:** normalizer boş satırı `
+
+` olarak bırakır, böylece idempotenttir (§14.4).
+  - **Hipotez kaynağı:** bulgu kimlikleri `HypothesisProvenance`'ta değil `Hypothesis.SourceFindingIds`'te tutulur, çünkü provenance liste başına, kaynak ise hipotez başınadır. Liste hash'inin tanımı değişmedi.
+  - **Mimari testler:**
+    - SourceGateway yalnızca Kernel'e bağlıdır;
+    - Researcher, Ai, Execution ve Trading.Host SourceGateway'e ulaşamaz;
+    - PdfPig ve AngleSharp yalnızca SourceGateway'dedir;
+    - Researcher'ın tool kümesi tam olarak 8'dir;
+    - yeni deny kuralları `RepositoryRuleTests`'te doğrulanır.
 - İlgili: ADR-0006, **ADR-0008** (bu ADR onun uygulamasıdır), ADR-0010, ADR-0013, ADR-0016, ADR-0017; `m7-protocol.md`; `architecture.md` §4, §8; `sources.md` S-X1…S-X12.
 
 ## Bağlam

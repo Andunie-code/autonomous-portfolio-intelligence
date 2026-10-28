@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- SourceGateway (M7, ADR-0008, ADR-0022): the only egress for web research. Allowlist with every redirect rejected,
+       robots.txt, per-host rate limit, cache outside the repository and OneDrive, PDF/HTML/Atom text extraction with
+       hidden-text filters and normalisation, SourceDocument and Finding provenance. Never references Ai, Research,
+       Execution, the evaluator or a host. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Kernel\PortfolioIntelligence.Kernel.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="AngleSharp" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="PdfPig" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Config\sources.v1.json" />
+  </ItemGroup>
+</Project>

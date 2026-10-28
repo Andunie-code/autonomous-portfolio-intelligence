@@ -35,6 +35,9 @@
   <Folder Name="/src/Modules/Research/">
     <Project Path="src/Modules/Research/PortfolioIntelligence.Research.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/SourceGateway/">
+    <Project Path="src/Modules/SourceGateway/PortfolioIntelligence.SourceGateway.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Researcher/">
     <Project Path="src/Modules/Researcher/PortfolioIntelligence.Researcher.csproj" />
   </Folder>
@@ -47,6 +50,9 @@
   </Folder>
   <Folder Name="/src/Tools/AiCli/">
     <Project Path="src/Tools/AiCli/PortfolioIntelligence.AiCli.csproj" />
+  </Folder>
+  <Folder Name="/src/Tools/SourcesCli/">
+    <Project Path="src/Tools/SourcesCli/PortfolioIntelligence.SourcesCli.csproj" />
   </Folder>
   <Folder Name="/src/Tools/BacktestCli/">
     <Project Path="src/Tools/BacktestCli/PortfolioIntelligence.BacktestCli.csproj" />
@@ -72,6 +78,9 @@
   </Folder>
   <Folder Name="/tests/Infrastructure.Tests/">
     <Project Path="tests/Infrastructure.Tests/PortfolioIntelligence.Infrastructure.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/SourceGateway.Tests/">
+    <Project Path="tests/SourceGateway.Tests/PortfolioIntelligence.SourceGateway.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/Trading.Tests/">
     <Project Path="tests/Trading.Tests/PortfolioIntelligence.Trading.Tests.csproj" />

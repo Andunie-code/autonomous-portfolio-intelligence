@@ -159,10 +159,10 @@ internal static class HgCommands
     {
         var (document, spec) = await LoadAsync(protocolPath);
         var commit = CommittedUnchanged(protocolPath);
-        var protocol = ToProtocol(document, spec, commit);
+        var protocol = IsFindingExtraction(spec) ? FeCommands.ToProtocol(document, spec, commit) : ToProtocol(document, spec, commit);
         await new NpgsqlQualificationStore(connection).RegisterProtocolAsync(protocol, CancellationToken.None);
         await new NpgsqlAiAudit(connection).RecordAsync("user:" + Environment.UserName, "qualification-protocol-registered",
-            new { protocol.ProtocolHash, protocol.DocumentCommit, protocol.Task, protocol.Model, protocol.SamplePerArm }, CancellationToken.None);
+            new { protocol.ProtocolHash, protocol.DocumentCommit, protocol.Task, protocol.Model, protocol.SamplePerArm, Design = protocol.Design.ToString(), protocol.P0 }, CancellationToken.None);
         Console.WriteLine($"Registered {protocol.Task} protocol {protocol.ProtocolHash[..12]} (commit {commit[..7]}): model {protocol.Model}, " +
             $"{protocol.SamplePerArm} items per arm, α {protocol.Alpha}, minimum effect {protocol.MinimumEffect}, budget {protocol.BudgetUsd} USD.");
         return 0;
@@ -173,6 +173,11 @@ internal static class HgCommands
     {
         var (document, spec) = await LoadAsync(protocolPath);
         CommittedUnchanged(protocolPath);
+        if (IsFindingExtraction(spec))
+        {
+            return await FeCommands.QualifyAsync(configuration, connection, apiKey, document, spec, reports, time);
+        }
+
         var (router, ledger, provider) = Wire(configuration, connection, apiKey, time);
         using var _ = provider;
         var task = new HypothesisGenerationTask(time, variant: Variant(spec));
@@ -210,7 +215,9 @@ internal static class HgCommands
         return llm.Reason ?? (llm.GateFailures.Count == 0 ? "llm passed all gates" : "llm gates: " + string.Join(", ", llm.GateFailures));
     }
 
-    private static (ModelRouter Router, ICostLedger Ledger, GeminiProvider Provider) Wire(AiConfiguration configuration, string connection, string apiKey, TimeProvider time)
+    private static bool IsFindingExtraction(JsonObject spec) => spec["task"]?.GetValue<string>() == nameof(TaskClass.FindingExtraction);
+
+    internal static (ModelRouter Router, ICostLedger Ledger, GeminiProvider Provider) Wire(AiConfiguration configuration, string connection, string apiKey, TimeProvider time)
     {
         var ledger = new NpgsqlCostLedger(connection);
         var killSwitch = new AiKillSwitch(new NpgsqlKillSwitchStore(connection), new NpgsqlAiAudit(connection), time);

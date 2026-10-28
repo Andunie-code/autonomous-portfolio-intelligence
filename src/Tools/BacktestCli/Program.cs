@@ -15,6 +15,7 @@ using PortfolioIntelligence.Research.Evaluation;
 // M4: research-m4 runs the pre-registered LLM-less research cycle (docs/m4-protocol.md) through the Researcher tools.
 // M5: freeze-import, parity-m5 (L1/L2 parity replay) and p1-analysis (docs/m5-protocol.md §4.5, §5, §9).
 // M5b: cohort-manifest builds a cohort manifest from a spec of pre-registered M4 points (ADR-0019).
+// M7: web-compare runs the web (finding-derived) and no-web arms and writes docs/m7-web-comparison.md (m7-protocol §9).
 // Reads market.candles from the local database; no network. Output: metrics only.
 const string ProtocolVersion = "m2-protocol v1";
 const string ProtocolCommit = "296757f";
@@ -34,6 +35,16 @@ switch (command)
         var ops = Environment.GetEnvironmentVariable("ConnectionStrings__Ops")
             ?? throw new InvalidOperationException("ConnectionStrings__Ops is not set (scripts/m3-cohort0.ps1 sets it).");
         return await Cohort0.RunAsync(ops, root, GitHead(root), Path.Combine(root, "docs", "cohorts", "cohort-0.json"));
+    }
+    case "web-compare":
+    {
+        var root = FindRepositoryRoot();
+        var ops = Environment.GetEnvironmentVariable("ConnectionStrings__Ops")
+            ?? throw new InvalidOperationException("ConnectionStrings__Ops is not set (scripts/m5-research.ps1 sets it).");
+        string? Arg(string name) => Array.IndexOf(args, name) is var i and >= 0 && i + 1 < args.Length ? args[i + 1] : null;
+        return await WebCompare.RunAsync(ops, root, Environment.GetEnvironmentVariable("PI_ENGINE_SOURCE") ?? GitHead(root), Arg("--web"), Arg("--web-hash"),
+            Arg("--baseline") ?? throw new ArgumentException("--baseline is required."), Arg("--baseline-hash") ?? throw new ArgumentException("--baseline-hash is required."),
+            Arg("--author") ?? "user");
     }
     case "research-m4":
     {

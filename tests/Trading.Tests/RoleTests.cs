@@ -66,6 +66,30 @@ public class RoleTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
     }
 
     [Fact]
+    public async Task Only_research_reads_and_appends_web_sources_and_the_cutoff_check_holds_for_its_login()
+    {
+        // Migration 0010 (ADR-0022 §7): sources.* belongs to Research.Host; trading and the dashboard see nothing of it.
+        var db = await fixture.NewAsync();
+        const string document = """
+            INSERT INTO sources.source_documents (url, canonical_url, kind, tier, text_kind, arxiv_id, arxiv_version, published_at, version_at, fetched_at,
+                content_sha256, text_sha256, bytes, content_type, extractor_version, normalizer_version, hidden_characters, removed_characters, truncated)
+            VALUES ('https://arxiv.org/pdf/2301.01234v1', 'https://arxiv.org/abs/2301.01234v1', 'ArxivPdf', 'T1', 'Pdf', '2301.01234', 1,
+                timestamptz '2023-01-02 00:00+00', timestamptz '{0}', now(), repeat('a', 64), repeat('b', 64), 10, 'application/pdf', 'x', 'y', 0, 0, false)
+            """;
+        await db.ExecuteAsync(string.Format(document, "2023-01-02 00:00+00"), "research_app");
+        await db.ExecuteAsync("INSERT INTO sources.research_requests (topic, categories, status) VALUES ('momentum', '{q-fin}', 'recorded')", "research_app");
+        Assert.Equal(1L, await db.ScalarAsync<long>("SELECT count(*) FROM sources.source_documents", "research_app"));
+        var late = await Assert.ThrowsAsync<PostgresException>(() => db.ExecuteAsync(string.Format(document, "2026-01-01 00:00+00"), "research_app"));
+        Assert.Equal(PostgresErrorCodes.CheckViolation, late.SqlState);
+        await Denied(db, "research_app", "UPDATE sources.source_documents SET truncated = true");
+        foreach (var role in new[] { "trading_app", "ops_api", "market_import", "status_relay" })
+        {
+            await Denied(db, role, "SELECT * FROM sources.source_documents");
+            await Denied(db, role, "SELECT * FROM sources.findings");
+        }
+    }
+
+    [Fact]
     public async Task Status_relay_only_inserts_cohort_status_and_research_cannot_write_it()
     {
         var db = await fixture.NewAsync();

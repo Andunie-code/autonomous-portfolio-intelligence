@@ -6,20 +6,22 @@ using PortfolioIntelligence.Researcher;
 namespace PortfolioIntelligence.Ai.Tests;
 
 /// <summary>
-/// Researcher contract (roadmap M4): exactly the six tools of architecture §4, no holdout, evaluator, SQL, shell or web
-/// access; disallowed calls are refused and recorded; the pre-registered hypothesis list cannot drift.
+/// Researcher contract (roadmap M4, M7): exactly the eight tools of architecture §4 (six M4 tools and SearchFindings,
+/// RequestSourceResearch), no holdout, evaluator, SQL, shell or raw web access; disallowed calls are refused and recorded;
+/// the pre-registered hypothesis list cannot drift.
 /// </summary>
 public class ResearcherContractTests
 {
     private const string ListHash = "89ab3965a8cbaf068788a95bc354f0340c29ae1b8d3834ef6c840bad1d4c2ec7";
 
     [Fact]
-    public void Toolbox_exposes_exactly_the_six_researcher_tools()
+    public void Toolbox_exposes_exactly_the_eight_researcher_tools()
     {
         var toolbox = new ResearcherToolbox(new FakeBackend(), new InMemorySafetyLog());
 
         Assert.Equal(
-            ["GetDatasetCatalog", "GetExperimentResult", "ListIndicators", "SearchExperiments", "SubmitExperiment", "ValidateStrategyDefinition"],
+            ["GetDatasetCatalog", "GetExperimentResult", "ListIndicators", "RequestSourceResearch", "SearchExperiments", "SearchFindings", "SubmitExperiment",
+             "ValidateStrategyDefinition"],
             toolbox.Tools.Tools.Select(t => t.Name).Order(StringComparer.Ordinal));
         Assert.Equal(ResearcherToolNames.All.Order(StringComparer.Ordinal), toolbox.Tools.Tools.Select(t => t.Name).Order(StringComparer.Ordinal));
     }

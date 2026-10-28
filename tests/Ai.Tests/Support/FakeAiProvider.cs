@@ -79,7 +79,7 @@ public static class TestConfig
     public const string Model = "test-model-a";
     public const string OtherModel = "test-model-b";
 
-    public static AiConfiguration Configuration(decimal monthlyCap = 10m, decimal callCap = 0.10m, string? qualifiedModels = null) => AiConfiguration.Parse($$"""
+    public static AiConfiguration Configuration(decimal monthlyCap = 10m, decimal callCap = 0.10m, string? qualifiedModels = null, string? findingQualifiedModels = null) => AiConfiguration.Parse($$"""
         {
           "version": "ai-config test",
           "spend": { "monthlyCapUsd": {{monthlyCap}}, "callCapUsd": {{callCap}}, "jobShares": { "Qualification": 0.30, "ResearchCycle": 0.05, "Spike": 0.05 },
@@ -92,6 +92,8 @@ public static class TestConfig
           "tasks": {
             "HypothesisGeneration": { "kind": "DecisionAffecting", "onUnavailable": "DeterministicFallback", "maxOutputTokens": 2000, "timeoutSeconds": 120,
                                       "qualifiedModels": [ {{qualifiedModels ?? ""}} ] },
+            "FindingExtraction": { "kind": "DecisionAffecting", "onUnavailable": "Skip", "maxOutputTokens": 2000, "timeoutSeconds": 120,
+                                   "qualifiedModels": [ {{findingQualifiedModels ?? ""}} ] },
             "Summary": { "kind": "Advisory", "onUnavailable": "Abstain", "maxOutputTokens": 2000, "timeoutSeconds": 120,
                          "model": { "provider": "gemini", "model": "{{Model}}", "promptVersion": "summary test", "acceptedModelVersions": [ "{{Model}}" ] } }
           }

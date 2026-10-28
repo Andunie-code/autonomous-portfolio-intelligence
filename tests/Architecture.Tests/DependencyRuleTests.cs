@@ -15,7 +15,10 @@ public class DependencyRuleTests
     private const string AiGemini = "PortfolioIntelligence.Ai.Gemini";
     private const string Researcher = "PortfolioIntelligence.Researcher";
     private const string AiCli = "PortfolioIntelligence.AiCli";
+    private const string SourceGateway = "PortfolioIntelligence.SourceGateway";
+    private const string SourcesCli = "PortfolioIntelligence.SourcesCli";
     private const string GeminiSdk = "Google.GenAI";
+    private static readonly string[] TextPackages = ["PdfPig", "AngleSharp"];
 
     private static readonly ProjectGraph Graph = ProjectGraph.Load(Path.Combine(RepositoryRoot.Path, "src"));
 
@@ -23,7 +26,7 @@ public class DependencyRuleTests
     public void Graph_contains_the_expected_projects()
     {
         Assert.Superset(
-            new HashSet<string> { Kernel, Research, ResearchHost, Execution, TradingHost, MarketData, HoldoutEvaluator, Ai, AiGemini, Researcher, AiCli },
+            new HashSet<string> { Kernel, Research, ResearchHost, Execution, TradingHost, MarketData, HoldoutEvaluator, Ai, AiGemini, Researcher, AiCli, SourceGateway, SourcesCli },
             Graph.Projects.ToHashSet());
     }
 
@@ -32,6 +35,8 @@ public class DependencyRuleTests
     [InlineData(ResearchHost)]
     [InlineData(Researcher)]
     [InlineData(Ai)]
+    [InlineData(SourceGateway)]
+    [InlineData(SourcesCli)]
     public void Research_side_never_reaches_execution_or_trading_host(string project)
     {
         var references = Graph.TransitiveReferencesOf(project);
@@ -70,6 +75,8 @@ public class DependencyRuleTests
     [InlineData(AiGemini)]
     [InlineData(Researcher)]
     [InlineData(AiCli)]
+    [InlineData(SourceGateway)]
+    [InlineData(SourcesCli)]
     public void Nothing_outside_the_evaluator_references_the_cohort_registry(string project)
     {
         // Research reaches the evaluator only through its narrow API; risk and execution never see cohorts (testing §7.3).
@@ -130,6 +137,32 @@ public class DependencyRuleTests
         Assert.Equal(new[] { Ai, Kernel }, Graph.TransitiveReferencesOf(Researcher).Order(StringComparer.Ordinal));
         Assert.Empty(Graph.PackagesOf(Researcher));
         Assert.DoesNotContain(AiGemini, Graph.TransitiveReferencesOf(Research));
+    }
+
+    [Fact]
+    public void Source_gateway_depends_only_on_the_kernel_and_is_never_reached_by_the_researcher_or_trading()
+    {
+        // ADR-0022 §1: the only web egress; no AI, research, execution, evaluator or host code. The Researcher sees findings
+        // only through its tool port, and trading never reaches web content.
+        Assert.Equal(new[] { Kernel }, Graph.TransitiveReferencesOf(SourceGateway));
+        Assert.DoesNotContain(SourceGateway, Graph.TransitiveReferencesOf(Researcher));
+        Assert.DoesNotContain(SourceGateway, Graph.TransitiveReferencesOf(Execution));
+        Assert.DoesNotContain(SourceGateway, Graph.TransitiveReferencesOf(TradingHost));
+        Assert.DoesNotContain(SourceGateway, Graph.TransitiveReferencesOf(Ai));
+    }
+
+    [Fact]
+    public void Pdf_and_html_packages_are_referenced_only_by_the_source_gateway()
+    {
+        foreach (var project in Graph.Projects.Where(p => p != SourceGateway))
+        {
+            foreach (var package in TextPackages)
+            {
+                Assert.DoesNotContain(package, Graph.PackagesOf(project));
+            }
+        }
+
+        Assert.All(TextPackages, p => Assert.Contains(p, Graph.PackagesOf(SourceGateway)));
     }
 
     [Fact]
