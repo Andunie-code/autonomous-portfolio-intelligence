@@ -53,6 +53,30 @@ public class FindingExtractionTests
     }
 
     [Fact]
+    public void The_qualification_protocol_document_matches_the_code_and_the_pre_registered_rule()
+    {
+        var document = File.ReadAllText(Path.Combine(RepositoryRoot.Path, "docs", "m7-fe-qualification-protocol.md"));
+        var block = System.Text.RegularExpressions.Regex.Match(document, "```json qualification-protocol\\s*\\n(?<json>.*?)\\n```",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+        var spec = JsonNode.Parse(block.Groups["json"].Value)!;
+        var set = (string name) => QualificationItem.SetHash(FeItem.Range(spec[name]!["seedBase"]!.GetValue<int>(), spec[name]!["count"]!.GetValue<int>())
+            .Select(i => i.ToQualificationItem()));
+
+        Assert.Equal(nameof(TaskClass.FindingExtraction), spec["task"]!.GetValue<string>());
+        Assert.Equal(FindingPrompt.PromptVersion, spec["promptVersion"]!.GetValue<string>());
+        Assert.Equal(FindingPrompt.Schema.Hash, spec["schemaHash"]!.GetValue<string>());
+        Assert.Equal(Kernel.Dsl.DslCanonical.Sha256(FindingPrompt.System.ReplaceLineEndings("\n")), spec["promptHash"]!.GetValue<string>());
+        Assert.Equal((nameof(QualificationDesign.OneArmBinomial), 0.80, 0.05), (spec["design"]!.GetValue<string>(), spec["p0"]!.GetValue<double>(), spec["alpha"]!.GetValue<double>()));
+        Assert.True(spec["budgetUsd"]!.GetValue<decimal>() <= 3.00m);
+        Assert.Equal("540265479ee30f1fd35555742b5685d8b5f07bede2f03e2cb71ee8b11f8c098c", set("pilot"));
+        Assert.Contains(set("qualification"), document);
+        var n = spec["samplePerArm"]!.GetValue<int>();
+        Assert.Equal(n, spec["qualification"]!["count"]!.GetValue<int>());
+        // §7 with the pilot rate 19/20: the smallest n in {30, …, 200} with power ≥ 0.80.
+        Assert.Equal(BinomialExact.RequiredSample(19.0 / 20, 0.80, 0.05, 0.80, Enumerable.Range(3, 18).Select(i => i * 10)), n);
+    }
+
+    [Fact]
     public void Calibration_arms_show_that_the_success_rule_discriminates_before_any_model_run()
     {
         var items = FeItem.Range(80_000, 50);

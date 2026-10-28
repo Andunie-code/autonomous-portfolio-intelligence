@@ -2,6 +2,23 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-28 — M7 Kapı C1 ve C3 tamamlandı; FindingExtraction yeterlilik protokolü (U)
+- **C1 (kullanıcı):**
+  - arama 4 kayıt döndürdü, düşürülen 0; `arxiv.org/robots.txt` → 200;
+  - 4 belge kaydedildi: 3 PDF, 1 özet (`1802.03708v8` için `/pdf/` 404 döndü);
+  - provenance raporunda sorunlu 0, önbellek bozulması 0;
+  - v1.2 sorgu düzeltmesi gerçek API'de çalıştı.
+- **C3 pilotu (kullanıcı; `m7-protocol.md` v1.2, designHash `067181b1…`):**
+  - **19/20**; güvenlik ihlali 0; uydurma alıntı 0;
+  - 0,028655 USD;
+  - tek başarısızlık bir I2 öğesindeki `unsupported-number` reddi, ihlal değil.
+  - Rapor: `m7-fe-pilot-results.md`.
+- **§7 kuralının uygulanması:**
+  - p̂ 0,95 için `n` = 30 (güç 0,812; geçme sınırı 28/30);
+  - tahmin 0,086 USD; iş bütçesi 3,00 USD.
+- **Yeterlilik protokolü:** `m7-fe-qualification-protocol.md` (U): seed 82000–82029, set `58863a75…`, tek kollu, p0 0,80, α 0,05.
+  - Bir test, protokol bloğunun koddaki prompt, şema ve set hash'leriyle ve §7 kuralıyla uyuştuğunu doğrular.
+
 ## 2026-10-28 — M7 Kapı C1: arXiv API'nin HTTP 500 yanıtı için sorgu düzeltmesi (m7-protocol v1.2)
 - **Gözlem (kullanıcı):** `m7-sources.ps1 search` isteğine API HTTP 500 döndü; CLI hatayı yakalamadan çıkış yaptı.
 - **İnceleme:** `q-fin.*` wildcard'ı sunucuya gitmiyordu (`ArxivQuery.Expand` onu dokuz açık alt sınıfa açar). İki şüpheli bulundu:
