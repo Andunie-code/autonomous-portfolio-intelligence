@@ -12,7 +12,9 @@ using PortfolioIntelligence.SourceGateway.Text;
 
 // M7 sources command line (docs/m7-protocol.md §10). The user's runs only; Claude Code cannot pass the network flag.
 //   search --allow-network --terms "a,b" [--field abs|ti|all] [--categories q-fin.*,stat.ML] [--max 10] [--show-titles]
-//                                         — arXiv API search (pre-cutoff versions only; U-M7-2).
+//                                         — arXiv API search (pre-cutoff versions only; U-M7-2). q-fin.* is expanded to its
+//                                           explicit subject classes before the query is built (the API has no wildcard).
+//   search --terms "a,b" [...] --print-url — prints the exact request URL without any network access (diagnosis).
 //   fetch --allow-network --ids 2301.01234v2,... — records at most 10 versions: PDF if robots.txt allows, else the API abstract.
 //   extract --allow-network [--document <id>] — FindingExtraction on recorded documents; refused while web research is closed (D20).
 //   docs                                  — recorded documents (operational fields only; no network).
@@ -31,16 +33,38 @@ switch (command)
 {
     case "search":
     {
+        var terms = RequireOption("--terms").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var categories = Option("--categories")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
+        var field = Option("--field") ?? "abs";
+        var max = Math.Clamp(int.Parse(Option("--max") ?? "10", CultureInfo.InvariantCulture), 1, configuration.MaxApiResults);
+        var request = ArxivQuery.Search(ArxivQuery.SearchQuery(terms, field, categories, configuration), 0, max);
+        if (args.Contains("--print-url"))
+        {
+            // No network: the exact request, validated by the policy, for diagnosis.
+            policy.Validate(request);
+            Console.WriteLine(request.AbsoluteUri);
+            return 0;
+        }
+
         if (!Confirm($"arXiv API search on https://{ArxivQuery.ApiBase[8..]} (one request; at least {configuration.MinIntervalSeconds} s between requests)"))
         {
             return 1;
         }
 
         var (fetcher, _) = Online();
-        var terms = RequireOption("--terms").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var categories = Option("--categories")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
-        var (entries, rejected, source) = await new ArxivClient(fetcher, configuration).SearchAsync(terms, Option("--field") ?? "abs", categories,
-            int.Parse(Option("--max") ?? "10", CultureInfo.InvariantCulture), CancellationToken.None);
+        IReadOnlyList<ArxivEntry> entries;
+        IReadOnlyDictionary<ArxivRejection, int> rejected;
+        FetchedSource source;
+        try
+        {
+            (entries, rejected, source) = await new ArxivClient(fetcher, configuration).SearchAsync(terms, field, categories, max, CancellationToken.None);
+        }
+        catch (Exception e) when (e is SourceUnavailableException or SourcePolicyViolationException or SourceTooLargeException)
+        {
+            Console.Error.WriteLine($"{e.GetType().Name}: {e.Message}");
+            Console.Error.WriteLine($"Request: {request.AbsoluteUri}");
+            return 2;
+        }
         Console.WriteLine($"Response {source.ContentSha256[..12]} ({source.Body.Length} bytes{(source.FromCache ? ", from cache" : "")}): {entries.Count} usable record(s); " +
             $"dropped: after cutoff {rejected[ArxivRejection.AfterCutoff]}, category {rejected[ArxivRejection.CategoryNotAllowed]}, unparseable {rejected[ArxivRejection.Unparseable]}.");
         foreach (var e in entries)

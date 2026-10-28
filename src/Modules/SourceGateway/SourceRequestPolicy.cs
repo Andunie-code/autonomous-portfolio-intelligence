@@ -17,8 +17,11 @@ public sealed record SourceTarget(SourceKind Kind, AllowedSource Source);
 /// </summary>
 public sealed partial class SourceRequestPolicy(SourceConfiguration configuration)
 {
-    /// <summary>Server-side submission filter that every API query carries (the binding check is on the client, §2.5).</summary>
-    public const string SubmittedBeforeCutoff = "submittedDate:[000001010000 TO 202512312359]";
+    /// <summary>
+    /// Server-side submission filter that every API query carries (the binding check is on the client, §2.5). The lower bound
+    /// is arXiv's first year; a year-0000 bound is a likely cause of the HTTP 500 seen in Gate C1 (m7-protocol §15).
+    /// </summary>
+    public const string SubmittedBeforeCutoff = "submittedDate:[199101010000 TO 202512312359]";
 
     private static readonly HashSet<string> ApiParameters = new(StringComparer.Ordinal) { "search_query", "id_list", "start", "max_results", "sortBy", "sortOrder" };
 

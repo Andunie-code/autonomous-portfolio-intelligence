@@ -43,7 +43,7 @@ public static partial class ArxivQuery
     }
 
     public static Uri Search(string searchQuery, int start, int maxResults) =>
-        new($"{ApiBase}?search_query={Uri.EscapeDataString(searchQuery)}&start={start.ToString(CultureInfo.InvariantCulture)}" +
+        new($"{ApiBase}?search_query={Encode(searchQuery)}&start={start.ToString(CultureInfo.InvariantCulture)}" +
             $"&max_results={maxResults.ToString(CultureInfo.InvariantCulture)}&sortBy=submittedDate&sortOrder=descending");
 
     /// <summary>One versioned record, still through the server-side submission filter.</summary>
@@ -56,8 +56,15 @@ public static partial class ArxivQuery
 
         var categories = string.Join(" OR ", Expand(configuration.ArxivCategories).Select(c => "cat:" + c));
         var search = $"({categories}) AND {SourceRequestPolicy.SubmittedBeforeCutoff}";
-        return new Uri($"{ApiBase}?search_query={Uri.EscapeDataString(search)}&id_list={versionedId}&max_results=1");
+        return new Uri($"{ApiBase}?search_query={Encode(search)}&id_list={versionedId}&max_results=1");
     }
+
+    /// <summary>
+    /// The API manual's encoding (S-X3): spaces as <c>+</c>, field colons literal, parentheses <c>%28</c>/<c>%29</c>, quotes
+    /// <c>%22</c>, brackets <c>%5B</c>/<c>%5D</c>. The request policy decodes it back to the same query.
+    /// </summary>
+    public static string Encode(string query) =>
+        Uri.EscapeDataString(query).Replace("%20", "+", StringComparison.Ordinal).Replace("%3A", ":", StringComparison.Ordinal);
 
     public static IReadOnlyList<string> Expand(IEnumerable<string> categories) =>
         categories.SelectMany(c => c == "q-fin.*" ? QuantitativeFinance : [c]).Distinct(StringComparer.Ordinal).ToList();

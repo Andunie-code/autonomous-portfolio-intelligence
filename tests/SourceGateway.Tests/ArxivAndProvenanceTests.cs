@@ -31,6 +31,29 @@ public class ArxivAndProvenanceTests
     }
 
     [Fact]
+    public void Requests_use_explicit_categories_the_manual_encoding_and_a_valid_date_range()
+    {
+        // Gate C1 regression (HTTP 500 from the API): no wildcard, no year-0000 bound, spaces as '+', literal field colons.
+        var configuration = SourceConfiguration.LoadDefault();
+        var search = ArxivQuery.Search(ArxivQuery.SearchQuery(["momentum", "crypto"], "abs", [], configuration), 0, 10);
+        var version = ArxivQuery.Version($"{Id}v2", configuration);
+
+        foreach (var uri in new[] { search, version })
+        {
+            var query = uri.Query;
+            Assert.DoesNotContain("*", Uri.UnescapeDataString(query));
+            Assert.DoesNotContain("%20", query);
+            Assert.DoesNotContain("%3A", query);
+            Assert.DoesNotContain("0000010100", query);
+            Assert.Contains("submittedDate:%5B199101010000+TO+202512312359%5D", query);
+            Assert.Contains("cat:q-fin.TR+OR+cat:stat.ML", Uri.UnescapeDataString(query.Replace("%28", "(").Replace("%29", ")")));
+            Assert.Equal(SourceKind.ArxivApi, new SourceRequestPolicy(configuration).Validate(uri).Kind); // the policy decodes '+' back to spaces
+        }
+
+        Assert.Contains("abs:%22momentum%22+AND+abs:%22crypto%22", search.Query);
+    }
+
+    [Fact]
     public void Feed_keeps_only_versions_submitted_before_the_cutoff_in_allowed_categories()
     {
         var feed = Feeds.Feed(

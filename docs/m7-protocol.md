@@ -2,6 +2,7 @@
 
 - Durum: **Ön kayıt — kullanıcı tarafından onaylandı (Kapı A, 2026-10-28, U; §0.2 A-1…A-9, §11 ve §13 dahil).** Ön kayıt kanıtı, bu belgenin onaylandığı git commit'idir. O commit'ten önce M7 kodu yazılmaz.
 - **v1.1 (2026-10-28, Kapı B sonu; kullanıcı onayı U, 2026-10-28):** §6'daki pilot bloğuna şema, prompt ve set hash'leri eklendi; kalibrasyon sonucu (§5.6) ve Kapı B uygulama notları §14'te. §5–§7'deki kurallar değişmedi. Pilot bu commit'ten sonra koşulur.
+- **v1.2 (2026-10-28, Kapı C1, T):** arXiv API sorgusunun tarih alt sınırı ve URL kodlaması düzeltildi (§15). Yalnızca §2.5'teki sunucu tarafı süzgecin alt sınırı değişti; U-M7-2, §5–§7 ve pilot bloğu değişmedi.
 - **Pilot ön kaydının tamamlanması:** şema hash'i, prompt metni ve set hash'leri yalnızca kodla üretilebilir. Bu değerler Kapı B'nin sonunda §6'daki pilot bloğuna **v1.1** olarak eklenir. Pilot ancak o commit'ten sonra koşulur. v1.1, §5–§7'deki kuralları değiştiremez; yalnızca hash ve sayı ekler.
 - Karar türleri: **U** = kullanıcı, **T** = teknik lider, **P** = öneri (kullanıcı onayı gerekir).
 - İlgili: ADR-0006, ADR-0008, ADR-0010, ADR-0013, ADR-0016, ADR-0017, **ADR-0022**; `architecture.md` §2–§4, §8; `testing-strategy.md` §6.1, §6.2, §6.4; `risk-model.md` §4–§5; `sources.md` S-X1…S-X12, S-G3, S-G5; D4, D10, D14, D16, D20; T7–T10, T13, T17, T18.
@@ -95,7 +96,7 @@
 
 ### 2.5 arXiv sorgu kurucusu ve zaman filtresi (U-M7-2)
 - `search_query`, serbest metinden değil yapılandırılmış girdiden kurulur: anahtar terimler (yalnızca harf, rakam, boşluk ve tire; terim başına ≤ 40 karakter, ≤ 6 terim) `ti:` / `abs:` / `all:` alanlarına; kategori, izinli listeden `cat:` ile `OR` olarak eklenir.
-- Sorguya her zaman `submittedDate:[000001010000+TO+202512312359]` eklenir. Bu, sunucu tarafında ilk süzgeçtir.
+- Sorguya her zaman `submittedDate:[199101010000+TO+202512312359]` eklenir (v1.2; önceki alt sınır `000001010000` idi, §15). Bu, sunucu tarafında ilk süzgeçtir.
 - **İstemci tarafındaki bağlayıcı kontrol:** her Atom kaydında `published < C` **ve** `updated < C`. Uymayan kayıt atılır ve sayısı raporlanır.
 - PDF yalnızca filtreyi geçen kaydın **o sürümü** için istenir (`/pdf/<id>v<n>`). Kayıttan başka bir sürüme geçilmez.
 
@@ -392,3 +393,17 @@ Bir öğe, aşağıdakilerin **hepsi** sağlanırsa başarılıdır:
   - web'li kol en fazla 5 hipotezdir, her hipotez kaynak bulgularını adlandırır; iki kolun hipotez sayısı aynıdır;
   - komut yalnızca kullanıcının script'iyle çalışır (`scripts/m7-web-compare.ps1`).
 - **Bulgu → hipotez (§8.2):** bulgu kimlikleri hipotez listesinin hash'ine girmez; liste hash'inin tanımı M4 ile aynı kalır. Kimlikler `research.hypotheses.source_finding_ids`'te append-only olarak kaydedilir ve DB trigger'ı ile uygulamada iki kez denetlenir.
+
+## 15. Ek v1.2 — Kapı C1'deki HTTP 500 (T, 2026-10-28)
+- **Gözlem (kullanıcının C1 koşusu):** `search` isteğine arXiv API'si HTTP 500 döndü. Kod hatayı yakalamadığı için süreç çıkış yaptı.
+- **İnceleme:**
+  - `q-fin.*` sunucuya gitmiyordu. `ArxivQuery.Expand` onu sorguyu kurmadan önce dokuz açık alt sınıfa açar (`q-fin.CP` … `q-fin.TR`).
+  - **Şüpheli 1:** sunucu süzgecinin tarih alt sınırı `000001010000` idi (0000 yılı).
+  - **Şüpheli 2:** URL kodlaması kılavuzdan farklıydı. Boşluk `%20`, iki nokta `%3A` olarak gidiyordu; kılavuz boşluk için `+` kullanır, `:` karakterini olduğu gibi bırakır (S-X3).
+  - Hangisinin 500'e yol açtığı, kural gereği Claude Code tarafından arXiv'e istek atılarak denenmedi (T17). Doğrulama kullanıcının yeni C1 koşusudur.
+- **Düzeltme:**
+  - alt sınır `199101010000` oldu (arXiv'in ilk yılı); üst sınır ve istemci tarafındaki bağlayıcı `< C` kontrolü değişmedi;
+  - sorgu kılavuz biçiminde kodlanır (`ArxivQuery.Encode`: boşluk `+`, `:` olduğu gibi, parantez `%28`/`%29`, tırnak `%22`, köşeli parantez `%5B`/`%5D`); istek politikası aynı sorguya geri çözer;
+  - `SourcesCli search` artık bir hatada istek URL'sini yazar ve 2 koduyla çıkar;
+  - yeni seçenek `--print-url`: ağa çıkmadan, politikadan geçmiş tam istek URL'sini yazar.
+- **Regresyon testi:** sorgularda `*`, `%20`, `%3A` ve 0000 yılı yoktur; açık alt kategoriler vardır; politika isteği kabul eder.

@@ -2,6 +2,19 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-28 — M7 Kapı C1: arXiv API'nin HTTP 500 yanıtı için sorgu düzeltmesi (m7-protocol v1.2)
+- **Gözlem (kullanıcı):** `m7-sources.ps1 search` isteğine API HTTP 500 döndü; CLI hatayı yakalamadan çıkış yaptı.
+- **İnceleme:** `q-fin.*` wildcard'ı sunucuya gitmiyordu (`ArxivQuery.Expand` onu dokuz açık alt sınıfa açar). İki şüpheli bulundu:
+  - tarih alt sınırı `000001010000` (0000 yılı);
+  - boşluğun `%20`, iki noktanın `%3A` olarak gönderilmesi.
+- **Düzeltme:**
+  - alt sınır `199101010000`;
+  - sorgu kılavuz biçiminde kodlanıyor (boşluk `+`, `:` olduğu gibi);
+  - `search` hatada istek URL'sini yazıyor ve 2 koduyla çıkıyor;
+  - `--print-url` ağsız tanı imkânı veriyor.
+- **Değişmeyenler:** U-M7-2 ve istemci tarafındaki `< C` kontrolü, FindingExtraction kuralları ve pilot bloğu.
+- **Doğrulama:** Claude Code arXiv'e istek atmadığı için düzeltme gerçek API'de denenmedi; kullanıcının C1 koşusuyla doğrulanacak.
+
 ## 2026-10-28 — M7 Kapı B: SourceGateway, Extractor ve doğrulama, Researcher tool'ları, migration 0010 (m7-protocol v1.1)
 - **Kod (çevrimdışı, API maliyeti 0; ADR-0022 uygulama notu):**
   - Yeni `SourceGateway` modülü:
