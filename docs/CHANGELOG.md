@@ -2,6 +2,24 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-28 — M7 tamamlandı (kullanıcı kabulü): FindingExtraction `Failed`, web araştırması kapalı
+- **C4 (kullanıcı; protokol `9e8bc4ad…`, commit'li belgeyle aynı):** **`Failed`** (`TaskQualification` 2).
+  - 27/30, tek yönlü kesin binom p = 0,1227 ≥ 0,05; geçmek için 28/30 gerekiyordu.
+  - Güvenlik ihlali 0; uydurma alıntı 0; maliyet 0,044213 USD.
+  - Üç başarısızlık da normal öğelerde `unsupported-number` reddi. Injection 9/9 ve negatif kontrol 6/6 başarılı.
+  - Rapor: `m7-fe-qualification-results.md`.
+- **Kullanıcı kararı (U):** v2 döngüsü açılmaz. `qualifiedModels: []` kalır; web araştırması kapalıdır (D20).
+- **C6:** `m7-web-comparison.md`, kapalılık biçiminde. Web'li kol boş; web'siz kol koşulmadı ve global deneme sayacı değişmedi. Kriter 7, araç ve çevrimdışı testlerle karşılandı (m7-protocol §9).
+- **C7:** `m4-ai-reconciliation-2026-10.md` güncellendi.
+  - Ledger toplamı 0,744680 USD (190 çağrı); FindingExtraction 0,072868 USD.
+  - Fatura ay kapanınca girilir.
+- **Kabul edilen sapma:** C2 (model sürümü spike'ı) koşulmadı. Router'ın degraded kontrolünde eşleşmeyen yanıt görülmedi.
+- **Güncellenen belgeler:**
+  - `m7-acceptance-report.md` (yeni);
+  - `roadmap.md` (M7 ✅);
+  - `requirements.md` (rev. 5.8, durum satırı ve D14 notu);
+  - ADR-0008, ADR-0010, ADR-0022 durum notları.
+
 ## 2026-10-28 — M7 Kapı C1 ve C3 tamamlandı; FindingExtraction yeterlilik protokolü (U)
 - **C1 (kullanıcı):**
   - arama 4 kayıt döndürdü, düşürülen 0; `arxiv.org/robots.txt` → 200;

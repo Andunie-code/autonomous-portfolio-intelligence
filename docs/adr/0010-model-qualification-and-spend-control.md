@@ -2,6 +2,7 @@
 
 - Durum: Kabul edildi (teknik lider kararı T7–T10, T14) · Tarih: 2026-10-13
 - Uygulama durumu: **Kapı B'de uygulandı (2026-10-18)**: harcama kontrolü, `AiKillSwitch` ve otomatik tetikler, ledger, mutabakat raporu ve harness; testing §6.3'teki testler sahte sağlayıcıyla geçti (yapı ADR-0017). Kapı C (2026-10-19): HypothesisGeneration için pilot, ön kayıtlı protokol (`c434d84`) ve yeterlilik koşusu yapıldı; sonuç **`Failed`** (`TaskQualification` 1). M4 toplam harcaması 0,146228 USD; mutabakat raporu `m4-ai-reconciliation-2026-10.md`.
+  - **M7 (2026-10-28):** harness'a tek kollu kesin binom tasarımı eklendi (ADR-0022 §5). FindingExtraction yeterliliğinin sonucu **`Failed`** (`TaskQualification` 2; 27/30, p = 0,1227, güvenlik ihlali 0); M7'nin AI harcaması 0,072868 USD.
 - İlgili: ADR-0007, `architecture.md` §3, `testing-strategy.md` §6
 
 ## Problem ve kısıtlar

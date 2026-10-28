@@ -208,8 +208,11 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Anahtar yalnızca Trading.Host'ta.
   - `PaperTrading → TestnetActive` geçişi yalnızca `Frozen` stratejiler için ve kullanıcı oturumuyla mümkün; **doğrulama gerektirmiyor** (ADR-0012). `Validated` olmayan stratejiler "deneysel" etiketi taşıyor.
 
-### M7 — Kontrollü web araştırması (M) — Kapı A ve B tamamlandı; Kapı C sürüyor (C1 ve C3 tamam; C4 yeterlilik protokolü commit'lendi, kayıt ve koşu kullanıcıda)
-- **Ön kayıt:** [`m7-protocol.md`](m7-protocol.md) v1 ve ADR-0022 (Kapı A, kullanıcı onayı 2026-10-28).
+### M7 — Kontrollü web araştırması (M) — ✅ tamamlandı (2026-10-28; kullanıcı kabulü)
+- **Ön kayıt:** [`m7-protocol.md`](m7-protocol.md) v1, v1.1, v1.2 ve ADR-0022 (Kapı A, kullanıcı onayı 2026-10-28).
+- **Durum:** Kapı A (`2ff940b`), Kapı B (`e82e4dd`, 711 test) ve Kapı C tamamlandı. Kabul raporu: [`m7-acceptance-report.md`](m7-acceptance-report.md).
+  - **Sonuç:** FindingExtraction yeterliliği **`Failed`** (`TaskQualification` 2: 27/30, p = 0,1227, ihlal 0). Kullanıcı kararıyla v2 döngüsü açılmadı; web araştırması kapalı kalır (D20).
+  - **Kabul edilen sapma:** C2 (model sürümü spike'ı) koşulmadı; model sürümü eşleşmesi router'ın degraded kontrolüyle görüldü.
 - **Kapılar (U):**
   - **A:** arXiv ve Semantic Scholar koşullarının doğrulanması (`sources.md` S-X1…S-X12), allowlist, PDF kütüphanesi, protokol ve ADR.
   - **B:** çevrimdışı kod ve testler; `verify.ps1` yeşil; API maliyeti 0.

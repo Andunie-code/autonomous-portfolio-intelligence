@@ -4,7 +4,12 @@
 - Karar türü:
   - **U:** `m7-protocol.md` U-M7-1…U-M7-6 (zaman filtresi, Semantic Scholar'ın ertelenmesi, model, bütçe, `robots.txt` ele alışı).
   - **T:** modül yapısı, guard ve önbellek, kütüphaneler, normalizer, kabul hattı, harness'ın tek kollu modu, bulgu → hipotez yolu.
-- Uygulama durumu: **Kapı B'de uygulandı (2026-10-28).** Çevrimdışı ve sahte HTTP handler ile; API maliyeti 0. Kapı C bekliyor.
+- Uygulama durumu: **Uygulandı. M7 kullanıcı kabulüyle kapandı (2026-10-28).**
+  - Kapı B çevrimdışı ve sahte HTTP handler ile yapıldı; API maliyeti 0.
+  - Kapı C:
+    - 4 kesim öncesi belge kaydedildi; provenance sorunu 0;
+    - FindingExtraction yeterliliği `Failed` (`TaskQualification` 2: 27/30, p = 0,1227, ihlal 0);
+    - web araştırması kapalı kalır (D20).
 - Uygulama notları (Kapı B; ayrıntı `m7-protocol.md` §14):
   - **Kod yerleşimi:**
     - `SourceGateway`: `SourceConfiguration` (`Config/sources.v1.json`), `SourceRequestPolicy`, `SourceGuardHandler`, `DomainRateLimiter`, `SourceHttp`, `RobotsRules`/`RobotsPolicy`, `SourceCache`, `SourceFetcher`, `ArxivQuery`/`ArxivFeed`/`ArxivClient`, `DocumentIngestor`, `Text/` (`TextNormalizer`, `PdfTextExtractor`, `HtmlTextExtractor`), `Provenance` (`SourceDocument`, `Finding`, in-memory ve Npgsql store'ları);

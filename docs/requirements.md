@@ -1,8 +1,8 @@
 # Gereksinimler
 
-Son güncelleme: 2026-10-28 (rev. 5.7; M7 Kapı A: PDF/HTML kütüphanesi, M7 kararları) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-28 (rev. 5.8; M7 tamamlandı: FindingExtraction `Failed`, web araştırması kapalı) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
 
-> Durum: M0–M5 ve M5b (Kohort 1, M9a dashboard) tamamlandı (roadmap). M6 tamamlandı (kullanıcı kabulü 2026-10-28; gerçek Testnet terfisi D30 sonrasında, `m6-acceptance-report.md` §5). M7 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
+> Durum: M0–M5 ve M5b (Kohort 1, M9a dashboard) tamamlandı (roadmap). M6 tamamlandı (kullanıcı kabulü 2026-10-28; gerçek Testnet terfisi D30 sonrasında, `m6-acceptance-report.md` §5). M7 tamamlandı (kullanıcı kabulü 2026-10-28; FindingExtraction yeterliliği `Failed`, web araştırması kapalı, `m7-acceptance-report.md`). M8 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
 
 ## Karar durumu etiketleri
 | Etiket | Anlamı |
@@ -58,7 +58,7 @@ Kârlılık varsayılmaz. Sistemin amacı, bir stratejinin avantajı olup olmad�
 | D11 | Kill switch (rev. 2026-10-14) | Pozisyonları tut, yeni emir açma; açık giriş emirleri iptal edilir. **Koruyucu stop emirleri iptal edilmez** (çıkışlar her zaman çalışır, ADR-0014). "Tümünü kapat" ayrı bir manuel eylem |
 | D12 | AI sağlayıcısı | **Geçici.** Runtime'da yetkili tek sağlayıcı Gemini (başlangıç modeli `gemini-3.5-flash-lite`). Uygulama şimdilik Anthropic API kullanmaz |
 | D13 | Maliyet ayrımı | **Geçici.** Ayrı bir Anthropic faturası yok. Claude Code aboneliğinin uygulamaya runtime API erişimi sağladığı varsayılmaz |
-| D14 | Web araştırması | İleride, kontrollü olarak (M7, ADR-0008). **M7 kararları (2026-10-28):**<br>- yalnızca kesim öncesi arXiv sürümleri;<br>- Semantic Scholar ertelendi;<br>- FindingExtraction modeli `gemini-3.5-flash-lite`; bütçe pilot 0,50 USD, yeterlilik 3,00 USD;<br>- arXiv API'si `robots.txt` yerine API koşullarına, diğer yollar `robots.txt`'ye tabi.<br>Ayrıntı: `m7-protocol.md` U-M7-1…U-M7-6, ADR-0022 |
+| D14 | Web araştırması | İleride, kontrollü olarak (M7, ADR-0008). **M7 kararları (2026-10-28):**<br>- yalnızca kesim öncesi arXiv sürümleri;<br>- Semantic Scholar ertelendi;<br>- FindingExtraction modeli `gemini-3.5-flash-lite`; bütçe pilot 0,50 USD, yeterlilik 3,00 USD;<br>- arXiv API'si `robots.txt` yerine API koşullarına, diğer yollar `robots.txt`'ye tabi.<br>Ayrıntı: `m7-protocol.md` U-M7-1…U-M7-6, ADR-0022.<br>**Sonuç (2026-10-28):** FindingExtraction `Failed` (`TaskQualification` 2); kullanıcı kararıyla v2 döngüsü açılmadı, web araştırması kapalı (D20) |
 | D15 | İlk dikey dilim | M0–M2: veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli, deterministik backtest testleri. LLM, emir, Testnet ve dashboard yok |
 | D16 | Model yeterliliği | Erişilebilir ya da fonlanmış olmak uygunluk anlamına gelmez. Karar etkileyen görev sınıfları, ön kayıtlı yeterlilik testini geçmek zorundadır |
 | D17 | Holdout izolasyonu (rev. 2026-10-14) | Holdout verisi geliştirme makinesiyle **aynı fiziksel makinede** ve aynı PostgreSQL instance'ında, ayrı bir `holdout` veritabanında bulunur. Bu **kabul edilmiş artık risktir.** İzolasyon DB rolleri ve `CONNECT` yetkileri, `pg_hba` kuralları, Docker ağları, uygulama katmanı ve T17 ile sağlanır. Geliştirme kimlik bilgileriyle okunamaz; araştırma ve tuning iş akışları final değerlendirmeden önce erişemez (ADR-0013) |
