@@ -45,6 +45,7 @@ ADR-0001'deki "iki process yalnızca PostgreSQL üzerinden haberleşir" kuralı 
 | HoldoutEvaluator | Holdout verisini import etme ve değerlendirme | Ayrı container |
 | SourceGateway (M7) | Allowlist'li web erişimi | Research.Host |
 | Portfolio, Allocation, Risk, Execution, Reconciliation, Ops/Audit | Operasyon | Trading.Host |
+| Allocator (M8) | LLM önerisinin paketlenmesi, doğrulanması ve clamp'i; gölge ve aktif mod (ADR-0023). Bağımlılıkları yalnızca Kernel ve Ai; Execution AI'dan bağımsız kalır, bağlamayı Trading.Host yapar | Trading.Host |
 
 ## 2. LLM ile deterministik kodun sınırı
 | İş | Sahibi |
@@ -134,7 +135,7 @@ Claude Code yalnızca geliştirme aracıdır. Runtime erişimi sağladığı var
 |---|---|---|---|
 | Researcher | Research | `ListIndicators`, `SearchExperiments`, `GetDatasetCatalog` (holdout penceresi listelenmez), `ValidateStrategyDefinition`, `SubmitExperiment` (bütçeye ve deneme sayısına tabi), `GetExperimentResult`; M7'de `SearchFindings`, `RequestSourceResearch` | Holdout, evaluator API'si, SQL, shell, ham web, emir, risk config |
 | Extractor (M7) | Research | Yok | Hepsi |
-| Allocator (M8) | Trading | Salt okunur portföy, sinyal, piyasa ve risk özetleri | Web, emir, risk config, araştırma verisi |
+| Allocator (M8) | Trading | Salt okunur portföy, sinyal, piyasa ve risk özetleri; tool yok. Yalnızca giriş adayları için bant içi çarpan ya da veto önerir (`m8-protocol.md` §5) | Web, emir, risk config, araştırma verisi, holdout, çıkışlar ve stop'lar |
 
 Hiçbir LLM rolü dondurma, holdout değerlendirmesi ya da doğrulama durumu üzerinde yetkiye sahip değildir. Kohort işlemlerini deterministik Registry ve evaluator yürütür (§6).
 
@@ -143,7 +144,7 @@ Hiçbir LLM rolü dondurma, holdout değerlendirmesi ya da doğrulama durumu üz
 2. Reconciliation çalışır. Tutarsızlık varsa yeni giriş açılmaz.
 3. **Koruyucu stop kontrolü (ADR-0014):** paper'da kapanan muma OHLC stop kuralı uygulanır (`Open ≤ S` ise `Open`'dan, değilse `Low ≤ S` ise `S`'den çıkış). Testnet'te stop borsada emir olarak bekler; bu adımda yalnızca dolumlar mutabakata alınır.
 4. StrategyEngine kapanış sinyallerini üretir. Giriş ve çıkış sinyalleri bir sonraki mumun açılışında uygulanır.
-5. **Varsayılan allocation politikası (T11)** hedef ağırlıkları hesaplar. M8'den sonra, nitelikli bir model varsa Allocator bu ağırlıkları bant içinde ayarlayabilir; **ama yalnızca `Validated` stratejiler için.** Her durumda sonucu deterministik Sizer kullanır.
+5. **Varsayılan allocation politikası (T11)** hedef ağırlıkları hesaplar. M8'den sonra, nitelikli bir model varsa Allocator bu ağırlıkları bant içinde (`m × w_T11`, m ∈ [0,5; 1,5] ya da veto; D34) ayarlayabilir; **ama yalnızca `Validated` stratejiler için.** Her durumda sonucu deterministik Sizer ve tavanlar kullanır. Motor bu adımı iki fazda yürütür: çıkışlar ve stop'lar önce, LLM önerisi yalnızca girişlere (ADR-0023). Gölge modda öneri yalnızca ayrı bir gölge motora uygulanır.
 6. Risk her intent için onay, kırpma ya da ret kararı verir. Yeni pozisyonların efektif stop seviyesi (strateji stop'u ve `RiskConfig` hard stop'undan girişe en yakın olanı, D25) burada belirlenir. Deneysel paritelerin (E1/E2) toplam maruziyeti `ExperimentalPairsMaxExposure` (%10) tavanına tabidir (`risk-model.md` §2). Risk motoru doğrulama durumundan ve holdout yaşam döngüsünden **bağımsızdır.**
 7. Execution önce `clientOrderId`'yi kaydeder (outbox), sonra emri gönderir. Testnet'te giriş dolumundan sonra koruyucu stop emri de aynı yoldan gönderilir. Emirler strateji ve kohort kimliğiyle etiketlenir (ADR-0015).
 8. Dolumlar işlenir, ledger ve audit güncellenir.

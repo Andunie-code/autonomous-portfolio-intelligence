@@ -1,7 +1,7 @@
 # ADR-0011: Varsayılan deterministik allocation politikası ve korelasyon yaklaşımı
 
 - Durum: Kabul edildi (teknik lider kararı T11–T12) · Tarih: 2026-10-13
-- Uygulama durumu: **Planlandı, uygulanmadı**
+- Uygulama durumu: **Uygulandı (M2, `allocation v1`: `InverseVolatilityAllocation`, 30 günlük volatilite).** Backtest, paper, Testnet ve parity aynı kodu kullanır. Bağlayıcı küme tavanı D29 ile eklendi (M5). M8'de Allocator bu ağırlıkları yalnızca bant içinde ayarlar (ADR-0023).
 
 ## Problem
 Önceki belgelerde iki onaysız varsayım vardı:

@@ -3,6 +3,7 @@
 - Durum: **Kabul edildi (Kapı A, kullanıcı onayı 2026-10-20)** · Tarih: 2026-10-19
 - Karar türü: **T** (teknik lider). Kullanıcı kararları `m5-protocol.md` §0'da.
 - Uygulama durumu: **Kapı B'de çevrimdışı uygulandı (2026-10-20); gerçek ortam Kapı C'de.**
+- **M8 notu (2026-10-29, ADR-0023):** §4'teki "Trading.Host → Ai referansı yok" kuralı, Trading.Host için daraltılarak değişir: Trading.Host Allocator, Ai ve Ai.Gemini'yi bağlayabilir; Execution'ın bağımlılıkları {Kernel, MarketData} olarak kalır. `Step` iki faza (`BeginStep`/`CompleteStep`) ayrılır; override yokken davranış ve hash'ler birebir aynıdır.
 - Uygulama notları (Kapı B):
   - `PortfolioEngine` mutable bir nesnedir: `Step(t, bars, reference, context)` durumu yerinde ilerletir ve olayları biriktirir. Bu, §1'deki `Step(state, …) → (state, events)` biçimine işlevsel olarak eşdeğerdir. Restart'ta durum, `trading.steps`'teki adım girdileriyle (sembol listesi, bağlam, `RiskConfig` sürümü) baştan yeniden üretilir ve her adımın durum hash'i karşılaştırılır.
   - `BacktestEngine.Run` tek sleeve'li bir `PortfolioReplay` döngüsüdür. M2'nin dört hash'i (`m3-parity.ps1`, gerçek `R`) ve motor değişikliğinden önce yakalanan 36 sentetik senaryo hash'i (`engine-regression.v1.txt`) birebir üretilir.

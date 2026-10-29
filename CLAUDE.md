@@ -39,6 +39,10 @@ Kullanıcıdan açık onay alınmadan yapılmaz:
   - Claude Code, arXiv makale içeriğini (`arxiv.org/abs/`, `arxiv.org/pdf/`) ve `export.arxiv.org` API yanıtlarını hiçbir yolla çekmez ve okumaz. Yalnızca belge ve koşul sayfaları (`info.arxiv.org`) okunabilir.
   - Kaynak önbelleği (`%LOCALAPPDATA%\PortfolioIntelligence\source-cache`) ve `sources.*` tablolarındaki metin alanları (`claim`, `quote`, başlıklar) incelenmez. Kaynak raporlarından yalnızca operasyonel alanlar görülür (sayılar, hash'ler, tarihler, durum kodları, ret nedenleri, maliyet).
   - `scripts/m7-*.ps1`, kaynak çekme (`fetch`, `extract`) ve FindingExtraction pilot/yeterlilik koşuları **yalnızca kullanıcı** tarafından çalıştırılır.
+- **M8 Portfolio Allocator (m8-protocol §7; ADR-0023):**
+  - `scripts/m8-*.ps1`, allocator mod geçişleri, `alloc-spike`/`alloc-register`/`alloc-report`/`alloc-qualify` koşuları ve `--allow-network` komutları **yalnızca kullanıcı** tarafından çalıştırılır.
+  - Gölge ve yeterlilik raporlarından yalnızca operasyonel alanlar görülür (karar, gün ve çağrı sayıları, geçerli öneri, clamp, veto, fallback ve güvenlik olayı sayıları, maliyet, süre `N`). Getiri farkı, güven sınırı, σ̂_d ve drawdown değerleri okunmaz, repoya yazılmaz, araştırma girdisi olmaz.
+  - `trading.allocator_*` tabloları ve `/allocator` uç noktası gerçek ortamda okunmaz ve çağrılmaz; doğrulama yalnızca sentetik test verisiyle yapılır. Gemini runtime anahtarı yalnızca `secrets/` altındadır ve okunmaz.
 - Holdout ortamına ait sır adları (`tests/Architecture.Tests/HoldoutSecretReferenceTests.cs`) evaluator projesi dışında hiçbir kaynak, config ya da script dosyasında kullanılmaz.
 
 ## Sırlar

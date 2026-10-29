@@ -227,7 +227,12 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - FindingExtraction yeterliliği ön kayıtla yapıldı ve kaydedildi; nitelik yoksa web araştırması kapalı.
   - Web'li ve web'siz karşılaştırma raporu hazır.
 
-### M8 — Portfolio Allocator (M)
+### M8 — Portfolio Allocator (M) — Kapı A onaylandı (2026-10-29)
+- **Ön kayıt:** [`m8-protocol.md`](m8-protocol.md) v1 ve ADR-0023 (Kapı A, kullanıcı onayı 2026-10-29). Kararlar: D34 (U, 2026-10-29).
+- **Kapılar (U):**
+  - **A:** protokol (bant, mod durum makinesi, gölge motor, non-inferiority karar kuralı, pilot ön kaydı), ADR-0023, Gemini fiyatının yeniden doğrulanması (S-G1, S-G2, 2026-10-29).
+  - **B:** çevrimdışı kod ve testler (sahte sağlayıcı, fault injection, kalibrasyon kolları); `verify.ps1` yeşil; API maliyeti 0.
+  - **C:** kullanıcının koşuları: migration ve anahtar (C0), sentetik spike (C1), 14 günlük gölge pilot (C2), yeterlilik protokolünün kaydı (C3), kabul (C4). Yeterlilik penceresi kapanıştan sonra arka planda sürer (kabul edilen sapma, U-M8-4).
 - **Kabul kriterleri:**
   - Limit dışı öneriler clamp ediliyor ya da reddediliyor.
   - Çıkışları engelleme girişimi etkisiz.

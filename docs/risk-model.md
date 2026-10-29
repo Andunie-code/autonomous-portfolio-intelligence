@@ -59,7 +59,7 @@ LLM'in durdurulması trading'i durdurmaz. Operasyon varsayılan deterministik po
 | Kısmi dolum | Ledger dolan miktarla güncellenir. Kalan kısım config'teki süre sonunda iptal edilir |
 | Duplicate gönderim | Kalıcı `clientOrderId` ile engellenir |
 | Restart | Önce reconciliation. İşler idempotent |
-| **LLM hatası, geçersiz çıktı, nitelikli model yok, bütçe aşımı ya da LLM acil durdurma** | **Varsayılan deterministik allocation politikası** (T11, ADR-0011): onaylı tavanlar içinde ters volatilite ağırlıklandırma. Backtest'te ve paper'da doğrulanmış olan aynı politika. Olay audit'e yazılır. Önceki onaysız "tavanların yarısı" kuralı kaldırıldı |
+| **LLM hatası, geçersiz çıktı, nitelikli model yok, bütçe aşımı ya da LLM acil durdurma** | **Varsayılan deterministik allocation politikası** (T11, ADR-0011): onaylı tavanlar içinde ters volatilite ağırlıklandırma. Backtest'te ve paper'da doğrulanmış olan aynı politika. Olay audit'e yazılır. Önceki onaysız "tavanların yarısı" kuralı kaldırıldı. M8: fallback nedenleri ve çıkışlara müdahale girişiminin güvenlik olayı sayılması `m8-protocol.md` §5.3–§5.4 |
 | Research'te LLM yok | Grid/parametrik arama ve insan onaylı hipotezler. Danışma amaçlı metinler yerine şablon kullanılır |
 | Web kaynağına erişilemiyor (M7) | Önbellek kullanılır; yoksa iş atlanır. `robots.txt` okunamazsa host yasak sayılır; arXiv'de yalnızca API özeti kullanılır. 403'ten sonra o host'a istek gönderilmez (ADR-0022) |
 | Evaluator'a erişilemiyor ya da `HoldoutEnvironmentVerified = false` | Paper ve Testnet devam eder (ADR-0012). `Validated` sonucu yazılamaz; değerlendirme ortam doğrulandıktan sonra aynı girdilerle yapılır |

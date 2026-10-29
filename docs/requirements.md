@@ -1,8 +1,8 @@
 # Gereksinimler
 
-Son güncelleme: 2026-10-28 (rev. 5.8; M7 tamamlandı: FindingExtraction `Failed`, web araştırması kapalı) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-29 (rev. 5.9; M8 başladı: D34, Kapı A onaylandı) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
 
-> Durum: M0–M5 ve M5b (Kohort 1, M9a dashboard) tamamlandı (roadmap). M6 tamamlandı (kullanıcı kabulü 2026-10-28; gerçek Testnet terfisi D30 sonrasında, `m6-acceptance-report.md` §5). M7 tamamlandı (kullanıcı kabulü 2026-10-28; FindingExtraction yeterliliği `Failed`, web araştırması kapalı, `m7-acceptance-report.md`). M8 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
+> Durum: M0–M5 ve M5b (Kohort 1, M9a dashboard) tamamlandı (roadmap). M6 tamamlandı (kullanıcı kabulü 2026-10-28; gerçek Testnet terfisi D30 sonrasında, `m6-acceptance-report.md` §5). M7 tamamlandı (kullanıcı kabulü 2026-10-28; FindingExtraction yeterliliği `Failed`, web araştırması kapalı, `m7-acceptance-report.md`). M8 başladı (Kapı A onaylandı 2026-10-29: `m8-protocol.md`, ADR-0023). M8 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
 
 ## Karar durumu etiketleri
 | Etiket | Anlamı |
@@ -65,6 +65,7 @@ Kârlılık varsayılmaz. Sistemin amacı, bir stratejinin avantajı olup olmad�
 | D18 | Sağlayıcıdan bağımsızlık | `IAiProvider`, `ModelRouter`, görev politikaları, çıktı doğrulaması, `DecisionTrace`, `EvidenceValidator` ve değerlendirme altyapısı |
 | D19 | Gelecekte Anthropic runtime kullanımı | Mimari seçenek olarak açık. **Ayrı ve açık onay** gerekir; onaylanmış bir bütçe yok |
 | D20 | Nitelikli model yoksa | Deterministik davranış, çekimser kalma ya da manuel inceleme. Kalite sessizce düşürülmez |
+| D34 | M8 Portfolio Allocator (2026-10-29) | Gölge öneriler **tüm** paper stratejileri için üretilir; aktif modda ağırlık yalnızca `Validated` stratejilere uygulanır. **Bant:** `w' = m × w_T11`, m ∈ [0,5; 1,5] ya da veto; bant dışı çarpan clamp edilir; onaylı tavanlar ardından değişmeden uygulanır. **Model:** `gemini-3.5-flash-lite`; bütçe pilot 1,00 USD, yeterlilik 3,00 USD. **Kapanış:** kabul edilen sapma; yeterlilik penceresi M8 kapanışından sonra arka planda sürer. Ayrıntı: `m8-protocol.md` U-M8-1…U-M8-5, ADR-0023 |
 
 ## 3. Teknik lider kararları (T)
 | # | Karar | Gerekçe ve ayrıntı |
@@ -135,7 +136,7 @@ Gerçek para ile işlem, futures/margin, birden fazla borsa, haber ve sentiment,
 | Aile benzerlik eşikleri (korelasyon 0,9, Jaccard 0,8) | Mühendislik başlangıç değerleri; veriyle gözden geçirilir | M3 | Teknik lider |
 | Evaluator yayın tamponu (başlangıç: 3 gün) | Arşivin yayın gecikmesine göre. M5'te holdout penceresi verisi import edilmediği için ölçülemedi; ilk gerçek import'ta ölçülür | İlk import (en geç 2027-10, Kohort 0) | Teknik lider |
 | Yeterlilik eşikleri ve örneklem büyüklükleri (görev sınıfı başına) | Ayrı bir pilot sette varyans ölçülür, ardından güç analizi yapılır. α ve minimum anlamlı etki protokolde gerekçelendirilir | Her yeterlilik protokolü öncesi | Teknik lider |
-| Allocator gölge mod süresi (≥ 4 hafta onaylı alt sınır) | Gölge modun ilk haftalarındaki karar sayısı ve varyansla güç analizi | M8 | Teknik lider |
+| Allocator gölge mod süresi (≥ 4 hafta onaylı alt sınır) | 14 günlük pilotun günlük fark varyansıyla ön kayıtlı süre kuralı: `N = max(28, ⌈(2,487 · σ̂_d / m)²⌉)` gün, en fazla 56 (`m8-protocol.md` §6.3; A-4, U 2026-10-29) | M8 Kapı C3 | Teknik lider, protokolle |
 | ~~Timeout, retry, eşzamanlılık değerleri~~ — **M4'te ölçüldü** (spike, pilot ve yeterlilik koşusu: gecikme 0,6–2,0 sn, retry ya da timeout olayı yok). Başlangıç değerleri (120 sn, en fazla 2 retry, eşzamanlılık 1) korundu (`m4-spike-results.md`) | — | — | — |
 | ~~Gemini fiyatları, rate limit'leri, kredi kapsamı~~ — **doğrulandı** (`sources.md` S-G1…S-G9, 2026-10-18/19; B1 kapandı, 2026-10-19) | — | — | — |
 | TL/USD mutabakatı | Defter, liste fiyatlarına göre USD tutar. Google faturasıyla aylık manuel mutabakat yapılır. Araç M4'te hazır (`m4-ai.ps1 reconcile`). 2026-10 ledger toplamı 0,146228 USD; fatura ay kapanınca girilir | Her ay sonu (ilki 2026-10) | Kullanıcı (fatura tutarı), teknik lider |

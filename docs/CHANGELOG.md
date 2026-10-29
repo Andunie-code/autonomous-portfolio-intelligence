@@ -2,6 +2,21 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-29 — M8 Kapı A (kullanıcı onayı): `m8-protocol.md` v1, ADR-0023, D34
+- **Kullanıcı kararları (U, 2026-10-29; D34):**
+  - gölge öneriler tüm paper stratejileri için; aktif modda ağırlık yalnızca `Validated` stratejilere;
+  - bant `m × w_T11`, m ∈ [0,5; 1,5] ya da veto; bant dışı clamp; onaylı tavanlar ardından değişmeden;
+  - model `gemini-3.5-flash-lite`; bütçe pilot 1,00 USD, yeterlilik 3,00 USD;
+  - kapanış kabul edilen sapma; yeterlilik penceresi arka planda sürer.
+- **Kullanıcı onayı (U, 2026-10-29):** protokol v1, A-1…A-7, ADR-0023 ve D34 onaylandı. Ön kayıt kanıtı bu commit'tir.
+- **Belgeler:**
+  - `m8-protocol.md` v1: girdi paketi, şema, clamp/red tablosu, fallback nedenleri, mod durum makinesi, gölge motor, non-inferiority karar kuralı, pilot ön kaydı, görünürlük kuralları. A-1…A-7 (§0.2): NI marjı yıllık −%3; drawdown toleransı 0; geçerli öneri ≥ %80; süre kuralı 28–56 gün; ≥ 10 geçerli öneri; timeout 30 sn; pilot 14 gün.
+  - ADR-0023: yeni `Allocator` modülü (Kernel + Ai); Trading.Host bağlar, Execution AI'dan bağımsız kalır; iki fazlı adım; gölge motor; sızıntı korumaları.
+- **Güncellenen belgeler:** `requirements.md` rev. 5.9 (D34, §8 gölge süresi satırı); `roadmap.md` (M8 kapıları); `architecture.md` §1, §4, §5; `testing-strategy.md` §6.2; `risk-model.md` §4; ADR-0005, ADR-0011 (uygulama durumu düzeltildi) ve ADR-0018 notları.
+- **`sources.md`:** S-G1 ve S-G2 yeniden doğrulandı (2026-10-29); fiyatlar değişmedi. SDK sürümü değişmez.
+- **T17:** `CLAUDE.md`'ye M8 kuralları; `.claude/settings.json`'a `*-File*m8-*` deny kuralları (`RepositoryRuleTests` genişletildi).
+- **Doğrulama:** `verify.ps1` yeşil: **715 test** (önceki 713; Architecture +2).
+
 ## 2026-10-28 — M7 tamamlandı (kullanıcı kabulü): FindingExtraction `Failed`, web araştırması kapalı
 - **C4 (kullanıcı; protokol `9e8bc4ad…`, commit'li belgeyle aynı):** **`Failed`** (`TaskQualification` 2).
   - 27/30, tek yönlü kesin binom p = 0,1227 ≥ 0,05; geçmek için 28/30 gerekiyordu.

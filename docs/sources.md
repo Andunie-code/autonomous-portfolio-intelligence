@@ -1,6 +1,6 @@
 # Doğrulanmış Harici Bilgiler
 
-Son güncelleme: 2026-10-28 (S-X1…S-X12, M7 Kapı A; S-G3 ve S-G5 yeniden doğrulandı)
+Son güncelleme: 2026-10-29 (M8 Kapı A: S-G1, S-G2 yeniden doğrulandı; S-X1…S-X12, M7 Kapı A)
 
 Bu belgedeki bilgiler, aksi belirtilmedikçe, belirtilen tarihte resmi kaynaktan okunmuştur. Fiyatlar, limitler ve şartlar değişebilir. Her bilgi, ilgili milestone başlamadan önce yeniden doğrulanır.
 
@@ -84,6 +84,11 @@ Yalnızca resmi belge sayfaları okundu; API çağrısı yapılmadı.
 - ~~Thinking token'larının çıktı fiyatından faturalanıp faturalanmadığı~~ — **doğrulandı** (S-G2, 2026-10-18: çıktı fiyatına dahil).
 
 **Gemini kredisi (kullanıcı beyanı, 2026-10-13):** 12.000 TL Gemini kredisi mevcut. Kredinin Gemini API ücretli katmanına uygulanıp uygulanmadığı, kapsamı ve son kullanma tarihi **doğrulanmadı** (M4 öncesinde). Kredi bir finansman kaynağıdır, harcama onayı değildir (D4).
+
+**M8 öncesi yeniden doğrulama (2026-10-29):**
+- **S-G1:** geçerli. `gemini-3.5-flash-lite` Stable; structured outputs destekleniyor; kullanımdan kalkma tarihi sayfada yok (sayfa güncellemesi 2026-10-29).
+- **S-G2:** geçerli. Standart girdi 0,30 $, çıktı 2,50 $ (thinking dahil); Batch ve Flex 0,15 $ / 1,25 $ (sayfa güncellemesi 2026-10-28). `ai.v1.json` fiyat tablosu değişmez.
+- **S-G6:** SDK sürümü değişmez (`Google.GenAI` 1.23.0 sabit; ADR-0017). Trading.Host aynı adapter'ı kullanır.
 
 **M7 öncesi yeniden doğrulama (2026-10-28):**
 - **S-G3 (grounding fiyatı):** geçerli. Gemini 3+ modellerinde, modelin çalıştırdığı her arama sorgusu faturalanır; aylık 5.000 ücretsiz sorgu tüm Gemini 3+ modelleri arasında paylaşılır; sonrası 1.000 sorgu başına 14 $ (sayfa güncellemesi 2026-10-13). https://ai.google.dev/gemini-api/docs/google-search
