@@ -60,7 +60,8 @@ public sealed record PaperRun(long Id, DateTimeOffset TradingStart, DateTimeOffs
 /// <summary>
 /// The recorded operational inputs of one step. Replaying the stored candles of <see cref="Symbols"/> with these
 /// contexts must rebuild the stored state hash (ADR-0018 §1); this is the restart and reconciliation rule. A Testnet
-/// step also records the exchange's fills (<see cref="External"/>, ADR-0021 §3); paper steps keep their JSON.
+/// step also records the exchange's fills (<see cref="External"/>, ADR-0021 §3); paper steps keep their JSON. A step of
+/// an active allocator records the overrides it applied (<see cref="Allocation"/>, ADR-0023 §4), so the replay needs no model call.
 /// </summary>
 public sealed record StepInputs(
     string? Blocked,
@@ -70,14 +71,16 @@ public sealed record StepInputs(
     IReadOnlyList<string> Symbols,
     long LastActionId,
     long RiskVersion,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ExternalExecution? External = null)
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ExternalExecution? External = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<AllocationOverride>? Allocation = null)
 {
     public StepContext ToContext() => new(
         Blocked,
         Disabled.Count == 0 ? null : Disabled.ToHashSet(),
         Manual.Count == 0 ? null : Manual.Select(m => (m.Sleeve, m.Symbol)).ToHashSet(),
         CloseAll,
-        External: External);
+        External: External,
+        Allocation: Allocation);
 
     public string Json() => JsonSerializer.Serialize(this, PaperJson.Options);
 

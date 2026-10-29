@@ -43,6 +43,10 @@ secrets:
     file: ./secrets/testnet_api_key
   testnet_api_secret:
     file: ./secrets/testnet_api_secret
+  # Gemini runtime key of the allocator (M8, ADR-0023): Trading.Host only; written by the user's scripts/m8-update.ps1
+  # -SetKey (an empty placeholder until then: every allocator decision stays T11).
+  gemini_runtime_api_key:
+    file: ./secrets/gemini_runtime_api_key
 
 services:
   postgres:
@@ -100,7 +104,7 @@ services:
       OpsApi__TokenFile: /run/secrets/ops_api_token
       # Signal radar watch list (ADR-0020 §5): the E1 subset of docs/m3-e1-subset.md; fetched and shown only, never traded.
       Radar__WatchSymbols: WIFUSDT,ORDIUSDT,GMTUSDT,BONKUSDT,BOMEUSDT
-    secrets: [trading_app, ops_api, ops_api_token, testnet_api_key, testnet_api_secret]
+    secrets: [trading_app, ops_api, ops_api_token, testnet_api_key, testnet_api_secret, gemini_runtime_api_key]
     ports:
       - "127.0.0.1:55490:8080"   # Ops API, loopback only
     networks:

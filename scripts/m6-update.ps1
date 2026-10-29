@@ -66,6 +66,8 @@ $keyFile = Ensure-EmptySecret $script:OpsSecrets 'testnet_api_key'
 $secretFile = Ensure-EmptySecret $script:OpsSecrets 'testnet_api_secret'
 Reset-SecretAcl $script:OpsSecrets 'testnet_api_key'
 Reset-SecretAcl $script:OpsSecrets 'testnet_api_secret'
+Ensure-EmptySecret $script:OpsSecrets 'gemini_runtime_api_key' | Out-Null  # M8: compose mounts it (empty: allocator stays T11)
+Reset-SecretAcl $script:OpsSecrets 'gemini_runtime_api_key'
 $testnet = ((Get-Item $keyFile).Length -gt 0) -and ((Get-Item $secretFile).Length -gt 0)
 if ($testnet) {
     Confirm-Interactive 'Start Trading.Host with live klines and Testnet execution enabled (orders to testnet.binance.vision only for TestnetActive strategies)?'

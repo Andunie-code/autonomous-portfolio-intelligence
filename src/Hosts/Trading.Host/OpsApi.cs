@@ -45,6 +45,7 @@ public sealed record OpsToken(string? Value)
 /// by a test. Requests whose Host is not a loopback name are refused (421) against DNS rebinding.
 /// M6 (ADR-0021 §7) adds two read routes (/testnet, /promotion) and two confirmed user actions: the
 /// PaperTrading → TestnetActive transition (V10) and the Testnet rebaseline after an exchange reset.
+/// M8 (ADR-0023) adds the allocator's read route (/allocator) and its confirmed mode transition (/allocator/mode).
 /// </summary>
 public static class OpsApi
 {
@@ -72,6 +73,7 @@ public static class OpsApi
         "GET /dashboard/app.css",
         "GET /testnet",
         "GET /promotion",
+        "GET /allocator",
         "POST /kill-switch",
         "POST /strategies/{name}/disable",
         "POST /positions/close",
@@ -79,6 +81,7 @@ public static class OpsApi
         "POST /risk-config",
         "POST /strategies/{name}/testnet-activate",
         "POST /testnet/rebaseline",
+        "POST /allocator/mode",
     ];
 
     /// <summary>Applied to every response (ADR-0020 §3); the dashboard has no inline script or style.</summary>
@@ -94,6 +97,8 @@ public static class OpsApi
     public sealed record RiskConfigRequest(RiskConfigDocument Config, string Reason, bool Confirm);
 
     public sealed record ConfirmedRequest(string Reason, bool Confirm);
+
+    public sealed record AllocatorModeRequest(string Mode, string? ProtocolHash, long? QualificationId, string Reason, bool Confirm);
 
     public static void Map(WebApplication app)
     {
@@ -155,6 +160,9 @@ public static class OpsApi
         Get(app, "/testnet", (s, _, ct) => s.GetRequiredService<DashboardQueries>().TestnetAsync(s.GetRequiredService<TestnetRuntime>().Executor is not null, ct));
         Get(app, "/promotion", (s, _, ct) => s.GetRequiredService<DashboardQueries>().PromotionAsync(s.GetRequiredService<TimeProvider>().GetUtcNow(), ct));
 
+        // M8 (m8-protocol §4): the allocator's mode, decisions and shadow values.
+        Get(app, "/allocator", (s, request, ct) => s.GetRequiredService<DashboardQueries>().AllocatorAsync(Limit(request), ct));
+
         // The dashboard's static files: no data and no token (the page asks for the token and sends it as a header).
         Asset(app, "/dashboard", "index.html", "text/html; charset=utf-8");
         Asset(app, "/dashboard/app.js", "app.js", "text/javascript; charset=utf-8");
@@ -180,6 +188,7 @@ public static class OpsApi
         Post<ConfirmedRequest>(app, "/strategies/{name}/testnet-activate", (ops, r, request, ct) =>
             ops.ActivateTestnetAsync((string)request.RouteValues["name"]!, r.Reason, r.Confirm, ct));
         Post<ConfirmedRequest>(app, "/testnet/rebaseline", (ops, r, _, ct) => ops.RebaselineTestnetAsync(r.Reason, r.Confirm, ct));
+        Post<AllocatorModeRequest>(app, "/allocator/mode", (ops, r, _, ct) => ops.SetAllocatorModeAsync(r.Mode, r.ProtocolHash, r.QualificationId, r.Reason, r.Confirm, ct));
     }
 
     private static System.Text.Json.Nodes.JsonObject JsonNode(string json) => System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();

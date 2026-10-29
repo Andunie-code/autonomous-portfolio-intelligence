@@ -2,6 +2,21 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-29 — M8 Kapı B: Allocator modülü, iki fazlı adım, gölge motor, mod durum makinesi, migration 0011 (m8-protocol v1.1)
+- **Kod (çevrimdışı, API maliyeti 0; ayrıntı `m8-protocol.md` §11, ADR-0023 uygulama notu):**
+  - Kernel: `PortfolioEngine.BeginStep`/`CompleteStep` (override yokken davranış ve hash'ler birebir), `StepContext.Allocation`, `allocator-band v1`, L2 olayları `AllocatorAdjusted` ve `AllocatorIgnored`; port `IAllocationAdvisor` ve DTO'lar.
+  - Yeni `Allocator` modülü (Kernel + Ai): opak referanslı girdi paketi, `allocation-prompt v1` ve `allocation-proposal v1`, çıktı doğrulayıcısı (açık pozisyona ya da bekleyen çıkışa referans = `exit-interference` güvenlik olayı), deterministik clamp, `AllocatorGate`, `AllocationAdvisor` (gölge: yeterlilik modu ve protokol bütçesi; aktif: production modu), non-inferiority kuralı ve süre kuralı, protokol belgesi ayrıştırıcısı, gölge değerlendirmesi.
+  - Execution: gölge motor (gerçek adımdan sonra; restart'ta saklanan override'larla LLM'siz yeniden kurulur ve durum hash'i doğrulanır), aktif mod (yalnızca `Validated` sleeve'ler; override `StepInputs`'a yazılır), allocator store'u, mod geçişi ve dashboard sorgusu. Allocator yolundaki her hata T11'e düşer; döngü durmaz.
+  - Trading.Host: allocator bağlaması (anahtar dosyası yoksa her karar T11), `GET /allocator`, `POST /allocator/mode`, "Allocator" sekmesi.
+  - Ai: `JobKind.Allocation` (iş payı 0,10), `QualificationDesign.NonInferiority`; AllocationProposal zaman aşımı 30 sn (A-6).
+  - Migration 0011: `trading.allocator_mode_events` (kural trigger'ı), `trading.allocator_proposals`, `trading.allocator_shadow_steps` (append-only); iki `SECURITY DEFINER` kontrol fonksiyonu; `design`, `job_kind` ve `ops_actions` kısıtları; grant'lar (`research_app`'e hiçbir şey).
+  - Araçlar ve script'ler: AiCli `alloc-register|alloc-spike|alloc-report|alloc-qualify`; `scripts/m8-update.ps1`, `m8-allocator-mode.ps1`, `m8-allocator.ps1` (yalnızca kullanıcı; T17 deny kuralı); Compose secret'ı `gemini_runtime_api_key` (boş yer tutucu), `m5-paper-start.ps1` ve `m6-update.ps1` yer tutucuyu oluşturur.
+- **Mimari kural (ADR-0023):** Execution {Kernel, MarketData} kalır; yalnızca Trading.Host Allocator, Ai ve Ai.Gemini'ye ulaşır; Allocator {Kernel, Ai} ve kaynak taraması temiz (yerleştirilmiş ihlalle öz-test).
+- **Testler:** Kernel override değişmezleri I-1…I-4 (rastgele override'larla property testleri), allocator birim testleri (her fallback yolu, kalibrasyon kolları: oracle, attacker, fabricator), protokol belgesinin koda bağlanması, non-inferiority kuralı, DB ve uygulama mod kuralları, roller, Ops API, gölge modda gerçek adımların birebir aynı kalması ve LLM'siz yeniden kurulum, aktif modda yalnızca `Validated` run'ın ayarlanması ve replay.
+- **Regresyon kilitleri (Claude Code, `R`):** M2'nin dört hash'i birebir (`parity-m3`); Kohort 0 ve Kohort 1 L1/L2 hash'leri ve Kohort 1 rapor özeti M5/M5b ile aynı (kuru `parity-m5`).
+- **`verify.ps1` yeşil: 770 test** (önceki 715; Ai 171, Architecture 122, Backtest 136, HoldoutEvaluator 46, Infrastructure 27, MarketData 97, SourceGateway 69, Trading 102).
+- **Onay bekleyen (U):** `m8-protocol.md` v1.1 ve `m8-alloc-pilot-protocol.md` (14 gün, 1,00 USD, seed 83000).
+
 ## 2026-10-29 — M8 Kapı A (kullanıcı onayı): `m8-protocol.md` v1, ADR-0023, D34
 - **Kullanıcı kararları (U, 2026-10-29; D34):**
   - gölge öneriler tüm paper stratejileri için; aktif modda ağırlık yalnızca `Validated` stratejilere;

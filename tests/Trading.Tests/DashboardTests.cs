@@ -20,7 +20,7 @@ namespace PortfolioIntelligence.Trading.Tests;
 public class DashboardTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
 {
     private const string Token = "dashboard-test-token-456";
-    private static readonly string[] DataRoutes = ["/overview", "/sleeves", "/fills", "/decisions", "/provenance/1", "/radar", "/system", "/ai/costs", "/ai/traces", "/testnet", "/promotion"];
+    private static readonly string[] DataRoutes = ["/overview", "/sleeves", "/fills", "/decisions", "/provenance/1", "/radar", "/system", "/ai/costs", "/ai/traces", "/testnet", "/promotion", "/allocator"];
 
     private static async Task<(WebApplication App, HttpClient Http)> StartAsync(OpsDatabase.OpsDb db)
     {

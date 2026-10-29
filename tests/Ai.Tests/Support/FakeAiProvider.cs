@@ -79,10 +79,10 @@ public static class TestConfig
     public const string Model = "test-model-a";
     public const string OtherModel = "test-model-b";
 
-    public static AiConfiguration Configuration(decimal monthlyCap = 10m, decimal callCap = 0.10m, string? qualifiedModels = null, string? findingQualifiedModels = null) => AiConfiguration.Parse($$"""
+    public static AiConfiguration Configuration(decimal monthlyCap = 10m, decimal callCap = 0.10m, string? qualifiedModels = null, string? findingQualifiedModels = null, string? allocationQualifiedModels = null) => AiConfiguration.Parse($$"""
         {
           "version": "ai-config test",
-          "spend": { "monthlyCapUsd": {{monthlyCap}}, "callCapUsd": {{callCap}}, "jobShares": { "Qualification": 0.30, "ResearchCycle": 0.05, "Spike": 0.05 },
+          "spend": { "monthlyCapUsd": {{monthlyCap}}, "callCapUsd": {{callCap}}, "jobShares": { "Qualification": 0.30, "ResearchCycle": 0.05, "Spike": 0.05, "Allocation": 0.10 },
                      "velocityWindowMinutes": 60, "velocityShare": 0.20, "costDeviationFactor": 2, "costDeviationConsecutive": 3 },
           "resilience": { "concurrency": 1, "maxRetries": 2, "backoffBaseSeconds": 1, "maxRetryAfterSeconds": 60, "circuitBreakerFailures": 5,
                           "killSwitchPollSeconds": 2, "maxToolRounds": 3 },
@@ -94,6 +94,8 @@ public static class TestConfig
                                       "qualifiedModels": [ {{qualifiedModels ?? ""}} ] },
             "FindingExtraction": { "kind": "DecisionAffecting", "onUnavailable": "Skip", "maxOutputTokens": 2000, "timeoutSeconds": 120,
                                    "qualifiedModels": [ {{findingQualifiedModels ?? ""}} ] },
+            "AllocationProposal": { "kind": "DecisionAffecting", "onUnavailable": "DeterministicFallback", "maxOutputTokens": 2000, "timeoutSeconds": 30,
+                                    "qualifiedModels": [ {{allocationQualifiedModels ?? ""}} ] },
             "Summary": { "kind": "Advisory", "onUnavailable": "Abstain", "maxOutputTokens": 2000, "timeoutSeconds": 120,
                          "model": { "provider": "gemini", "model": "{{Model}}", "promptVersion": "summary test", "acceptedModelVersions": [ "{{Model}}" ] } }
           }

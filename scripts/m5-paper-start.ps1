@@ -13,6 +13,7 @@ Set-Location $script:Root
 # M6: the compose file names the Testnet key secrets; empty placeholders keep Testnet off (scripts/m6-testnet-key.ps1).
 Ensure-EmptySecret $script:OpsSecrets 'testnet_api_key' | Out-Null
 Ensure-EmptySecret $script:OpsSecrets 'testnet_api_secret' | Out-Null
+Ensure-EmptySecret $script:OpsSecrets 'gemini_runtime_api_key' | Out-Null
 
 if ($Stop) {
     $env:PI_TRADING_LIVE_DATA = 'disabled'

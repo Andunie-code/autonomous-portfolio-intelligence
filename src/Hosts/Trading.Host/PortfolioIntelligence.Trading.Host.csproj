@@ -8,6 +8,10 @@
     <ProjectReference Include="..\..\Kernel\PortfolioIntelligence.Kernel.csproj" />
     <ProjectReference Include="..\..\Infrastructure\PortfolioIntelligence.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Execution\PortfolioIntelligence.Execution.csproj" />
+    <!-- M8 (ADR-0023): the host alone wires the allocator; Execution stays free of AI code. -->
+    <ProjectReference Include="..\..\Modules\Allocator\PortfolioIntelligence.Allocator.csproj" />
+    <ProjectReference Include="..\..\Modules\Ai\PortfolioIntelligence.Ai.csproj" />
+    <ProjectReference Include="..\..\Modules\Ai.Gemini\PortfolioIntelligence.Ai.Gemini.csproj" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Dashboard\*" LogicalName="PortfolioIntelligence.Trading.Host.Dashboard.%(Filename)%(Extension)" />

@@ -58,7 +58,10 @@ public class TestnetIsolationTests
         var trading = Block(compose, "trading-host");
 
         Assert.DoesNotContain(research, l => l.Contains("testnet", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains("secrets: [trading_app, ops_api, ops_api_token, testnet_api_key, testnet_api_secret]", trading);
+        Assert.Contains("secrets: [trading_app, ops_api, ops_api_token, testnet_api_key, testnet_api_secret, gemini_runtime_api_key]", trading);
+        // M8 (ADR-0023): the allocator's Gemini runtime key is mounted only into Trading.Host.
+        Assert.DoesNotContain(research, l => l.Contains("gemini", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(Block(compose, "postgres"), l => l.Contains("gemini", StringComparison.OrdinalIgnoreCase));
         Assert.Contains("Trading__Testnet: ${PI_TRADING_TESTNET:-disabled}", trading);
         Assert.DoesNotContain(Block(compose, "postgres"), l => l.Contains("testnet", StringComparison.OrdinalIgnoreCase));
     }

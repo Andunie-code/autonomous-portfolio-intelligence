@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Portfolio Allocator (M8, ADR-0023): input packet, prompt and schema, output validation and clamp, the advisor
+       behind the Kernel's IAllocationAdvisor port, and the non-inferiority evaluation. Depends only on Kernel and Ai;
+       no database, network, process or evaluator code here (architecture test). Trading.Host wires it; Execution never sees it. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Kernel\PortfolioIntelligence.Kernel.csproj" />
+    <ProjectReference Include="..\Ai\PortfolioIntelligence.Ai.csproj" />
+  </ItemGroup>
+</Project>

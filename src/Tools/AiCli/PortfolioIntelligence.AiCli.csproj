@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\Modules\Ai\PortfolioIntelligence.Ai.csproj" />
     <ProjectReference Include="..\..\Modules\Ai.Gemini\PortfolioIntelligence.Ai.Gemini.csproj" />
     <ProjectReference Include="..\..\Modules\Research\PortfolioIntelligence.Research.csproj" />
+    <ProjectReference Include="..\..\Modules\Allocator\PortfolioIntelligence.Allocator.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" />

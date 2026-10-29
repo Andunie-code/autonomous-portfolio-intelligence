@@ -46,6 +46,9 @@ public enum JobKind
     Qualification,
     ResearchCycle,
     Spike,
+
+    /// <summary>Production calls of a qualified allocator in active mode (M8, ADR-0023); one job per calendar month.</summary>
+    Allocation,
 }
 
 /// <summary>A job (qualification run, research cycle, spike) groups calls under one per-job cap.</summary>

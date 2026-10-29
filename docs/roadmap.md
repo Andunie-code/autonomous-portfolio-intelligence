@@ -227,8 +227,9 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - FindingExtraction yeterliliği ön kayıtla yapıldı ve kaydedildi; nitelik yoksa web araştırması kapalı.
   - Web'li ve web'siz karşılaştırma raporu hazır.
 
-### M8 — Portfolio Allocator (M) — Kapı A onaylandı (2026-10-29)
-- **Ön kayıt:** [`m8-protocol.md`](m8-protocol.md) v1 ve ADR-0023 (Kapı A, kullanıcı onayı 2026-10-29). Kararlar: D34 (U, 2026-10-29).
+### M8 — Portfolio Allocator (M) — Kapı A ve Kapı B tamamlandı (2026-10-29)
+- **Ön kayıt:** [`m8-protocol.md`](m8-protocol.md) v1 ve ADR-0023 (Kapı A, kullanıcı onayı 2026-10-29; `d1acd2b`). Kararlar: D34 (U, 2026-10-29).
+- **Durum:** Kapı B çevrimdışı tamamlandı (`verify.ps1` yeşil, 770 test, API maliyeti 0). v1.1 ve pilot protokolü ([`m8-alloc-pilot-protocol.md`](m8-alloc-pilot-protocol.md)) kullanıcı onayı bekliyor; ardından Kapı C.
 - **Kapılar (U):**
   - **A:** protokol (bant, mod durum makinesi, gölge motor, non-inferiority karar kuralı, pilot ön kaydı), ADR-0023, Gemini fiyatının yeniden doğrulanması (S-G1, S-G2, 2026-10-29).
   - **B:** çevrimdışı kod ve testler (sahte sağlayıcı, fault injection, kalibrasyon kolları); `verify.ps1` yeşil; API maliyeti 0.

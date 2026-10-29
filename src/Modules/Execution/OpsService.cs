@@ -302,6 +302,80 @@ public sealed class OpsService(string connectionString, TimeProvider? time = nul
         await transaction.CommitAsync(ct);
     }
 
+    /// <summary>
+    /// Allocator mode transition (m8-protocol §4.2). Disabled is always allowed. Shadow needs confirm = true (400) and a
+    /// registered non-inferiority AllocationProposal protocol (409). Active comes only from Shadow and needs confirm and a
+    /// Passed qualification of such a protocol with a window of at least 28 days (409). The database trigger checks the
+    /// role, the current mode and the evidence again.
+    /// </summary>
+    public async Task<AllocatorState> SetAllocatorModeAsync(string mode, string? protocolHash, long? qualificationId, string reason, bool confirm, CancellationToken ct)
+    {
+        Require(reason);
+        if (!Enum.TryParse<AllocatorMode>(mode, ignoreCase: false, out var target) || !Enum.IsDefined(target))
+        {
+            throw new OpsRequestException("mode must be Disabled, Shadow or Active");
+        }
+
+        if (target != AllocatorMode.Disabled && !confirm)
+        {
+            throw new OpsRequestException($"allocator {target} needs confirm = true");
+        }
+
+        await using var connection = await OpenAsync(ct);
+        AllocatorMode current;
+        await using (var read = new NpgsqlCommand("SELECT to_mode FROM trading.allocator_mode_events ORDER BY id DESC LIMIT 1", connection))
+        {
+            current = await read.ExecuteScalarAsync(ct) is string text ? Enum.Parse<AllocatorMode>(text) : AllocatorMode.Disabled;
+        }
+
+        if (target == AllocatorMode.Shadow)
+        {
+            await using var check = new NpgsqlCommand("SELECT coalesce(trading.allocator_protocol_registered($1), false)", connection);
+            check.Parameters.AddWithValue(NpgsqlTypes.NpgsqlDbType.Text, (object?)protocolHash ?? DBNull.Value);
+            if (!(bool)(await check.ExecuteScalarAsync(ct))!)
+            {
+                throw new OpsConflictException("Shadow needs a registered AllocationProposal protocol (alloc-register)");
+            }
+        }
+
+        if (target == AllocatorMode.Active)
+        {
+            if (current != AllocatorMode.Shadow)
+            {
+                throw new OpsConflictException($"Active comes only from Shadow (current: {current})");
+            }
+
+            await using var check = new NpgsqlCommand("SELECT coalesce(trading.allocator_qualification_passed($1), false)", connection);
+            check.Parameters.AddWithValue(NpgsqlTypes.NpgsqlDbType.Bigint, (object?)qualificationId ?? DBNull.Value);
+            if (!(bool)(await check.ExecuteScalarAsync(ct))!)
+            {
+                throw new OpsConflictException("Active needs a Passed AllocationProposal qualification with a window of at least 28 days");
+            }
+        }
+
+        var evidence = JsonSerializer.Serialize(new { confirm, reason, protocolHash, qualificationId }, PaperJson.Options);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+        long id;
+        await using (var insert = new NpgsqlCommand("""
+            INSERT INTO trading.allocator_mode_events (from_mode, to_mode, protocol_hash, qualification_id, actor, reason, evidence)
+            VALUES ($1, $2, $3, $4, 'user', $5, $6::jsonb) RETURNING id
+            """, connection, transaction))
+        {
+            insert.Parameters.AddWithValue(current.ToString());
+            insert.Parameters.AddWithValue(target.ToString());
+            insert.Parameters.AddWithValue(target == AllocatorMode.Disabled ? DBNull.Value : (object?)protocolHash ?? DBNull.Value);
+            insert.Parameters.AddWithValue(target == AllocatorMode.Active ? (object?)qualificationId ?? DBNull.Value : DBNull.Value);
+            insert.Parameters.AddWithValue(reason);
+            insert.Parameters.AddWithValue(evidence);
+            id = (long)(await insert.ExecuteScalarAsync(ct))!;
+        }
+
+        await Execute(connection, transaction, "INSERT INTO trading.ops_actions (actor, action, reason) VALUES ('user', 'allocator-mode', $1)", ct, $"{current} -> {target}: {reason}");
+        await Audit(connection, transaction, "allocator_mode_changed", new { from = current.ToString(), to = target.ToString(), protocolHash, qualificationId, reason }, ct);
+        await transaction.CommitAsync(ct);
+        return new AllocatorState(target, target == AllocatorMode.Disabled ? null : protocolHash, id);
+    }
+
     private static void Require(string reason)
     {
         if (string.IsNullOrWhiteSpace(reason))

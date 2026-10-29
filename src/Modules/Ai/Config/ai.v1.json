@@ -3,7 +3,7 @@
   "spend": {
     "monthlyCapUsd": 10,
     "callCapUsd": 0.10,
-    "jobShares": { "Qualification": 0.30, "ResearchCycle": 0.05, "Spike": 0.05 },
+    "jobShares": { "Qualification": 0.30, "ResearchCycle": 0.05, "Spike": 0.05, "Allocation": 0.10 },
     "velocityWindowMinutes": 60,
     "velocityShare": 0.20,
     "costDeviationFactor": 2,
@@ -44,7 +44,7 @@
       "kind": "DecisionAffecting",
       "onUnavailable": "DeterministicFallback",
       "maxOutputTokens": 2048,
-      "timeoutSeconds": 120,
+      "timeoutSeconds": 30,
       "qualifiedModels": []
     },
     "ResultInterpretation": {

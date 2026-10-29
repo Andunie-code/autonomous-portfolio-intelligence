@@ -9,6 +9,9 @@
     scripts/m4-ai.ps1 reconcile --month 2026-10 --invoice-try 123.45 --usd-try 41.20
     scripts/m4-ai.ps1 fe-items | fe-calibrate                     (M7, no network, no database)
     scripts/m4-ai.ps1 fe-pilot --allow-network --design docs/m7-protocol.md   (M7 Gate C3, user only)
+    scripts/m4-ai.ps1 alloc-register --protocol docs/m8-alloc-pilot-protocol.md   (M8 C2: registers the shadow protocol, no network)
+    scripts/m4-ai.ps1 alloc-spike --allow-network                             (M8 Gate C1, user only)
+  The allocator's report and qualification read the trading schema: scripts/m8-allocator.ps1 (user only).
   Gate C only: the spike makes real Gemini calls and needs the network flag, an interactive confirmation and the
   user's own API key (Gemini__ApiKey in the session or dotnet user-secrets of the tool). Claude Code cannot start it.
   If the execution policy blocks scripts: powershell -ExecutionPolicy Bypass -File scripts/m4-ai.ps1 <args>

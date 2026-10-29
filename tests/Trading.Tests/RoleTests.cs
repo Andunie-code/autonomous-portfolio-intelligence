@@ -154,7 +154,7 @@ public class RoleTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
             SELECT count(*) FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid JOIN pg_namespace n ON n.oid = c.relnamespace
             WHERE t.tgname = 'append_only' AND n.nspname IN ('market', 'research', 'trading')
             """);
-        Assert.Equal(22L, appendOnly); // M5: 16 tables; M6 (migration 0009): run closures, the outbox's orders, events and fills, rule snapshots, baselines
+        Assert.Equal(25L, appendOnly); // M5: 16 tables; M6 (migration 0009): run closures, the outbox's orders, events and fills, rule snapshots, baselines; M8 (0011): allocator mode events, proposals, shadow steps
     }
 
     [Fact]

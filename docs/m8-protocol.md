@@ -1,7 +1,8 @@
-# M8 Protokolü — Portfolio Allocator, gölge mod ve AllocationProposal yeterliliği (v1)
+# M8 Protokolü — Portfolio Allocator, gölge mod ve AllocationProposal yeterliliği (v1.1)
 
 - Durum: **Ön kayıt — kullanıcı tarafından onaylandı (Kapı A, 2026-10-29, U; §0.2 A-1…A-7 dahil).** Ön kayıt kanıtı, bu belgenin onaylandığı git commit'idir. O commit'ten önce M8 kodu yazılmaz.
 - **Pilot ve yeterlilik bloklarının tamamlanması:** prompt hash'i ve şema hash'i yalnızca kodla üretilebilir. Bu değerler Kapı B'nin sonunda §8'deki bloklara **v1.1** olarak eklenir. v1.1, §5–§7'deki kuralları değiştiremez; yalnızca hash ekler.
+- **v1.1 (2026-10-29, Kapı B sonu; kullanıcı onayı bekleniyor):** §8'e prompt ve şema hash'leri eklendi; pilot protokolü ayrı belge oldu ([`m8-alloc-pilot-protocol.md`](m8-alloc-pilot-protocol.md)); Kapı B uygulama notları §11'de. §5–§7'deki kurallar değişmedi. Pilot, onaylanan belge commit'lendikten sonra kaydedilir.
 - Karar türleri: **U** = kullanıcı, **T** = teknik lider, **P** = öneri (kullanıcı onayı gerekir).
 - İlgili: ADR-0005, ADR-0010, ADR-0011, ADR-0012, ADR-0014, ADR-0015, ADR-0017, ADR-0018, ADR-0020, ADR-0021, **ADR-0023**; `architecture.md` §2–§5; `testing-strategy.md` §6.1–§6.2; `risk-model.md` §1–§4; `sources.md` S-G1, S-G2; D1, D4, D10, D12, D16, D20, D29, **D34**; T7–T11, T17, T24.
 - **Değiştirilmeyenler:**
@@ -175,15 +176,15 @@ Kernel aynı bandı ve tavanları ikinci kez uygular (§3.2).
 - Dashboard `/allocator` uç noktası gerçek ortamda Claude Code tarafından açılmaz (ADR-0020 §6 ile aynı).
 - `scripts/m8-*.ps1` ve `--allow-network` komutları yalnızca kullanıcı tarafından çalıştırılır.
 
-## 8. Ön kayıt blokları (v1.1'de hash'lerle tamamlanır)
+## 8. Ön kayıt blokları (v1.1: hash'lerle tamamlandı)
 ```json allocator-pilot
 {
   "task": "AllocationProposal",
   "provider": "gemini",
   "model": "gemini-3.5-flash-lite",
   "promptVersion": "allocation-prompt v1",
-  "promptHash": "(v1.1)",
-  "schemaHash": "(v1.1)",
+  "promptHash": "a35e1db64bc413ba163770b396a54fd39b1fea66b4bdb169b12e2163f8d1614f",
+  "schemaHash": "3dba851b0cfb0f4f1a18f5ad7d8a99fb7e4e11c8ee8322922660e2aa44856280",
   "band": "allocator-band v1",
   "days": 14,
   "budgetUsd": 1.00,
@@ -191,7 +192,11 @@ Kernel aynı bandı ve tavanları ikinci kez uygular (§3.2).
 }
 ```
 
-Yeterlilik protokolü (`docs/m8-alloc-qualification-protocol.md`) C3'te, §6.2–§6.3'teki kural ve pilottan hesaplanan `N` ile yazılır; kural değiştirilemez.
+- Prompt hash'i (`allocation-prompt v1`, sistem talimatının SHA-256'sı): `a35e1db64bc413ba163770b396a54fd39b1fea66b4bdb169b12e2163f8d1614f`.
+- Şema hash'i (`allocation-proposal v1`): `3dba851b0cfb0f4f1a18f5ad7d8a99fb7e4e11c8ee8322922660e2aa44856280`.
+- Pilotun kaydedilecek belgesi [`m8-alloc-pilot-protocol.md`](m8-alloc-pilot-protocol.md)'dir (`json allocation-protocol` bloğu; rol `pilot`, 14 gün, 1,00 USD, seed 83000). Bir test, bu bloğun ve yukarıdaki hash'lerin koddaki prompt, şema ve bantla aynı olduğunu doğrular (`AllocatorProtocolTests`).
+
+Yeterlilik protokolü (`docs/m8-alloc-qualification-protocol.md`) C3'te, §6.2–§6.3'teki kural ve pilottan hesaplanan `N` ile yazılır; kural değiştirilemez. Aynı `json allocation-protocol` biçimindedir (rol `qualification`, `days` = `N`, `N > 56` ise `days` 56 ve `"underpowered": true`).
 
 ## 9. Kapı C (kullanıcının koşuları)
 | # | Adım | Komut | Tahmini maliyet |
@@ -213,3 +218,27 @@ Yeterlilik protokolü (`docs/m8-alloc-qualification-protocol.md`) C3'te, §6.2�
 | AllocationProposal protokolü ve sonucu kaydedildi | Pilot ve yeterlilik protokolleri; `TaskQualification` (pencere sonunda) |
 | Aktif moda geçiş yalnızca nitelik varsa ve kullanıcı onayıyla | Mod geçiş testleri (uygulama ve DB trigger'ı) |
 | Allocator ağırlığı yalnızca `Validated` stratejilere | `not-validated` testleri; aktif replay ve `ParityReplay` birebir |
+
+## 11. Kapı B uygulama notları (v1.1)
+- **Kod yerleşimi (ADR-0023):**
+  - Kernel: `Backtest/Allocation.cs` (`AllocationOverride`, `EntryCandidate`, `AllocatorBand`, `AllocatorMode`, `AllocationRequest`, `AllocationDecision`, `AllocationOutcome`, port `IAllocationAdvisor` ve `DeterministicAllocationAdvisor`); `PortfolioEngine.BeginStep`/`CompleteStep`; L2 olayları `AllocatorAdjusted`, `AllocatorIgnored`.
+  - `src/Modules/Allocator`: `AllocationPrompt`, `AllocationPacket`, `AllocationOutputValidator`, `AllocationProposalReader`, `AllocatorGate`, `AllocationAdvisor`, `NonInferiority`, `AllocatorProtocol`, `ShadowEvaluation`.
+  - Execution: `AllocatorStore` (Npgsql ve bellek içi), `PaperTrader` gölge motoru ve aktif mod, `StepInputs.Allocation`, `OpsService.SetAllocatorModeAsync`, `DashboardQueries.AllocatorAsync`.
+  - Trading.Host: `TradingHost.CreateAllocator`, `GET /allocator`, `POST /allocator/mode`, "Allocator" sekmesi.
+  - Ai: `JobKind.Allocation` (iş payı 0,10), `QualificationDesign.NonInferiority` (harness bu tasarımı çalıştırmaz).
+  - AiCli: `alloc-register`, `alloc-spike`, `alloc-report`, `alloc-qualify`; script'ler `m8-update.ps1`, `m8-allocator-mode.ps1`, `m8-allocator.ps1` (yalnızca kullanıcı).
+  - Migration 0011.
+- **Uygulama ayrıntıları ve sapmalar (T):**
+  - **Sınıflandırma sırası:** bir öneri birden çok kurala takılırsa sonuç sırasıyla güvenlik, şema, kanıttır (§5.3 tablosundaki kategoriler değişmedi).
+  - **Mod kuralları ve `ops_api`:** trigger ve `OpsService`, yeterlilik kayıtlarını iki `SECURITY DEFINER` fonksiyonla (`trading.allocator_protocol_registered`, `trading.allocator_qualification_passed`) evet/hayır olarak okur. `ops_api`'nin `ai.qualification_protocols` ve `ai.task_qualifications` üzerinde tablo yetkisi yoktur (M5b'deki dashboard kuralı korunur).
+  - **`Active → Shadow`:** gölge çalışmak için de kayıtlı bir protokol gerekir; `* → Disabled` her zaman serbesttir.
+  - **Rapor ve yeterlilik kimliği:** `trading_app` ve `ops_api` yalnızca Trading.Host container'ından bağlanabildiği için (`pg_hba`), `alloc-report` ve `alloc-qualify` `m5-migrate.ps1` gibi `ops_owner` ile loopback'ten çalışır. Yalnızca `trading.allocator_*` ve ledger'ı okur, `ai.task_qualifications`'a tek satır ekler.
+  - **`TaskQualification`:** AllocationProposal satırında `p_value` `NaN`'dir; `trials_llm` çağrı, `successes_llm` geçerli öneri, `trials_baseline` gün sayısıdır; `notes` yalnızca karar nedenidir.
+  - **Zaman aşımı:** A-6 (30 sn), `ai.v1.json`'daki AllocationProposal politikasına yazıldı (yalnızca bu görev).
+  - **Spike (C1):** üretim yolunun aynısıyla (paket, router yeterlilik modu, doğrulayıcı, clamp) üç sentetik karar; bellek içi spike protokolü, iş bütçesi 0,05 USD; yalnızca sentetik semboller.
+  - **Güvenlik olayı kaydı:** `exit-interference`, `trading.allocator_proposals.safety` alanına ve `audit.events`'e (`allocator_safety_event`) yazılır. `ai.decision_traces`'te yalnızca indekslerle görünür (`exit-interference: entry i`); referans ya da sembol yazılmaz.
+  - **Pencere:** gölge adımları ve kararlar protokol hash'iyle etiketlenir; pencere, o hash'i taşıyan satırlardır. Günlük işaret, 20:00 açılışlı mumdan sonraki değerdir (UTC gün sonu).
+- **Regresyon kilitleri (Claude Code, `R`, 2026-10-29):**
+  - M2'nin dört sonuç hash'i (`m5-research.ps1 parity-m3`): kodlanmış ve DSL baseline'lar birebir;
+  - 36 engine regresyon hash'i (`EngineRegressionTests`) değişmedi;
+  - kuru `parity-m5`: Kohort 0 L1 `f870c0a658b1`, L2 `b078ebaa6fc4`; Kohort 1 L1 `8dccb8f86868`, L2 `3bcc41534577`; rapor özeti M5b'dekiyle aynı (`2f234be0…`).

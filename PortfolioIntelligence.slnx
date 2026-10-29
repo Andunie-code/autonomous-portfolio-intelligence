@@ -26,6 +26,9 @@
   <Folder Name="/src/Modules/Ai/">
     <Project Path="src/Modules/Ai/PortfolioIntelligence.Ai.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Allocator/">
+    <Project Path="src/Modules/Allocator/PortfolioIntelligence.Allocator.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Execution/">
     <Project Path="src/Modules/Execution/PortfolioIntelligence.Execution.csproj" />
   </Folder>

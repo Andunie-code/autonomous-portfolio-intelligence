@@ -157,7 +157,8 @@ public static class SignalRadar
             R(roc.Value), R(volume.Value), volume.Value is { } v && v != 0 ? R(last.QuoteVolume / v) : null);
     }
 
-    private static RadarRegime Regime(IReadOnlyList<Candle> btc)
+    /// <summary>The BTCUSDT regime of the radar (close against SMA300) from <paramref name="btc"/>, oldest first.</summary>
+    public static RadarRegime Regime(IReadOnlyList<Candle> btc)
     {
         if (btc.Count == 0)
         {

@@ -261,7 +261,7 @@ internal static class HgCommands
     private static int Variant(JsonObject spec) => spec["variant"]?.GetValue<int>() ?? 1;
 
     /// <summary>The document must be committed and unchanged since (T8: the protocol is fixed before the run). Returns the commit.</summary>
-    private static string CommittedUnchanged(string path)
+    internal static string CommittedUnchanged(string path)
     {
         var relative = Path.GetRelativePath(Directory.GetCurrentDirectory(), Path.GetFullPath(path)).Replace('\\', '/');
         var status = Git("status", "--porcelain", "--", relative);

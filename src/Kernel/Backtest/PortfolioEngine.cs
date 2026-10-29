@@ -68,6 +68,7 @@ public sealed record EngineOrder(int Sleeve, string Symbol, bool Entry, decimal 
 /// Operational inputs of one step (m5-protocol §2.4). They are not part of the strategy and exist only in paper and
 /// replay; the backtest always passes <see cref="Normal"/> (and <see cref="Final"/> on its last bar). In the external
 /// fill mode <see cref="External"/> carries the exchange's fills instead of the simulated open and stop fills.
+/// <see cref="Allocation"/> carries the allocator's overrides of this step's new entries (m8-protocol §3.2).
 /// </summary>
 public sealed record StepContext(
     string? EntriesBlockedReason = null,
@@ -75,7 +76,8 @@ public sealed record StepContext(
     IReadOnlySet<(int Sleeve, string Symbol)>? ManualCloses = null,
     bool CloseAll = false,
     bool IsFinal = false,
-    ExternalExecution? External = null)
+    ExternalExecution? External = null,
+    IReadOnlyList<AllocationOverride>? Allocation = null)
 {
     public static StepContext Normal { get; } = new();
 
@@ -100,6 +102,10 @@ public enum EngineEventKind
     Clipped,
     Rejected,
     Canceled,
+
+    // L2, M8 (ADR-0023): an allocator override applied to an entry (Before/After are T11 and applied weights) or ignored.
+    AllocatorAdjusted,
+    AllocatorIgnored,
 }
 
 /// <summary>One engine event. <see cref="Value"/> is a price, level or weight; Before/After are notionals of L2 decisions.</summary>
@@ -152,6 +158,9 @@ public sealed class PortfolioEngine
     private readonly IReadOnlySet<string> _experimental;
     private readonly Sleeve[] _sleeves;
     private readonly List<EngineEvent> _events = [];
+    private bool _begun;
+    private PendingClose? _pendingClose;
+    private List<EntryCandidate>? _preview;
     private decimal _peak;
     private decimal _dayStartEquity;
     private DateTimeOffset _noEntriesUntil = DateTimeOffset.MinValue;
@@ -221,10 +230,73 @@ public sealed class PortfolioEngine
     /// <summary>Processes the bar opening at <paramref name="t"/>. Steps must be strictly increasing and on the interval grid.</summary>
     public void Step(DateTimeOffset t, IReadOnlyDictionary<string, Candle> bars, Candle? reference, StepContext context)
     {
+        Begin(t, bars, reference, context);
+        CompleteStep(context.Allocation);
+    }
+
+    /// <summary>
+    /// First phase of a step (m8-protocol §3.1, ADR-0023): everything up to the new entries — gap rule, open, intrabar
+    /// stop, close, risk rules, exit signals and trailing stops. Returns this step's entry candidates with their T11
+    /// weights, previewed without overrides. <see cref="CompleteStep"/> must follow before the next step.
+    /// </summary>
+    public IReadOnlyList<EntryCandidate> BeginStep(DateTimeOffset t, IReadOnlyDictionary<string, Candle> bars, Candle? reference, StepContext context)
+    {
+        Begin(t, bars, reference, context);
+        if (_pendingClose is not { } pending)
+        {
+            return [];
+        }
+
+        var candidates = new List<EntryCandidate>();
+        _preview = candidates;
+        try
+        {
+            EntryPass(pending, null);
+        }
+        finally
+        {
+            _preview = null;
+            foreach (var sleeve in _sleeves)
+            {
+                sleeve.PendingEntries.Clear();
+            }
+        }
+
+        return candidates;
+    }
+
+    /// <summary>
+    /// Second phase of a step: sizes this step's new entries with the optional allocator <paramref name="overrides"/>
+    /// (applied to entry candidates only, within <see cref="AllocatorBand"/> and below every approved cap).
+    /// </summary>
+    public void CompleteStep(IReadOnlyList<AllocationOverride>? overrides)
+    {
+        if (!_begun)
+        {
+            throw new InvalidOperationException("CompleteStep needs a BeginStep first.");
+        }
+
+        _begun = false;
+        if (_pendingClose is { } pending)
+        {
+            _pendingClose = null;
+            EntryPass(pending, overrides);
+        }
+    }
+
+    private void Begin(DateTimeOffset t, IReadOnlyDictionary<string, Candle> bars, Candle? reference, StepContext context)
+    {
+        if (_begun)
+        {
+            throw new InvalidOperationException("The previous step was begun but not completed.");
+        }
+
         if (_lastStep is { } last && t <= last)
         {
             throw new InvalidOperationException($"Steps must increase: {t:O} after {last:O}.");
         }
+
+        _begun = true;
 
         _lastStep = t;
         var risk = _setup.Risk.Settings;
@@ -252,7 +324,7 @@ public sealed class PortfolioEngine
             StepOpenAndStop(t, bars, context, risk, costs);
         }
 
-        CloseStep(t, bars, reference, context, risk, costs);
+        _pendingClose = CloseStep(t, bars, reference, context, risk);
     }
 
     private void StepOpenAndStop(DateTimeOffset t, IReadOnlyDictionary<string, Candle> bars, StepContext context, RiskSettings risk, CostModel costs)
@@ -456,8 +528,10 @@ public sealed class PortfolioEngine
         }
     }
 
-    private void CloseStep(DateTimeOffset t, IReadOnlyDictionary<string, Candle> bars, Candle? reference, StepContext context, RiskSettings risk, CostModel costs)
+    /// <summary>The close up to the new entries; null when no entries follow (warm-up or the final bar).</summary>
+    private PendingClose? CloseStep(DateTimeOffset t, IReadOnlyDictionary<string, Candle> bars, Candle? reference, StepContext context, RiskSettings risk)
     {
+        var costs = _setup.Costs;
         // 3. Close: indicators, equity, risk, signals.
         var closeTime = t + _length;
         foreach (var sleeve in _sleeves)
@@ -503,7 +577,7 @@ public sealed class PortfolioEngine
 
         if (t < _setup.TradingStart)
         {
-            return;
+            return null;
         }
 
         for (var k = 0; k < _sleeves.Length; k++)
@@ -514,7 +588,7 @@ public sealed class PortfolioEngine
 
         if (context.IsFinal)
         {
-            return;
+            return null;
         }
 
         _peak = Math.Max(_peak, currentEquity);
@@ -569,12 +643,26 @@ public sealed class PortfolioEngine
             }
         }
 
+        return new PendingClose(closeTime, sleeveEquity, currentEquity, ready, context);
+    }
+
+    /// <summary>
+    /// New entries of the close (m2-protocol §2): T11 weights, the allocator overrides (m8-protocol §3.2), then the
+    /// approved caps. With <see cref="_preview"/> set it only collects the candidates: events are not recorded and the
+    /// caller clears the pending entries.
+    /// </summary>
+    private void EntryPass(PendingClose pending, IReadOnlyList<AllocationOverride>? overrides)
+    {
+        var (closeTime, sleeveEquity, currentEquity, ready, context) = pending;
+        var risk = _setup.Risk.Settings;
+        var costs = _setup.Costs;
         var portfolioBlock = HaltedAt is not null ? "drawdown-halt" : closeTime < _noEntriesUntil ? "daily-loss" : context.EntriesBlockedReason;
         var remainingAll = _sleeves.Sum(s => s.Positions.Keys.Count(p => !s.PendingExits.Contains(p)));
         var allocated = 0;
         // Latest completed UTC day: its day-end close is the close of its 20:00 candle (≤ closeTime).
         var asOf = DateOnly.FromDateTime(closeTime.UtcDateTime).AddDays(-1);
         IReadOnlyDictionary<string, int>? clusters = null;
+        var candidateKeys = new HashSet<(int, string)>();
         for (var k = 0; k < _sleeves.Length; k++)
         {
             var sleeve = _sleeves[k];
@@ -628,8 +716,31 @@ public sealed class PortfolioEngine
             }
 
             var weights = InverseVolatilityAllocation.Weights(volatilities, risk);
+
+            // Allocator overrides (m8-protocol §3.2): candidates only, multiplier clamped to the band, weight to the asset cap.
+            var applied = new Dictionary<string, decimal>();
+            var vetoed = new HashSet<string>();
+            foreach (var candidate in candidates)
+            {
+                var symbol = candidate.Symbol;
+                _preview?.Add(new EntryCandidate(k, symbol, weights[symbol], candidate.Sigma!.Value));
+                candidateKeys.Add((k, symbol));
+                if (overrides?.FirstOrDefault(o => o.Sleeve == k && o.Symbol == symbol) is not { } adjustment)
+                {
+                    applied[symbol] = weights[symbol];
+                }
+                else if (adjustment.Veto)
+                {
+                    vetoed.Add(symbol);
+                }
+                else
+                {
+                    applied[symbol] = Math.Min(AllocatorBand.Clamp(adjustment.Multiplier) * weights[symbol], risk.MaxAssetWeight);
+                }
+            }
+
             var openValue = remaining.Sum(s => sleeve.Positions[s].Quantity * sleeve.States[s].LastClose!.Value);
-            var targets = candidates.ToDictionary(c => c.Symbol, c => weights[c.Symbol] * sleeveEquity[k]);
+            var targets = candidates.Where(c => !vetoed.Contains(c.Symbol)).ToDictionary(c => c.Symbol, c => applied[c.Symbol] * sleeveEquity[k]);
             var room = Math.Max(0, risk.MaxTotalExposure * sleeveEquity[k] - openValue);
             var requested = targets.Values.Sum();
             var scale = requested > room && requested > 0 ? room / requested : 1m;
@@ -637,6 +748,17 @@ public sealed class PortfolioEngine
             {
                 var symbol = candidate.Symbol;
                 Record(closeTime, k, symbol, EngineEventKind.UnitWeight, weights[symbol], "inverse-volatility");
+                if (vetoed.Contains(symbol))
+                {
+                    Record(closeTime, k, symbol, EngineEventKind.Rejected, 0, "allocator-veto", weights[symbol] * sleeveEquity[k], 0);
+                    continue;
+                }
+
+                if (applied[symbol] != weights[symbol])
+                {
+                    Record(closeTime, k, symbol, EngineEventKind.AllocatorAdjusted, applied[symbol], AllocatorBand.Version, weights[symbol], applied[symbol]);
+                }
+
                 var before = targets[symbol];
                 var notional = before * scale;
                 var reason = scale < 1m ? "total-exposure" : null;
@@ -682,6 +804,12 @@ public sealed class PortfolioEngine
                 allocated++;
                 Record(closeTime, k, symbol, reason is null ? EngineEventKind.Approved : EngineEventKind.Clipped, 0, reason ?? "ok", before, notional);
             }
+        }
+
+        // An override for anything but an entry candidate (an open position, a pending exit, no signal) has no effect.
+        foreach (var ignored in overrides?.Where(o => !candidateKeys.Contains((o.Sleeve, o.Symbol))) ?? [])
+        {
+            Record(closeTime, ignored.Sleeve, ignored.Symbol, EngineEventKind.AllocatorIgnored, 0, "not-candidate");
         }
     }
 
@@ -733,7 +861,7 @@ public sealed class PortfolioEngine
 
     private void Record(DateTimeOffset time, int sleeve, string symbol, EngineEventKind kind, decimal value, string detail, decimal before = 0, decimal after = 0)
     {
-        if (_setup.RecordEvents)
+        if (_setup.RecordEvents && _preview is null)
         {
             _events.Add(new EngineEvent(time, sleeve, symbol, kind, value, detail, before, after));
         }
@@ -779,6 +907,9 @@ public sealed class PortfolioEngine
     }
 
     private sealed record PendingEntry(string Symbol, decimal Notional);
+
+    /// <summary>State of a begun step that the entry pass needs (ADR-0023).</summary>
+    private sealed record PendingClose(DateTimeOffset CloseTime, decimal[] SleeveEquity, decimal CurrentEquity, List<string>[] Ready, StepContext Context);
 
     private sealed class Sleeve
     {

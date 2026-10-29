@@ -7,12 +7,16 @@ namespace PortfolioIntelligence.Ai;
 /// <summary>
 /// Decision design of a qualification (ADR-0022 §5): two arms with a one-sided Fisher exact test against the deterministic
 /// baseline (HypothesisGeneration), or one arm with a one-sided exact binomial test against a pre-registered rate p0 (tasks
-/// without a deterministic alternative, such as FindingExtraction).
+/// without a deterministic alternative, such as FindingExtraction). AllocationProposal uses a forward non-inferiority
+/// design against the deterministic default policy in shadow mode (m8-protocol §6): <see cref="QualificationProtocol.MinimumEffect"/>
+/// is the annualised margin and <see cref="QualificationProtocol.SamplePerArm"/> the window length in days. It is not run
+/// by <see cref="QualificationHarness"/>; the allocator's evaluator records its result.
 /// </summary>
 public enum QualificationDesign
 {
     TwoArmFisher,
     OneArmBinomial,
+    NonInferiority,
 }
 
 /// <summary>
@@ -167,6 +171,11 @@ public sealed class QualificationHarness(IQualificationStore store, ModelRouter 
         var hash = QualificationProtocol.HashDocument(protocolDocument);
         var protocol = await store.FindProtocolAsync(hash, ct)
             ?? throw new InvalidOperationException("No registered qualification protocol for this document hash; the harness does not run without one.");
+        if (protocol.Design == QualificationDesign.NonInferiority)
+        {
+            throw new InvalidOperationException("A non-inferiority protocol runs in shadow mode (m8-protocol §6), not in the item harness.");
+        }
+
         if (protocol.Task != task.Task)
         {
             throw new InvalidOperationException($"Protocol is for {protocol.Task}, not {task.Task}.");

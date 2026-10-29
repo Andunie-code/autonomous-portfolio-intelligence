@@ -345,6 +345,54 @@ async function renderTestnet(view) {
     ], data.runs)));
 }
 
+// ---------- allocator (M8, m8-protocol §4) ----------
+const MODE_TEXT = { Disabled: 'Kapalı', Shadow: 'Gölge', Active: 'Aktif' };
+const OUTCOME_TEXT = {
+  proposal: 'Geçerli öneri', 'catch-up': 'Catch-up (T11)', 'not-validated': 'Validated değil (T11)', 'no-key': 'Anahtar yok (T11)',
+  'no-protocol': 'Protokol yok (T11)', 'no-qualified-model': 'Nitelikli model yok (T11)', 'ai-kill-switch': 'LLM acil durdurma (T11)',
+  budget: 'Bütçe (T11)', timeout: 'Zaman aşımı (T11)', 'provider-error': 'Sağlayıcı hatası (T11)', schema: 'Şema reddi (T11)',
+  evidence: 'Kanıt reddi (T11)', safety: 'GÜVENLİK OLAYI (T11)', 'no-candidates': 'Aday yok', disabled: 'Kapalı',
+};
+
+function itemsCell(items) {
+  if (!items || items.length === 0) return '';
+  return el('span', { class: 'mono', text: items.map((i) => `${i.symbol} T11 ${num(i.t11Weight, 4)} → ${i.veto ? 'veto' : `×${num(i.multiplier, 2)}`}${i.clamp ? ` (${i.clamp})` : ''}`).join('; ') });
+}
+
+async function renderAllocator(view) {
+  const data = await api('/allocator?limit=100');
+  const safety = data.counts.reduce((sum, c) => sum + Number(c.safety_events), 0);
+  const calls = data.counts.filter((c) => ['proposal', 'timeout', 'provider-error', 'schema', 'evidence', 'safety'].includes(c.outcome));
+  const valid = calls.filter((c) => c.outcome === 'proposal').reduce((sum, c) => sum + Number(c.decisions), 0);
+  const total = calls.reduce((sum, c) => sum + Number(c.decisions), 0);
+  show(view,
+    callout('Allocator yalnızca yeni girişlerin ağırlığını T11 ters volatilite ağırlığının 0,5–1,5 katı arasında ayarlayabilir ya da girişi veto edebilir. Çıkışlara ve koruyucu stop\'lara dokunamaz; '
+      + 'onaylı risk tavanları her durumda ardından uygulanır. Gölge modda öneriler yalnızca ayrı bir gölge motora uygulanır, gerçek emirler T11 ile çalışır. Aktif modda ağırlık yalnızca Validated stratejilere verilir.'),
+    el('div', { class: 'kpis' },
+      kpi('Mod', MODE_TEXT[data.mode] || data.mode, data.mode === 'Active' ? 'neg' : '', data.band.version),
+      kpi('Geçerli öneri', `${valid}/${total}`, total > 0 && valid / total < 0.8 ? 'neg' : '', 'çağrı başına'),
+      kpi('Güvenlik olayı', String(safety), safety > 0 ? 'neg' : 'pos')),
+    card('Gölge ve T11 (son adım)', table([
+      { label: 'Run', key: 'run_id', num: true }, { label: 'Mum', render: (r) => time(r.bar_time) },
+      { label: 'Gölge', num: true, render: (r) => money(r.shadow_equity) }, { label: 'Gerçek (T11)', num: true, render: (r) => money(r.real_equity) },
+      { label: 'Fark', num: true, render: (r) => signed(r.difference), cls: (r) => signClass(r.difference) },
+      { label: 'Protokol', render: (r) => el('span', { class: 'mono muted', text: short(r.protocol_hash) }) },
+    ], data.shadow)),
+    scrollCard('Son kararlar', table([
+      { label: 'Mum', render: (d) => time(d.bar_time) }, { label: 'Run', key: 'run_id', num: true }, { label: 'Rol', key: 'role' },
+      { label: 'Sonuç', render: (d) => badge(OUTCOME_TEXT[d.outcome] || d.outcome, d.outcome === 'proposal' ? 'good' : d.outcome === 'safety' ? 'bad' : 'warn', d.outcome === 'safety' ? 'alert' : null) },
+      { label: 'T11 → öneri', render: (d) => itemsCell(d.items) },
+    ], data.decisions)),
+    el('div', { class: 'grid2' },
+      card('Karar sayıları', table([
+        { label: 'Rol', key: 'role' }, { label: 'Sonuç', render: (c) => OUTCOME_TEXT[c.outcome] || c.outcome }, { label: 'Adet', num: true, key: 'decisions' },
+      ], data.counts)),
+      card('Mod geçmişi', table([
+        { label: 'Zaman', render: (m) => time(m.recorded_at) }, { label: 'Geçiş', render: (m) => `${MODE_TEXT[m.from_mode]} → ${MODE_TEXT[m.to_mode]}` },
+        { label: 'Gerekçe', key: 'reason' },
+      ], data.modes))));
+}
+
 // ---------- sleeves ----------
 async function renderSleeves(view) {
   const [sleeves, fills, decisions] = await Promise.all([api('/sleeves'), api('/fills?limit=100'), api('/decisions?limit=100')]);
@@ -668,7 +716,7 @@ async function renderSystem(view) {
 }
 
 // ---------- shell ----------
-const renderers = { overview: renderOverview, sleeves: renderSleeves, radar: renderRadar, testnet: renderTestnet, trace: renderTrace, system: renderSystem };
+const renderers = { overview: renderOverview, sleeves: renderSleeves, radar: renderRadar, testnet: renderTestnet, allocator: renderAllocator, trace: renderTrace, system: renderSystem };
 
 function showLogin(message) {
   sessionStorage.removeItem(TOKEN_KEY);

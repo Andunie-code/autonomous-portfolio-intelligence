@@ -17,6 +17,7 @@ public class DependencyRuleTests
     private const string AiCli = "PortfolioIntelligence.AiCli";
     private const string SourceGateway = "PortfolioIntelligence.SourceGateway";
     private const string SourcesCli = "PortfolioIntelligence.SourcesCli";
+    private const string Allocator = "PortfolioIntelligence.Allocator";
     private const string GeminiSdk = "Google.GenAI";
     private static readonly string[] TextPackages = ["PdfPig", "AngleSharp"];
 
@@ -26,7 +27,7 @@ public class DependencyRuleTests
     public void Graph_contains_the_expected_projects()
     {
         Assert.Superset(
-            new HashSet<string> { Kernel, Research, ResearchHost, Execution, TradingHost, MarketData, HoldoutEvaluator, Ai, AiGemini, Researcher, AiCli, SourceGateway, SourcesCli },
+            new HashSet<string> { Kernel, Research, ResearchHost, Execution, TradingHost, MarketData, HoldoutEvaluator, Ai, AiGemini, Researcher, AiCli, SourceGateway, SourcesCli, Allocator },
             Graph.Projects.ToHashSet());
     }
 
@@ -37,6 +38,7 @@ public class DependencyRuleTests
     [InlineData(Ai)]
     [InlineData(SourceGateway)]
     [InlineData(SourcesCli)]
+    [InlineData(Allocator)]
     public void Research_side_never_reaches_execution_or_trading_host(string project)
     {
         var references = Graph.TransitiveReferencesOf(project);
@@ -77,25 +79,68 @@ public class DependencyRuleTests
     [InlineData(AiCli)]
     [InlineData(SourceGateway)]
     [InlineData(SourcesCli)]
+    [InlineData(Allocator)]
     public void Nothing_outside_the_evaluator_references_the_cohort_registry(string project)
     {
         // Research reaches the evaluator only through its narrow API; risk and execution never see cohorts (testing §7.3).
         Assert.DoesNotContain(HoldoutEvaluator, Graph.TransitiveReferencesOf(project));
     }
 
-    [Theory]
-    [InlineData(Execution)]
-    [InlineData(TradingHost)]
-    public void Trading_reaches_only_the_kernel_market_data_and_infrastructure(string project)
+    [Fact]
+    public void Execution_reaches_only_the_kernel_and_market_data()
     {
-        // ADR-0018 §4, testing §7.3: risk and execution never see research, AI, the evaluator or cohort code.
-        var references = Graph.TransitiveReferencesOf(project);
-        foreach (var forbidden in new[] { Research, ResearchHost, Researcher, Ai, AiGemini, HoldoutEvaluator })
+        // ADR-0018 §4, testing §7.3, ADR-0023 §1: risk and execution never see research, AI, the allocator, the evaluator or
+        // cohort code; the allocator reaches the engine only through the Kernel's IAllocationAdvisor port.
+        Assert.Equal(new[] { Kernel, MarketData }, Graph.TransitiveReferencesOf(Execution).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Trading_host_wires_the_allocator_but_never_reaches_research_web_or_the_evaluator()
+    {
+        // ADR-0023 §1 (narrowing ADR-0018 §4): Trading.Host alone may reach Allocator, Ai and Ai.Gemini.
+        var references = Graph.TransitiveReferencesOf(TradingHost);
+        foreach (var forbidden in new[] { Research, ResearchHost, Researcher, SourceGateway, HoldoutEvaluator })
         {
             Assert.DoesNotContain(forbidden, references);
         }
 
-        Assert.Equal(new[] { Kernel, MarketData }, Graph.TransitiveReferencesOf(Execution).Order(StringComparer.Ordinal));
+        Assert.Superset(new HashSet<string> { Allocator, Ai, AiGemini }, references.ToHashSet());
+        foreach (var project in Graph.Projects.Where(p => p != TradingHost && p != Allocator && p != AiGemini && p != AiCli && p != SourcesCli))
+        {
+            if (Graph.TransitiveReferencesOf(project).Contains(Allocator))
+            {
+                Assert.Fail($"{project} reaches the allocator");
+            }
+        }
+    }
+
+    [Fact]
+    public void Allocator_reaches_only_the_kernel_and_the_ai_module_and_takes_no_package()
+    {
+        Assert.Equal(new[] { Ai, Kernel }, Graph.TransitiveReferencesOf(Allocator).Order(StringComparer.Ordinal));
+        Assert.Empty(Graph.PackagesOf(Allocator));
+    }
+
+    [Fact]
+    public void Allocator_sources_use_no_database_process_http_or_holdout_code()
+    {
+        Assert.Empty(SourceScan.Offenders(Path.Combine(RepositoryRoot.Path, "src", "Modules", "Allocator")));
+    }
+
+    [Fact]
+    public void Source_scan_finds_a_planted_violation()
+    {
+        // Guard against a vacuous scan: a file using a forbidden namespace is reported.
+        var root = Directory.CreateTempSubdirectory("pi-scan-");
+        try
+        {
+            File.WriteAllText(Path.Combine(root.FullName, "Planted.cs"), "using Npgsql;\nclass Planted { }\n");
+            Assert.Equal(["Planted.cs:1"], SourceScan.Offenders(root.FullName));
+        }
+        finally
+        {
+            root.Delete(recursive: true);
+        }
     }
 
     [Fact]

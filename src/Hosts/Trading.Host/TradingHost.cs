@@ -3,6 +3,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using PortfolioIntelligence.Ai;
+using PortfolioIntelligence.Ai.Gemini;
+using PortfolioIntelligence.Ai.Persistence;
+using PortfolioIntelligence.Allocator;
 using PortfolioIntelligence.Execution;
 using PortfolioIntelligence.Execution.Exchange;
 using PortfolioIntelligence.Execution.Exchange.Binance;
@@ -25,11 +29,14 @@ namespace PortfolioIntelligence.Trading.Host;
 ///   OpsApi:AllowedHosts         loopback host names accepted by the Ops API (default 127.0.0.1;localhost;[::1])
 ///   Trading:Testnet = enabled   Binance Spot Testnet execution (M6, ADR-0021; off by default). Needs the Docker
 ///                               secrets testnet_api_key and testnet_api_secret in Trading:SecretsDirectory (D33)
+///   Allocator (M8, ADR-0023)    the mode is the user's (Ops API); a model is called only with the Docker secret
+///                               gemini_runtime_api_key in Trading:SecretsDirectory, otherwise every decision is T11
 /// </summary>
 public static class TradingHost
 {
     public const string TestnetKeyFile = "testnet_api_key";
     public const string TestnetSecretFile = "testnet_api_secret";
+    public const string GeminiKeyFile = "gemini_runtime_api_key";
 
     public static WebApplicationBuilder CreateBuilder(string[] args)
     {
@@ -48,10 +55,13 @@ public static class TradingHost
         builder.Services.AddSingleton(_ => new DashboardQueries(Required(configuration, "OpsApi")));
         builder.Services.AddSingleton(_ => new RadarService(Required(configuration, "OpsApi"), watch));
         builder.Services.AddSingleton(sp => new LiveCandleStore(Required(configuration, "Trading")));
+        builder.Services.AddSingleton(_ => new AllocatorStore(Required(configuration, "Trading")));
+        builder.Services.AddSingleton(sp => CreateAllocator(configuration, Required(configuration, "Trading"), sp.GetRequiredService<TimeProvider>()));
         builder.Services.AddSingleton(sp =>
         {
             var store = sp.GetRequiredService<PaperStore>();
-            return new PaperTrader(store, new LiveCandleSource(sp.GetRequiredService<LiveCandleStore>()), CostModel.V1, testnet: sp.GetRequiredService<TestnetRuntime>().Executor);
+            return new PaperTrader(store, new LiveCandleSource(sp.GetRequiredService<LiveCandleStore>()), CostModel.V1, testnet: sp.GetRequiredService<TestnetRuntime>().Executor,
+                allocator: sp.GetRequiredService<IAllocationAdvisor>(), allocatorStore: sp.GetRequiredService<AllocatorStore>());
         });
         builder.Services.AddSingleton(sp =>
         {
@@ -111,13 +121,33 @@ public static class TradingHost
 
         if (configuration["Trading:SecretsDirectory"] is { Length: > 0 } secrets)
         {
-            files.AddRange(new[] { TestnetKeyFile, TestnetSecretFile, "trading_app", "ops_api" }.Select(f => Path.Combine(secrets, f)));
+            files.AddRange(new[] { TestnetKeyFile, TestnetSecretFile, GeminiKeyFile, "trading_app", "ops_api" }.Select(f => Path.Combine(secrets, f)));
         }
 
         return files.Select(ReadSecret).OfType<string>().Where(v => v.Length > 0).ToList();
     }
 
     private static string? ReadSecret(string path) => File.Exists(path) ? File.ReadAllText(path).Trim() : null;
+
+    /// <summary>
+    /// The allocator (ADR-0023): ledger → AI kill switch → Gemini (its own host guard) → call guard → router → advisor,
+    /// all on the trading_app connection. Without the runtime key file no model can be called: every decision is T11.
+    /// </summary>
+    public static IAllocationAdvisor CreateAllocator(IConfiguration configuration, string connection, TimeProvider time)
+    {
+        if (configuration["Trading:SecretsDirectory"] is not { Length: > 0 } secrets || ReadSecret(Path.Combine(secrets, GeminiKeyFile)) is not { Length: > 0 } key)
+        {
+            return new DeterministicAllocationAdvisor();
+        }
+
+        var ai = AiConfiguration.LoadDefault();
+        var ledger = new NpgsqlCostLedger(connection);
+        var killSwitch = new AiKillSwitch(new NpgsqlKillSwitchStore(connection), new NpgsqlAiAudit(connection), time);
+        var guard = new AiCallGuard(new GeminiProvider(key, ai.Prices, GeminiGuardHandler.CreateNetworkHandler()), ai, ledger, killSwitch, time);
+        var protocols = new NpgsqlQualificationStore(connection);
+        var router = new ModelRouter(ai, guard, new NpgsqlDecisionTraceStore(connection), new QualificationRegistry(protocols), time);
+        return new AllocationAdvisor(router, protocols, ledger, time);
+    }
 
     /// <summary>
     /// Testnet execution: HTTP client (HMAC signing, then the Testnet guard as the last handler; no redirects), the

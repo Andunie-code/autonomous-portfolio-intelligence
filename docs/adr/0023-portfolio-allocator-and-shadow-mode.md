@@ -4,7 +4,12 @@
 - Karar türü:
   - **U:** `m8-protocol.md` U-M8-1…U-M8-5 (D34: gölge kapsam, bant, kapanış, model ve bütçe) ve A-1…A-7 (2026-10-29).
   - **T:** modül yapısı, bağımlılık kuralının değişmesi, iki fazlı adım, gölge motor, mod durum makinesi, sızıntı korumaları.
-- Uygulama durumu: **Planlandı, uygulanmadı.**
+- Uygulama durumu: **Kapı B'de çevrimdışı uygulandı (2026-10-29; `verify.ps1` yeşil, 770 test; API maliyeti 0).** Gerçek gölge mod Kapı C'de.
+- Uygulama notları (Kapı B; ayrıntı `m8-protocol.md` §11):
+  - Port (`IAllocationAdvisor`) ve DTO'lar Kernel'dedir: Execution ve Allocator yalnızca Kernel üzerinden buluşur; Execution'ın bağımlılıkları {Kernel, MarketData} kalır.
+  - Mod kuralları yeterlilik kayıtlarını iki `SECURITY DEFINER` fonksiyonla okur; `ops_api`'ye `ai` tablolarında yeni yetki verilmedi.
+  - Rapor ve yeterlilik komutları `ops_owner` ile çalışır (`pg_hba`: `trading_app` yalnızca Trading.Host container'ından).
+  - Gemini runtime anahtarı Compose secret'ıdır (`gemini_runtime_api_key`, boş yer tutucu: her karar T11).
 - İlgili: ADR-0005, ADR-0010, ADR-0011, ADR-0015, ADR-0017, ADR-0018, ADR-0020; `m8-protocol.md`; `architecture.md` §2–§5
 
 ## Bağlam

@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\src\Modules\Ai\PortfolioIntelligence.Ai.csproj" />
     <ProjectReference Include="..\..\src\Modules\Ai.Gemini\PortfolioIntelligence.Ai.Gemini.csproj" />
     <ProjectReference Include="..\..\src\Modules\Researcher\PortfolioIntelligence.Researcher.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Allocator\PortfolioIntelligence.Allocator.csproj" />
     <ProjectReference Include="..\..\src\Modules\Research\PortfolioIntelligence.Research.csproj" />
     <ProjectReference Include="..\..\src\Infrastructure\PortfolioIntelligence.Infrastructure.csproj" />
   </ItemGroup>

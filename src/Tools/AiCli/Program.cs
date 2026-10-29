@@ -25,6 +25,10 @@ using PortfolioIntelligence.Ai.Persistence;
 //   fe-pilot --allow-network [--design <path>] — M7: FindingExtraction pilot (m7-protocol §6; no qualification).
 //                                           Model: --model, else Gemini:Model (Gemini__Model), else the configured default;
 //                                           it must have a list price in ai.v1.json (no call without a price).
+//   alloc-register --protocol <path>      — M8: registers a committed, unchanged allocator protocol (pilot or qualification window; no network).
+//   alloc-spike --allow-network [--model <id>] — M8 Gate C1: three synthetic allocator decisions (0.05 USD budget).
+//   alloc-report --protocol <path>        — M8: shadow-window report (trading_app via m8-allocator.ps1); operational part on screen.
+//   alloc-qualify --protocol <path> [--close-incomplete] — M8: closes a qualification window into TaskQualification.
 // The API key is never printed; output contains metrics only.
 const string ConfirmationWord = "EVET";
 
@@ -189,6 +193,26 @@ switch (command)
         return await HgCommands.QualifyAsync(configuration, RequireConnectionString(), call.ApiKey, protocolPath, ReportsDirectory(), time);
     }
 
+    case "alloc-register":
+        return await AllocCommands.RegisterAsync(RequireConnectionString(), RequireOption("--protocol"));
+
+    case "alloc-spike":
+    {
+        if (Prepare("M8 Gate C1 allocator spike: 3 synthetic decisions", new UsdAmount(AllocCommands.SpikeBudgetUsd),
+                fixedModel: Option("--model") ?? configuration.Policy(TaskClass.Summary).Model!.Model) is not { } call)
+        {
+            return 1;
+        }
+
+        return await AllocCommands.SpikeAsync(configuration, RequireConnectionString(), call.ApiKey, call.Model, ReportsDirectory(), time);
+    }
+
+    case "alloc-report":
+        return await AllocCommands.ReportAsync(RequireConnectionString(), RequireOption("--protocol"), ReportsDirectory());
+
+    case "alloc-qualify":
+        return await AllocCommands.QualifyAsync(RequireConnectionString(), RequireOption("--protocol"), args.Contains("--close-incomplete"), ReportsDirectory());
+
     default:
         return Usage();
 }
@@ -197,7 +221,8 @@ static int Usage()
 {
     Console.Error.WriteLine("Usage: killswitch status|trip|clear --reason <text> | ledger [--month yyyy-MM] | reconcile --month yyyy-MM [--invoice-try <x> --usd-try <rate>] | " +
         "spike --allow-network [--model <id>] | hg-pilot --allow-network [--design <path>] [--model <id>] | fe-items | fe-calibrate | fe-pilot --allow-network [--design <path>] | " +
-        "qualify-register --protocol <path> | qualify --allow-network --protocol <path>");
+        "qualify-register --protocol <path> | qualify --allow-network --protocol <path> | alloc-register --protocol <path> | alloc-spike --allow-network | " +
+        "alloc-report --protocol <path> | alloc-qualify --protocol <path> [--close-incomplete]");
     return 1;
 }
 

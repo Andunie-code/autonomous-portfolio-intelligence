@@ -537,6 +537,38 @@ public sealed class DashboardQueries(string connectionString)
             """, ct)]));
     }
 
+    /// <summary>
+    /// Allocator (m8-protocol §4, D32): the mode and its history, decision counts by role and outcome, the latest
+    /// shadow and real values per run, and recent decisions with T11 and proposed weights. For the user only (it shows
+    /// shadow values); no model text.
+    /// </summary>
+    public async Task<string> AllocatorAsync(int? limit, CancellationToken ct)
+    {
+        await using var connection = await OpenAsync(ct);
+        var modes = await RowsAsync(connection, """
+            SELECT id, recorded_at, from_mode, to_mode, protocol_hash, qualification_id, reason
+            FROM trading.allocator_mode_events ORDER BY id DESC LIMIT 20
+            """, ct);
+        return Json(new JsonObject
+        {
+            ["mode"] = modes.Count > 0 ? modes[0]["to_mode"]!.GetValue<string>() : nameof(AllocatorMode.Disabled),
+            ["band"] = new JsonObject { ["version"] = AllocatorBand.Version, ["low"] = AllocatorBand.Low, ["high"] = AllocatorBand.High },
+            ["modes"] = new JsonArray([.. modes]),
+            ["counts"] = new JsonArray([.. await RowsAsync(connection, """
+                SELECT role, outcome, count(*) AS decisions, count(*) FILTER (WHERE jsonb_array_length(safety) > 0) AS safety_events
+                FROM trading.allocator_proposals GROUP BY role, outcome ORDER BY role, outcome
+                """, ct)]),
+            ["shadow"] = new JsonArray([.. await RowsAsync(connection, """
+                SELECT DISTINCT ON (run_id) run_id, bar_time, protocol_hash, shadow_equity, real_equity, shadow_equity - real_equity AS difference
+                FROM trading.allocator_shadow_steps ORDER BY run_id, bar_time DESC
+                """, ct)]),
+            ["decisions"] = new JsonArray([.. await RowsAsync(connection, """
+                SELECT run_id, bar_time, role, outcome, task_id, items, safety
+                FROM trading.allocator_proposals WHERE outcome NOT IN ('no-candidates', 'disabled') ORDER BY bar_time DESC, id DESC LIMIT $1
+                """, ct, Limit(limit))]),
+        });
+    }
+
     /// <summary>Recent decision traces: task class, model, outcome, degraded flag, validator results; no prompt or answer text.</summary>
     public async Task<string> AiTracesAsync(int? limit, CancellationToken ct)
     {
