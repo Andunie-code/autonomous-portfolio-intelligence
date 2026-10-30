@@ -2,6 +2,10 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-30 — M8 Kapı B belgeleri onaylandı (U): `m8-protocol.md` v1.1 ve pilot protokolü
+- Kullanıcı `m8-protocol.md` v1.1'i (§8 hash'leri ve §11 uygulama sapmaları dahil) ve `m8-alloc-pilot-protocol.md`'yi (14 gün, 1,00 USD, `gemini-3.5-flash-lite`, seed 83000) onayladı. Durum satırları güncellendi; ön kayıt kanıtı bu commit'tir.
+- Sıradaki adımlar kullanıcının koşularıdır: C0 (`m8-update.ps1 -SetKey`), C1 (`alloc-spike --allow-network`), C2 (`alloc-register` ve `Disabled → Shadow`).
+
 ## 2026-10-29 — M8 Kapı B: Allocator modülü, iki fazlı adım, gölge motor, mod durum makinesi, migration 0011 (m8-protocol v1.1)
 - **Kod (çevrimdışı, API maliyeti 0; ayrıntı `m8-protocol.md` §11, ADR-0023 uygulama notu):**
   - Kernel: `PortfolioEngine.BeginStep`/`CompleteStep` (override yokken davranış ve hash'ler birebir), `StepContext.Allocation`, `allocator-band v1`, L2 olayları `AllocatorAdjusted` ve `AllocatorIgnored`; port `IAllocationAdvisor` ve DTO'lar.
@@ -15,7 +19,7 @@ M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar
 - **Testler:** Kernel override değişmezleri I-1…I-4 (rastgele override'larla property testleri), allocator birim testleri (her fallback yolu, kalibrasyon kolları: oracle, attacker, fabricator), protokol belgesinin koda bağlanması, non-inferiority kuralı, DB ve uygulama mod kuralları, roller, Ops API, gölge modda gerçek adımların birebir aynı kalması ve LLM'siz yeniden kurulum, aktif modda yalnızca `Validated` run'ın ayarlanması ve replay.
 - **Regresyon kilitleri (Claude Code, `R`):** M2'nin dört hash'i birebir (`parity-m3`); Kohort 0 ve Kohort 1 L1/L2 hash'leri ve Kohort 1 rapor özeti M5/M5b ile aynı (kuru `parity-m5`).
 - **`verify.ps1` yeşil: 770 test** (önceki 715; Ai 171, Architecture 122, Backtest 136, HoldoutEvaluator 46, Infrastructure 27, MarketData 97, SourceGateway 69, Trading 102).
-- **Onay bekleyen (U):** `m8-protocol.md` v1.1 ve `m8-alloc-pilot-protocol.md` (14 gün, 1,00 USD, seed 83000).
+- **Onay bekleyen (U; 2026-10-30'da onaylandı):** `m8-protocol.md` v1.1 ve `m8-alloc-pilot-protocol.md` (14 gün, 1,00 USD, seed 83000).
 
 ## 2026-10-29 — M8 Kapı A (kullanıcı onayı): `m8-protocol.md` v1, ADR-0023, D34
 - **Kullanıcı kararları (U, 2026-10-29; D34):**

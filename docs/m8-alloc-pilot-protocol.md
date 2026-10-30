@@ -1,6 +1,6 @@
 # AllocationProposal gölge pilot protokolü (v1)
 
-- Durum: **Ön kayıt — kullanıcı onayına sunuldu (Kapı B sonu, 2026-10-29; `m8-protocol.md` v1.1).** Onay, durum satırının güncellendiği commit'le kaydedilir; kayıt (`alloc-register`) o commit'ten sonra yapılır. Belge commit'lenir ve değişmeden `alloc-register` ile kaydedilir. Kayıtlı hash'i olmayan ya da değiştirilmiş bir belgeyle gölge mod açılmaz (T8, `m8-protocol.md` §4.2).
+- Durum: **Ön kayıt — kullanıcı tarafından onaylandı (2026-10-30, U; `m8-protocol.md` v1.1).** Ön kayıt kanıtı, bu durum satırının güncellendiği commit'tir; kayıt (`alloc-register`) o commit'ten sonra yapılır. Belge commit'lenir ve değişmeden `alloc-register` ile kaydedilir. Kayıtlı hash'i olmayan ya da değiştirilmiş bir belgeyle gölge mod açılmaz (T8, `m8-protocol.md` §4.2).
 - Tasarım: [`m8-protocol.md`](m8-protocol.md) §5–§9. Karar kuralı §6.2'de, süre kuralı §6.3'te sabittir; bu belge onları değiştirmez.
 - **Pilot nitelik vermez.** Yalnızca günlük fark varyansını (σ̂_d) ve operasyonel oranları ölçer; σ̂_d raporun yalnızca kullanıcıya açık bölümündedir. Yeterlilik penceresinin süresi `N` pilot raporundan §6.3 kuralıyla hesaplanır ve ayrı bir yeterlilik protokolüne yazılır (C3).
 

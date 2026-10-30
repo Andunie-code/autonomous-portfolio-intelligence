@@ -2,7 +2,7 @@
 
 - Durum: **Ön kayıt — kullanıcı tarafından onaylandı (Kapı A, 2026-10-29, U; §0.2 A-1…A-7 dahil).** Ön kayıt kanıtı, bu belgenin onaylandığı git commit'idir. O commit'ten önce M8 kodu yazılmaz.
 - **Pilot ve yeterlilik bloklarının tamamlanması:** prompt hash'i ve şema hash'i yalnızca kodla üretilebilir. Bu değerler Kapı B'nin sonunda §8'deki bloklara **v1.1** olarak eklenir. v1.1, §5–§7'deki kuralları değiştiremez; yalnızca hash ekler.
-- **v1.1 (2026-10-29, Kapı B sonu; kullanıcı onayı bekleniyor):** §8'e prompt ve şema hash'leri eklendi; pilot protokolü ayrı belge oldu ([`m8-alloc-pilot-protocol.md`](m8-alloc-pilot-protocol.md)); Kapı B uygulama notları §11'de. §5–§7'deki kurallar değişmedi. Pilot, onaylanan belge commit'lendikten sonra kaydedilir.
+- **v1.1 (2026-10-29, Kapı B sonu; kullanıcı tarafından onaylandı 2026-10-30, U; §11 sapmaları dahil):** §8'e prompt ve şema hash'leri eklendi; pilot protokolü ayrı belge oldu ([`m8-alloc-pilot-protocol.md`](m8-alloc-pilot-protocol.md)); Kapı B uygulama notları §11'de. §5–§7'deki kurallar değişmedi. Pilot, onaylanan belge commit'lendikten sonra kaydedilir.
 - Karar türleri: **U** = kullanıcı, **T** = teknik lider, **P** = öneri (kullanıcı onayı gerekir).
 - İlgili: ADR-0005, ADR-0010, ADR-0011, ADR-0012, ADR-0014, ADR-0015, ADR-0017, ADR-0018, ADR-0020, ADR-0021, **ADR-0023**; `architecture.md` §2–§5; `testing-strategy.md` §6.1–§6.2; `risk-model.md` §1–§4; `sources.md` S-G1, S-G2; D1, D4, D10, D12, D16, D20, D29, **D34**; T7–T11, T17, T24.
 - **Değiştirilmeyenler:**
