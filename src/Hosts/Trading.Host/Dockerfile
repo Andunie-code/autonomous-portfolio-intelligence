@@ -7,6 +7,9 @@ COPY src/Kernel/ src/Kernel/
 COPY src/Infrastructure/ src/Infrastructure/
 COPY src/Modules/MarketData/ src/Modules/MarketData/
 COPY src/Modules/Execution/ src/Modules/Execution/
+COPY src/Modules/Ai/ src/Modules/Ai/
+COPY src/Modules/Ai.Gemini/ src/Modules/Ai.Gemini/
+COPY src/Modules/Allocator/ src/Modules/Allocator/
 COPY src/Hosts/Trading.Host/ src/Hosts/Trading.Host/
 RUN dotnet publish src/Hosts/Trading.Host/PortfolioIntelligence.Trading.Host.csproj -c Release -o /app --no-self-contained
 

@@ -2,6 +2,11 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-30 — M8 C0 düzeltmesi: Dockerfile'larda eksik proje kopyaları
+- **Hata:** `m8-update.ps1`'in Trading.Host derlemesi (C0, adım 3/5) başarısız oldu. Dockerfile, M8'de eklenen `Ai`, `Ai.Gemini` ve `Allocator` projelerini kopyalamıyordu. Migration 0011 ve runtime anahtarı bu hatadan önce uygulanmıştı.
+- **Düzeltme:** Trading.Host Dockerfile'ına üç `COPY` satırı eklendi. Yeni test, Research.Host Dockerfile'ında M7'den beri eksik olan `SourceGateway` kopyasını da buldu; o da eklendi. İki imajın derleme aşaması yerelde başarıyla derlendi (`docker build --target build`).
+- **Kalıcı koruma (`EnvironmentConfigurationTests`):** her Dockerfile, yayımladığı projelerin geçişli tüm `ProjectReference` dizinlerini ve kök props dosyalarını kopyalamalı. Öz-test: Ai satırı çıkarılmış Trading.Host Dockerfile'ı yakalanıyor. Architecture testleri 124/124.
+
 ## 2026-10-30 — M8 Kapı B belgeleri onaylandı (U): `m8-protocol.md` v1.1 ve pilot protokolü
 - Kullanıcı `m8-protocol.md` v1.1'i (§8 hash'leri ve §11 uygulama sapmaları dahil) ve `m8-alloc-pilot-protocol.md`'yi (14 gün, 1,00 USD, `gemini-3.5-flash-lite`, seed 83000) onayladı. Durum satırları güncellendi; ön kayıt kanıtı bu commit'tir.
 - Sıradaki adımlar kullanıcının koşularıdır: C0 (`m8-update.ps1 -SetKey`), C1 (`alloc-spike --allow-network`), C2 (`alloc-register` ve `Disabled → Shadow`).

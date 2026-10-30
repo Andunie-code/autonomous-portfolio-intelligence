@@ -147,4 +147,64 @@ public class EnvironmentConfigurationTests
             Assert.Contains(pattern, ignore);
         }
     }
+
+    /// <summary>
+    /// Directories (repository-relative, "/"-separated, trailing "/") that the published projects of a Dockerfile need in their
+    /// build stage but no COPY brings in: each project itself, every transitive ProjectReference, and the root props files.
+    /// </summary>
+    private static List<string> MissingCopies(IReadOnlyList<string> dockerfile)
+    {
+        var copied = dockerfile.Select(l => l.Trim())
+            .Where(l => l.StartsWith("COPY ", StringComparison.Ordinal) && !l.Contains("--from=", StringComparison.Ordinal))
+            .SelectMany(l => l.Split(' ', StringSplitOptions.RemoveEmptyEntries)[1..^1])
+            .ToList();
+        var published = dockerfile.Where(l => l.Contains("dotnet publish ", StringComparison.Ordinal))
+            .Select(l => l.Split(' ', StringSplitOptions.RemoveEmptyEntries).SkipWhile(t => t != "publish").Skip(1).First())
+            .ToList();
+        Assert.NotEmpty(published);
+
+        var needed = new SortedSet<string>(StringComparer.Ordinal) { "Directory.Build.props", "Directory.Packages.props" };
+        var pending = new Stack<string>(published.Select(p => Path.GetFullPath(Path.Combine(Root, p))));
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (pending.Count > 0)
+        {
+            var file = pending.Pop();
+            if (!visited.Add(file))
+            {
+                continue;
+            }
+
+            var directory = Path.GetDirectoryName(file)!;
+            needed.Add(Path.GetRelativePath(Root, directory).Replace('\\', '/') + "/");
+            using var stream = File.OpenRead(file);
+            foreach (var reference in System.Xml.Linq.XDocument.Load(stream).Descendants("ProjectReference"))
+            {
+                pending.Push(Path.GetFullPath(Path.Combine(directory, reference.Attribute("Include")!.Value.Replace('\\', Path.DirectorySeparatorChar))));
+            }
+        }
+
+        return needed.Where(n => !copied.Any(c => c == n || (c.EndsWith('/') && n.StartsWith(c, StringComparison.Ordinal)))).ToList();
+    }
+
+    [Fact]
+    public void Every_dockerfile_copies_all_projects_its_published_project_references()
+    {
+        var dockerfiles = Directory.EnumerateFiles(Path.Combine(Root, "src"), "Dockerfile", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(Root, f).Replace('\\', '/'))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+        Assert.Equal(["src/HoldoutEvaluator/Dockerfile", "src/Hosts/Research.Host/Dockerfile", "src/Hosts/Trading.Host/Dockerfile"], dockerfiles);
+        var missing = dockerfiles.SelectMany(d => MissingCopies(File.ReadAllLines(Path.Combine(Root, d))).Select(m => $"{d}: {m}")).ToList();
+        Assert.Empty(missing);
+    }
+
+    [Fact]
+    public void Missing_copy_check_finds_a_dropped_transitive_reference()
+    {
+        // Self-test: the Trading.Host Dockerfile without its Ai line (the build failure of M8 C0).
+        var lines = File.ReadAllLines(Path.Combine(Root, "src", "Hosts", "Trading.Host", "Dockerfile"))
+            .Where(l => l.Trim() != "COPY src/Modules/Ai/ src/Modules/Ai/")
+            .ToList();
+        Assert.Equal(["src/Modules/Ai/"], MissingCopies(lines));
+    }
 }

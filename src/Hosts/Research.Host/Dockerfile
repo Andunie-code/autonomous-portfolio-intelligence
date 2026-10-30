@@ -9,6 +9,7 @@ COPY src/Modules/MarketData/ src/Modules/MarketData/
 COPY src/Modules/Ai/ src/Modules/Ai/
 COPY src/Modules/Researcher/ src/Modules/Researcher/
 COPY src/Modules/Research/ src/Modules/Research/
+COPY src/Modules/SourceGateway/ src/Modules/SourceGateway/
 COPY src/Hosts/Research.Host/ src/Hosts/Research.Host/
 RUN dotnet publish src/Hosts/Research.Host/PortfolioIntelligence.Research.Host.csproj -c Release -o /app --no-self-contained
 
