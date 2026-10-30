@@ -1,19 +1,21 @@
-> Kaynak: `scripts/m4-ai.ps1 reconcile --month 2026-10`, son üretim 2026-10-28; M4, HypothesisGeneration v2 pilotu ve M7 (FindingExtraction pilotu ve yeterliliği) dahil. Google faturası ay kapanınca kullanıcı tarafından girilir: `reconcile --month 2026-10 --invoice-try <tutar> --usd-try <kur>`. Fark %10'u aşarsa fiyat tablosu gözden geçirilir ve olay audit'e yazılır (ADR-0010).
+> Kaynak: `scripts/m4-ai.ps1 reconcile --month 2026-10`, son üretim 2026-10-31; M4, HypothesisGeneration v2 pilotu, M7 (FindingExtraction pilotu ve yeterliliği) ve M8 (C1 allocator spike'ı) dahil. M8 gölge pilot işi (`alloc-709c26e99f63`) bu üretimde ledger'da henüz yok. Google faturası ay kapanınca kullanıcı tarafından girilir: `reconcile --month 2026-10 --invoice-try <tutar> --usd-try <kur>`. Fark %10'u aşarsa fiyat tablosu gözden geçirilir ve olay audit'e yazılır (ADR-0010).
 
 # AI harcama mutabakatı — 2026-10
 
 - Fiyat tablosu: `gemini-list-prices 2026-10-19 (sources.md S-G2, S-G9)` (liste fiyatı, USD)
-- Ledger toplamı: **0.744680 USD** · çağrı 190 · girdi token 342910 · çıktı token 180043
+- Ledger toplamı: **0.749711 USD** · çağrı 193 · girdi token 344620 · çıktı token 181850
 - Fatura: girilmedi (mutabakat bekliyor)
 
 | Görev sınıfı | Tutar |
 |---|---|
 | (none) | 0.015788 USD |
+| AllocationProposal | 0.005031 USD |
 | FindingExtraction | 0.072868 USD |
 | HypothesisGeneration | 0.656024 USD |
 
 | İş | Tutar |
 |---|---|
+| alloc-ae4656b06498 | 0.005031 USD |
 | fe-pilot-067181b18acc | 0.028655 USD |
 | hg-pilot-0f2b043f7786 | 0.510653 USD |
 | hg-pilot-270fe2bf4ac2 | 0.032664 USD |
@@ -29,3 +31,4 @@
 | 2026-10-18 | 0.095625 USD |
 | 2026-10-19 | 0.576187 USD |
 | 2026-10-28 | 0.072868 USD |
+| 2026-10-30 | 0.005031 USD |

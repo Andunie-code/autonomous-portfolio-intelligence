@@ -199,6 +199,20 @@ public class EnvironmentConfigurationTests
     }
 
     [Fact]
+    public void Scripts_recreate_trading_host_so_a_new_image_and_secrets_take_effect()
+    {
+        // Without --force-recreate, compose keeps a running container whose configuration did not change, so a changed
+        // secret file (Testnet or Gemini runtime key) would not be re-read (M8 C0).
+        var starts = Directory.EnumerateFiles(Path.Combine(Root, "scripts"), "*.ps1", SearchOption.AllDirectories)
+            .SelectMany(f => File.ReadAllLines(f).Select(l => (File: Path.GetFileName(f), Line: l.Trim())))
+            .Where(x => !x.Line.StartsWith('#') && x.Line.Contains("docker compose", StringComparison.Ordinal)
+                && x.Line.Contains(" up ", StringComparison.Ordinal) && x.Line.EndsWith("trading-host", StringComparison.Ordinal))
+            .ToList();
+        Assert.Equal(3, starts.Count);
+        Assert.All(starts, s => Assert.Contains("--force-recreate", s.Line));
+    }
+
+    [Fact]
     public void Missing_copy_check_finds_a_dropped_transitive_reference()
     {
         // Self-test: the Trading.Host Dockerfile without its Ai line (the build failure of M8 C0).

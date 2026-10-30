@@ -1,8 +1,8 @@
 # Gereksinimler
 
-Son güncelleme: 2026-10-29 (rev. 5.9; M8 başladı: D34, Kapı A onaylandı) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-31 (rev. 5.10; M8 tamamlandı: gölge mod canlı, yeterlilik arka planda) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
 
-> Durum: M0–M5 ve M5b (Kohort 1, M9a dashboard) tamamlandı (roadmap). M6 tamamlandı (kullanıcı kabulü 2026-10-28; gerçek Testnet terfisi D30 sonrasında, `m6-acceptance-report.md` §5). M7 tamamlandı (kullanıcı kabulü 2026-10-28; FindingExtraction yeterliliği `Failed`, web araştırması kapalı, `m7-acceptance-report.md`). M8 başladı (Kapı A onaylandı 2026-10-29: `m8-protocol.md`, ADR-0023). M8 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
+> Durum: M0–M5 ve M5b (Kohort 1, M9a dashboard) tamamlandı (roadmap). M6 tamamlandı (kullanıcı kabulü 2026-10-28; gerçek Testnet terfisi D30 sonrasında, `m6-acceptance-report.md` §5). M7 tamamlandı (kullanıcı kabulü 2026-10-28; FindingExtraction yeterliliği `Failed`, web araştırması kapalı, `m7-acceptance-report.md`). M8 tamamlandı (kullanıcı kabulü 2026-10-31, kabul edilen sapma; allocator gölge modda, AllocationProposal pilotu ve yeterlilik penceresi arka planda sürer, `m8-acceptance-report.md`). M9 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
 
 ## Karar durumu etiketleri
 | Etiket | Anlamı |
@@ -136,7 +136,7 @@ Gerçek para ile işlem, futures/margin, birden fazla borsa, haber ve sentiment,
 | Aile benzerlik eşikleri (korelasyon 0,9, Jaccard 0,8) | Mühendislik başlangıç değerleri; veriyle gözden geçirilir | M3 | Teknik lider |
 | Evaluator yayın tamponu (başlangıç: 3 gün) | Arşivin yayın gecikmesine göre. M5'te holdout penceresi verisi import edilmediği için ölçülemedi; ilk gerçek import'ta ölçülür | İlk import (en geç 2027-10, Kohort 0) | Teknik lider |
 | Yeterlilik eşikleri ve örneklem büyüklükleri (görev sınıfı başına) | Ayrı bir pilot sette varyans ölçülür, ardından güç analizi yapılır. α ve minimum anlamlı etki protokolde gerekçelendirilir | Her yeterlilik protokolü öncesi | Teknik lider |
-| Allocator gölge mod süresi (≥ 4 hafta onaylı alt sınır) | 14 günlük pilotun günlük fark varyansıyla ön kayıtlı süre kuralı: `N = max(28, ⌈(2,487 · σ̂_d / m)²⌉)` gün, en fazla 56 (`m8-protocol.md` §6.3; A-4, U 2026-10-29) | M8 Kapı C3 | Teknik lider, protokolle |
+| Allocator gölge mod süresi (≥ 4 hafta onaylı alt sınır) | 14 günlük pilotun günlük fark varyansıyla ön kayıtlı süre kuralı: `N = max(28, ⌈(2,487 · σ̂_d / m)²⌉)` gün, en fazla 56 (`m8-protocol.md` §6.3; A-4, U 2026-10-29) | M8 Kapı C3 (M8 kapanışından sonra, arka planda) | Teknik lider, protokolle |
 | ~~Timeout, retry, eşzamanlılık değerleri~~ — **M4'te ölçüldü** (spike, pilot ve yeterlilik koşusu: gecikme 0,6–2,0 sn, retry ya da timeout olayı yok). Başlangıç değerleri (120 sn, en fazla 2 retry, eşzamanlılık 1) korundu (`m4-spike-results.md`) | — | — | — |
 | ~~Gemini fiyatları, rate limit'leri, kredi kapsamı~~ — **doğrulandı** (`sources.md` S-G1…S-G9, 2026-10-18/19; B1 kapandı, 2026-10-19) | — | — | — |
 | TL/USD mutabakatı | Defter, liste fiyatlarına göre USD tutar. Google faturasıyla aylık manuel mutabakat yapılır. Araç M4'te hazır (`m4-ai.ps1 reconcile`). 2026-10 ledger toplamı 0,146228 USD; fatura ay kapanınca girilir | Her ay sonu (ilki 2026-10) | Kullanıcı (fatura tutarı), teknik lider |

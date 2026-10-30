@@ -4,7 +4,7 @@
 - Karar türü:
   - **U:** `m8-protocol.md` U-M8-1…U-M8-5 (D34: gölge kapsam, bant, kapanış, model ve bütçe) ve A-1…A-7 (2026-10-29).
   - **T:** modül yapısı, bağımlılık kuralının değişmesi, iki fazlı adım, gölge motor, mod durum makinesi, sızıntı korumaları.
-- Uygulama durumu: **Kapı B'de çevrimdışı uygulandı (2026-10-29; `verify.ps1` yeşil, 770 test; API maliyeti 0).** Gerçek gölge mod Kapı C'de.
+- Uygulama durumu: **Kapı B'de çevrimdışı uygulandı (2026-10-29; `verify.ps1` yeşil, 770 test; API maliyeti 0).** Gerçek gölge mod Kapı C2'de başlatıldı (2026-10-30, pilot protokolü `709c26e9…`); M8 2026-10-31'de kapandı (`m8-acceptance-report.md`). C0'da Dockerfile'daki eksik proje kopyaları düzeltildi (`e5bf632`).
 - Uygulama notları (Kapı B; ayrıntı `m8-protocol.md` §11):
   - Port (`IAllocationAdvisor`) ve DTO'lar Kernel'dedir: Execution ve Allocator yalnızca Kernel üzerinden buluşur; Execution'ın bağımlılıkları {Kernel, MarketData} kalır.
   - Mod kuralları yeterlilik kayıtlarını iki `SECURITY DEFINER` fonksiyonla okur; `ops_api`'ye `ai` tablolarında yeni yetki verilmedi.

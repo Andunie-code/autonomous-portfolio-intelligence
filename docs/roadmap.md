@@ -1,6 +1,6 @@
 # Yol Haritası
 
-Son güncelleme: 2026-10-26 (rev. 5.7; M6 başladı, Kapı A onaylandı) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-10-31 (rev. 5.10; M8 tamamlandı, kabul edilen sapma) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
 > Durum: **M0 yerelde tamamlandı** (2026-10-13; doğrulama `716a1bd` commit'inde, temiz klonda). Uzak depo: private GitHub deposu `Andunie-code/autonomous-portfolio-intelligence`. M1 ve sonrası başlamadı; her milestone ayrı kullanıcı onayı gerektirir. Bir milestone, kabul kriterlerindeki testler **gerçekten uygulanıp geçtiğinde** tamamlanmış sayılır.
 
@@ -227,9 +227,10 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - FindingExtraction yeterliliği ön kayıtla yapıldı ve kaydedildi; nitelik yoksa web araştırması kapalı.
   - Web'li ve web'siz karşılaştırma raporu hazır.
 
-### M8 — Portfolio Allocator (M) — Kapı A ve Kapı B tamamlandı (2026-10-29)
+### M8 — Portfolio Allocator (M) — ✅ tamamlandı (2026-10-31; kullanıcı kabulü, kabul edilen sapma)
 - **Ön kayıt:** [`m8-protocol.md`](m8-protocol.md) v1 ve ADR-0023 (Kapı A, kullanıcı onayı 2026-10-29; `d1acd2b`). Kararlar: D34 (U, 2026-10-29).
-- **Durum:** Kapı B çevrimdışı tamamlandı (`verify.ps1` yeşil, 770 test, API maliyeti 0). v1.1 ve pilot protokolü ([`m8-alloc-pilot-protocol.md`](m8-alloc-pilot-protocol.md)) kullanıcı onayı bekliyor; ardından Kapı C.
+- **Durum:** Kapı A (`d1acd2b`), Kapı B (`5b36c5b`, 770 test), v1.1 ve pilot protokolünün onayı (`c739091`) ve Kapı C0–C2 tamamlandı. Kabul raporu: [`m8-acceptance-report.md`](m8-acceptance-report.md).
+  - **Sonuç:** allocator gölge modda (pilot protokolü `709c26e9…`); gerçek emirler T11 ile. Pilot (C3), yeterlilik protokolü ve yeterlilik penceresi kapanıştan sonra arka planda süren operasyonel gözlemdir (U-M8-4).
 - **Kapılar (U):**
   - **A:** protokol (bant, mod durum makinesi, gölge motor, non-inferiority karar kuralı, pilot ön kaydı), ADR-0023, Gemini fiyatının yeniden doğrulanması (S-G1, S-G2, 2026-10-29).
   - **B:** çevrimdışı kod ve testler (sahte sağlayıcı, fault injection, kalibrasyon kolları); `verify.ps1` yeşil; API maliyeti 0.

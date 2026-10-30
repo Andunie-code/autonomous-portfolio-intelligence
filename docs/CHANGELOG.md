@@ -2,6 +2,16 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-10-31 — M8 tamamlandı (kullanıcı kabulü, kabul edilen sapma): allocator gölge modda
+- **Kapı C (kullanıcı koşuları):**
+  - C0: migration 0011 (`already applied 11`), Gemini runtime anahtarı, Trading.Host yeniden derleme. İlk döngü `ok`, kill switch kapalı; `PaperTrading=5`; Testnet açık, bilinmeyen emir ve korumasız pozisyon 0; son 7 günde kritik hata 0.
+  - C1: `alloc-spike` üç senaryoda `PASS` (clamp 0, veto 0, güvenlik olayı 0), 0,005031 USD.
+  - C2: pilot protokolü kaydedildi (`709c26e99f63…`, 14 gün, 1,00 USD); `Disabled → Shadow`.
+- **Kapanış (U-M8-4, U 2026-10-31):** C3 (pilot raporu, süre `N`, yeterlilik protokolü) ve yeterlilik penceresi arka planda süren operasyonel gözlemdir; sonuçlar kabul raporuna ek olarak işlenir. `Passed` çıkmazsa T11 kalıcıdır (D20). Gerçek emirler T11 ile verilmeye devam eder.
+- **Script'ler:** `m5-paper-start.ps1` ve `m6-update.ps1` Trading.Host'u `--force-recreate` ile başlatır; yeni imaj ve değişen secret dosyaları her başlatmada yeniden yüklenir (`EnvironmentConfigurationTests` ile sabitlendi).
+- **Belgeler:** [`m8-acceptance-report.md`](m8-acceptance-report.md); 2026-10 mutabakatı yenilendi (ledger 0,749711 USD; AllocationProposal 0,005031 USD; pilot işi henüz ledger'da yok); roadmap M8 ✅ (rev. 5.10); requirements rev. 5.10; `m8-protocol.md` ve ADR-0023 durum notları.
+- **`verify.ps1`:** yeşil, **773 test** (önceki 770; Ai 171, Architecture 125, Backtest 136, HoldoutEvaluator 46, Infrastructure 27, MarketData 97, SourceGateway 69, Trading 102).
+
 ## 2026-10-30 — M8 C0 düzeltmesi: Dockerfile'larda eksik proje kopyaları
 - **Hata:** `m8-update.ps1`'in Trading.Host derlemesi (C0, adım 3/5) başarısız oldu. Dockerfile, M8'de eklenen `Ai`, `Ai.Gemini` ve `Allocator` projelerini kopyalamıyordu. Migration 0011 ve runtime anahtarı bu hatadan önce uygulanmıştı.
 - **Düzeltme:** Trading.Host Dockerfile'ına üç `COPY` satırı eklendi. Yeni test, Research.Host Dockerfile'ında M7'den beri eksik olan `SourceGateway` kopyasını da buldu; o da eklendi. İki imajın derleme aşaması yerelde başarıyla derlendi (`docker build --target build`).

@@ -78,7 +78,7 @@ if ($testnet) {
 }
 $env:PI_TRADING_LIVE_DATA = 'enabled'
 $restartedAt = [DateTimeOffset]::UtcNow
-docker compose --profile trading up -d --build trading-host
+docker compose --profile trading up -d --build --force-recreate trading-host
 if ($LASTEXITCODE -ne 0) { throw 'Trading.Host did not start.' }
 $ready = $false
 for ($i = 0; $i -lt 30; $i++) {

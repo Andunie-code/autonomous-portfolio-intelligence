@@ -17,14 +17,14 @@ Ensure-EmptySecret $script:OpsSecrets 'gemini_runtime_api_key' | Out-Null
 
 if ($Stop) {
     $env:PI_TRADING_LIVE_DATA = 'disabled'
-    docker compose --profile trading up -d trading-host
+    docker compose --profile trading up -d --force-recreate trading-host
     Write-Host 'Trading.Host restarted without live data.'
     exit $LASTEXITCODE
 }
 
 Confirm-Interactive 'Allow Trading.Host to fetch live klines from data-api.binance.vision and start paper trading?'
 $env:PI_TRADING_LIVE_DATA = 'enabled'
-docker compose --profile trading up -d --build trading-host
+docker compose --profile trading up -d --build --force-recreate trading-host
 if ($LASTEXITCODE -ne 0) { throw 'Trading.Host did not start.' }
 Write-Host 'Paper trading started. Ops API: http://127.0.0.1:55490 (bearer token in secrets/ops_api_token).'
 Write-Host 'Operational report for Claude Code: scripts/m5-paper-report.ps1 (no prices, PnL or trades).'
