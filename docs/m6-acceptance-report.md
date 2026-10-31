@@ -78,6 +78,7 @@
   3. Testnet run'ında bir kill switch aç/kapat denemesi (stop'lar borsada kalmalı).
 - **Kayıt:** sonuçlar bu raporun eki olarak ve CHANGELOG'a işlenir.
 - **Aylık Testnet sıfırlaması** (S-B19, S-B24): `testnet-reset-suspected` görülürse `m6-testnet-activate.ps1 -Rebaseline`.
+- **D30 rev. (U, 2026-10-30; `m6-protocol.md` v1.2 §14):** gün şartı 14'ten 10 takvim gününe indi; 60 mum ve sıfır kritik hata şartları değişmedi. Kohort 0 (`ema-trend`, `supertrend`) kullanıcının çıktısında `days=10,32`, `bars=61/60`, `criticalErrors7d=0`. C4 yalnızca Kohort 0 için, M9–M10 Kapı C'sinde (C1–C3) yapılır (`m9-m10-protocol.md` §6); Kohort 1'in terfisi ayrı kullanıcı kararıdır.
 
 ## 6. Kabul (roadmap M6 kriterleri)
 | Kriter | Kanıt | Durum |

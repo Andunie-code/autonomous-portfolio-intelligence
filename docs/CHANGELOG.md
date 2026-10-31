@@ -2,6 +2,15 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-11-01 — M9–M10 Kapı A (kullanıcı onayı): `m9-m10-protocol.md` v1, ADR-0024, D30 rev., D35
+- **D30 rev. (U, 2026-10-30):** `PaperTrading → TestnetActive` asgari süresi 14'ten **10 takvim gününe** indi; ≥ 60 işlenmiş 4h mum ve son 7 günde sıfır kritik hata değişmedi. Gerekçe: 60 × 4h = 10 gün. `m6-protocol.md` **v1.2** (§14; §6.2'deki lifecycle aktörü kodla uyumlu olarak `user`), `requirements.md` D30, `architecture.md` §5 (eski "TBD" satırı), ADR-0021 notu, `m6-acceptance-report.md` §5.
+- **Yeni ön kayıt:** [`m9-m10-protocol.md`](m9-m10-protocol.md) v1 ve [ADR-0024](adr/0024-alarms-and-dashboard-completion.md); karar **D35** (U, 2026-11-01): M6 C4'te yalnızca Kohort 0; alarmlar için yeni dış kanal yok; M10, 30 günlük prova başlatılınca kabul edilen sapmayla kapanır.
+- **M9 eksikleri (keşif, salt okuma):** Testnet borsa emrinden zincir yok; allocator çarpanı zincirde yok; `/ai/traces` `requested_model` dönmüyor, token ve tahmini maliyet görünmüyor; görev sınıfı toplamı ve bütçe çubuğu yok.
+- **M10 tasarımı:** hesaplanan alarmlar (A1–A7, eşikler B-1…B-5), `GET /alarms`, `m5-henv.ps1`'in ops'a `henv_run_recorded` koşu kaydı, `scripts/m10-alarm-drill.ps1`, `docs/runbook.md`.
+- **Belge düzeltmesi:** AI kill switch'in kapatılması yalnızca CLI'dadır (`architecture.md` §3.4, `risk-model.md` §3.2'deki "Ops API veya CLI" düzeltildi). `architecture.md` §11 alarm satırı ADR-0024'e bağlandı.
+- **T17:** `.claude/settings.json`'a `*-File*m10-*` deny kuralları (Bash, PowerShell); `CLAUDE.md` M9–M10 maddesi. Testleri Kapı B'de (`RepositoryRuleTests`).
+- requirements rev. 5.11, roadmap rev. 5.11 (M9/M10 kapıları). Kod değişikliği yok.
+
 ## 2026-10-31 — M8 tamamlandı (kullanıcı kabulü, kabul edilen sapma): allocator gölge modda
 - **Kapı C (kullanıcı koşuları):**
   - C0: migration 0011 (`already applied 11`), Gemini runtime anahtarı, Trading.Host yeniden derleme. İlk döngü `ok`, kill switch kapalı; `PaperTrading=5`; Testnet açık, bilinmeyen emir ve korumasız pozisyon 0; son 7 günde kritik hata 0.

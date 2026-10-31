@@ -116,7 +116,7 @@ Danışma amaçlı çıktılar hiçbir kapıyı, geçişi ya da emri etkilemez v
 | Timeout | Çağrı başına | Başlangıç 120 sn (Batch hariç) |
 | **LLM acil durdurma** (`AiKillSwitch`) | ops DB'de kalıcı bir bayrak. Her çağrıdan ve her retry'dan önce kontrol edilir. Açıldığında: yeni çağrı yapılmaz, uçuştaki çağrılar `CancellationToken` ile iptal edilir, açık Batch işleri iptal edilir, görevler `onUnavailable`'a düşer | — |
 | Otomatik tetikler | (a) aylık tavana ulaşılması; (b) son 60 dakikadaki harcamanın aylık tavanın %20'sini aşması; (c) gerçek maliyetin tahmini 2 katından fazla olması (art arda 3 çağrıda); (d) circuit breaker'ın açılması | Başlangıç değerleri |
-| Kapatma | Yalnızca manuel (Ops API veya CLI), audit kaydıyla | — |
+| Kapatma | Yalnızca manuel (CLI: `m4-ai.ps1 killswitch clear`), audit kaydıyla. Durum dashboard'da ve `/alarms`'ta görünür (ADR-0024) | — |
 | Bant dışı durdurma | Runbook: Google konsolunda API anahtarını iptal etme veya yenileme. Kodumuzdan bağımsız son çare | — |
 | Sağlayıcı tarafı limitler | Tier 1'in 250 $ fatura tavanı ve 10 dakikada 10 $ sınırı (S-G4) | Hesabınıza uygulanışı **doğrulanmadı.** İkinci katman, birincil kontrol değil |
 
@@ -267,7 +267,7 @@ Hepsi `eval_registry` tarafından holdout DB'sinde uygulanır.
 |---|---|---|
 | `Candidate → Frozen` | Kapılar geçildi; tanısal sonuç (varsa) `Rejected` değil; manifesto yetkili kayda yazıldı (GitHub push şart değil); `eval_registry` sınırları kabul etti | Otomatik |
 | `Frozen → PaperTrading` | Parity replay başarılı: L1 sinyal paritesi ve L2 karar paritesi birebir (ADR-0015). Mutlak emir büyüklükleri karşılaştırılmaz | **Otomatik (D3)** |
-| `PaperTrading → TestnetActive` | Asgari paper süresi (TBD) ve sıfır kritik hata | **Kullanıcı onayı (D3)** |
+| `PaperTrading → TestnetActive` | D30: ≥ 10 takvim günü (rev. 2026-10-30), ≥ 60 işlenmiş 4h mum, son 7 günde sıfır kritik hata | **Kullanıcı onayı (D3)** |
 | `* → Disabled / Retired` | Operasyonel güvenlik | Kullanıcı ya da risk motoru; her zaman serbest; audit'e yazılır |
 
 **Doğrulama durumu** (ayrı eksen; bir view'dır ve sonuç tablosundan türetilir):
@@ -406,7 +406,7 @@ Bkz. `risk-model.md` §4.
 - Yapılandırılmış JSON loglar (`Microsoft.Extensions.Logging` ve JSON console formatter). Her satırda `CycleId`, `JobId`, `TaskId`, `OrderId` gibi correlation ID'leri.
 - Health endpoint'leri (`/health/live`, `/health/ready`). Hazırlık; DB, son mumun tazeliği ve kill switch durumlarını kapsar.
 - Metrikler ops DB'de sorgulanabilir tablolar olarak tutulur (döngü süreleri, gecikme, maliyet). Prometheus/Grafana/ELK yok; ihtiyaç doğarsa M10'da yeniden değerlendirilir.
-- Alarmlar M10'da.
+- Alarmlar (M10, ADR-0024): mevcut tablolardan istek anında hesaplanır; `GET /alarms` ve dashboard alarm şeridi. Yeni dış bildirim kanalı yoktur. Katalog: `m9-m10-protocol.md` §3.2.
 
 ## 12. Dağıtım (ADR-0013)
 - **Tek yerel makine** (D5 rev.): Docker Compose ve Testcontainers. VPS yok.

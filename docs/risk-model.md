@@ -39,11 +39,11 @@ Son güncelleme: 2026-10-20 (rev. 5.1; M5, D29) · Değişiklikler: [CHANGELOG.m
 
 | Tetik | Davranış |
 |---|---|
-| Manuel (Ops API veya CLI) | Yeni LLM çağrısı yapılmaz, uçuştaki çağrılar ve Batch işleri iptal edilir, görevler `onUnavailable`'a düşer |
+| Manuel (CLI: `m4-ai.ps1 killswitch trip`; kapatma da yalnızca CLI) | Yeni LLM çağrısı yapılmaz, uçuştaki çağrılar ve Batch işleri iptal edilir, görevler `onUnavailable`'a düşer |
 | Aylık tavana ulaşma | Aynı |
 | Son 60 dakikadaki harcamanın aylık tavanın %20'sini aşması (başlangıç değeri) | Aynı |
 | Art arda 3 çağrıda gerçek maliyetin tahmini 2 katını aşması (başlangıç değeri) | Aynı |
-| Bant dışı | Google konsolunda API anahtarı iptali (runbook) |
+| Bant dışı | Google konsolunda API anahtarı iptali (`runbook.md` §2) |
 
 LLM'in durdurulması trading'i durdurmaz. Operasyon varsayılan deterministik politikayla (T11) devam eder.
 

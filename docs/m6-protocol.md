@@ -1,7 +1,8 @@
-# M6 Protokolü — Binance Spot Testnet execution (v1.1)
+# M6 Protokolü — Binance Spot Testnet execution (v1.2)
 
 - Durum: **Ön kayıt — kullanıcı tarafından onaylandı (Kapı A, 2026-10-26, U; §0.2 A-1…A-6 dahil).** Ön kayıt kanıtı, bu belgenin onaylandığı git commit'idir. O commit'ten önce M6 kodu yazılmaz.
 - **v1.1 (2026-10-28, U):** A-4 değişti: Testnet run sermayesi kohort başına 5.000 USDT nominal (§13). Değişiklik, Testnet'te henüz hiçbir run açılmamışken (C3'ten önce) yapıldı; v1'in diğer bütün hükümleri aynen geçerli.
+- **v1.2 (2026-11-01; karar U, 2026-10-30):** D30'un gün şartı 14'ten **10 takvim gününe** indi (§14). 60 mum ve son 7 günde sıfır kritik hata şartları, geçiş yolu ve diğer bütün hükümler aynen geçerli. Ayrıca §6.2'deki lifecycle aktörü kodla uyumlu hale getirildi (`user`).
 - Karar türleri: **U** = kullanıcı, **T** = teknik lider, **P** = öneri (kullanıcı onayı gerekir).
 - İlgili: ADR-0002, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0018, ADR-0019, ADR-0020, **ADR-0021**; `architecture.md` §5, §10; `risk-model.md` §2–§4; `testing-strategy.md` §5, V10; `sources.md` S-B1…S-B5, S-B11…S-B24; D3, D6, D7, D11, D25, D29, D30, **D33**.
 - Değiştirilmeyenler:
@@ -19,7 +20,7 @@
 |---|---|
 | U-M6-1 | M6 başlatıldı. Kapılar: **A** = belge doğrulaması (`sources.md`), bu protokol ve ADR-0021; **B** = çevrimdışı kod ve testler, `verify.ps1` yeşil (sahte HTTP handler ve fault injection); **C** = kullanıcının gerçek Testnet koşuları (≥ 20 emirlik tatbikat, `PaperTrading → TestnetActive` geçişi). D30 dolmadan gerçek strateji terfisi yapılmaz |
 | U-M6-2 (**D33**) | B6 kapanır. Testnet API anahtarında statik IP kısıtı aranmaz (ev bağlantısının IP'si değişebilir; Testnet yalnızca sanal bakiye kullanır). Telafi edici kontroller: istekler kodda yalnızca `https://testnet.binance.vision` host'una kilitlidir (`TestnetGuardHandler`); 3xx reddedilir; anahtar yalnızca Trading.Host'un secret'larındadır (`/run/secrets/testnet_api_key`, `testnet_api_secret`) ve yalnızca işlem iznine sahiptir. **Karar yalnızca Testnet için geçerlidir;** gerçek borsa (mainnet) kapsam dışıdır ve ayrı karar ister |
-| U-M6-3 | **D30 sayımı:** 14 gün, strateji için `PaperTrading` lifecycle olayından itibaren **takvim günüdür**. 60 mum, stratejinin kohort paper run'ında işlenmiş 4h mumlarıdır; kesinti sonrası sırayla işlenen (catch-up) mumlar dahildir. Kesinti oranı ilerleme göstergesinde ayrıca verilir |
+| U-M6-3 | **D30 sayımı:** gün şartı (v1.2: 10 gün, §14), strateji için `PaperTrading` lifecycle olayından itibaren **takvim günüdür**. 60 mum, stratejinin kohort paper run'ında işlenmiş 4h mumlarıdır; kesinti sonrası sırayla işlenen (catch-up) mumlar dahildir. Kesinti oranı ilerleme göstergesinde ayrıca verilir |
 | U-M6-4 | Bir strateji `TestnetActive` olunca **paper run'ı paralel sürer** (gölge). Testnet ayrı bir run'dır |
 | U-M6-5 | **Emir tipleri:**<br>- koruyucu stop `STOP_LOSS` (tetiklenince market);<br>- sembolün `orderTypes` listesinde yoksa bantlı `STOP_LOSS_LIMIT`;<br>- giriş koruma bantlı `LIMIT` + `IOC`;<br>- sinyal çıkışı, "pozisyon kapat" ve "tümünü kapat" `MARKET` |
 | U-M6-6 | İstek imzalama **HMAC-SHA256** |
@@ -210,7 +211,7 @@ Accepted | PartiallyFilled --iptal isteği--> CancelRequested --> Canceled | Fil
 ### 6.1 D30 koşulları (U-M6-3)
 | Koşul | Tanım | Kaynak |
 |---|---|---|
-| Süre | `now − recorded_at(PaperTrading olayı)` ≥ 14 takvim günü | `research.lifecycle_events` |
+| Süre | `now − recorded_at(PaperTrading olayı)` ≥ 10 takvim günü (v1.2; v1–v1.1: 14) | `research.lifecycle_events` |
 | Mum | Stratejinin kohort paper run'ında işlenmiş (catch-up dahil) 4h mum sayısı ≥ 60 | `trading.steps` |
 | Kritik hata (son 7 gün) | 0. Sayılanlar:<br>- `reconciliation_runs.ok = false` (ledger tutarsızlığı, invariant);<br>- duplicate dolum;<br>- o strateji için `strategy_hash_mismatch`;<br>- `ip-banned` (HTTP 418) | `trading.reconciliation_runs`, `trading.cycle_metrics`, `audit.events` |
 
@@ -226,7 +227,7 @@ Accepted | PartiallyFilled --iptal isteği--> CancelRequested --> Canceled | Fil
   - Testnet etkin değil (`Trading:Testnet=disabled`) ya da anahtar yok → 409;
   - strateji hash'i manifestoyla uyuşmuyor → 409 (V14).
 - **Başarıda tek transaction'da yazılanlar:**
-  - `research.lifecycle_events`: `PaperTrading → TestnetActive`, aktör `ops_api`, kanıt `{d30: {...}, confirm: true, reason}`;
+  - `research.lifecycle_events`: `PaperTrading → TestnetActive`, aktör `user` (yazan rol `ops_api`; v1.2 düzeltmesi), kanıt `{d30: {...}, confirm: true, reason}`;
   - `trading.ops_actions` (`testnet-activate`);
   - `audit.events`.
 - Testnet run'ı ve bakiye tabanı, bir sonraki bakım geçişinde Trading tarafından açılır.
@@ -237,10 +238,10 @@ Accepted | PartiallyFilled --iptal isteği--> CancelRequested --> Canceled | Fil
 ## 7. Ops API ve dashboard (ADR-0020'nin uzantısı)
 - **Yeni GET (salt okunur, token, güvenlik başlıkları, loopback `Host`):**
   - `/testnet`: run başına emir ve outbox durum sayıları; `Unknown` ve korumasız pozisyonlar; pozisyon başına borsadaki stop emrinin durumu (`Accepted` / yok / yedek tip); son reconciliation; sembol kuralları hash'i;
-  - `/promotion`: strateji başına D30 ilerlemesi (`X/14 gün`, `Y/60 mum`, son 7 günde kritik hata, kesinti oranı), uygunluk ve `experimental` etiketi.
+  - `/promotion`: strateji başına D30 ilerlemesi (`X/10 gün`, `Y/60 mum`; eşikler yanıttaki `minimumDays` ve `minimumBars` alanlarından, son 7 günde kritik hata, kesinti oranı), uygunluk ve `experimental` etiketi.
 - **Yeni POST:** `/strategies/{name}/testnet-activate` (§6.2) ve `/testnet/rebaseline` (§4.4).
 - Rota adları H24'ün yasaklı alt dizgilerini (`cohort`, `manifest`, `result`, `validat`) içermez. `OpsApi.Routes` pin listesi ve H24 testi bilinçli olarak güncellenir.
-- **Dashboard:** "Testnet" sekmesi (emirler, outbox, stop'lar) ve genel bakışta D30 çubukları (`Kohort 0: X/14 gün, Y/60 mum`). CSP, `textContent` kuralı ve harici kaynak yasağı korunur. Dashboard'da eylem düğmesi yoktur. Doğrulama sentetik veriyle yapılır.
+- **Dashboard:** "Testnet" sekmesi (emirler, outbox, stop'lar) ve genel bakışta D30 çubukları (`Kohort 0: X/10 gün, Y/60 mum`). CSP, `textContent` kuralı ve harici kaynak yasağı korunur. Dashboard'da eylem düğmesi yoktur. Doğrulama sentetik veriyle yapılır.
 
 ## 8. Güvenlik ve tatbikat
 
@@ -331,7 +332,7 @@ Accepted | PartiallyFilled --iptal isteği--> CancelRequested --> Canceled | Fil
 - **V10 ve D30:**
   - §6.2'deki tüm yanıt kodları;
   - DB trigger'ı (uygulama atlanarak doğrudan insert, `trading_app`/`research_app` yetkisi);
-  - D30 hesaplayıcının sınır değerleri (13/14 gün, 59/60 mum, 7 günlük pencere sınırı, catch-up mumlarının sayılması);
+  - D30 hesaplayıcının sınır değerleri (v1.2: 9,99/10 gün, 59/60 mum, 7 günlük pencere sınırı, catch-up mumlarının sayılması);
   - `experimental` etiketi.
 - **Paper gölge:** `TestnetActive` üyenin paper sleeve'i aktif kalır; paper L1/L2 değişmez.
 - **Harici dolum modu:**
@@ -358,7 +359,7 @@ Accepted | PartiallyFilled --iptal isteği--> CancelRequested --> Canceled | Fil
    - migration 0009;
    - Trading.Host'un yeniden derlenmesi ve `PI_TRADING_TESTNET=enabled`;
    - `-ChecksOnly`: paper 3/3, reconciliation, Testnet bağlantısı, Testnet run'ı yok.
-4. **C4 – Terfi:** D30 dolduğunda (en erken Kohort 0 için 2026-11-03, Kohort 1 için 2026-11-04) strateji başına `m6-testnet-activate.ps1 -Strategy <ad>` çalıştırılır. İlk Testnet döngülerinden sonra `-ChecksOnly` şunları gösterir:
+4. **C4 – Terfi:** D30 dolduğunda (v1.2 ile Kohort 0 için 2026-11-01'de uygun; Kohort 1'in terfisi ayrı kullanıcı kararıdır, `m9-m10-protocol.md` U-M9-2) strateji başına `m6-testnet-activate.ps1 -Strategy <ad>` çalıştırılır. İlk Testnet döngülerinden sonra `-ChecksOnly` şunları gösterir:
    - korumasız pozisyon 0;
    - takılı `Unknown` 0;
    - reconciliation temiz.
@@ -395,3 +396,12 @@ Accepted | PartiallyFilled --iptal isteği--> CancelRequested --> Canceled | Fil
   - Tatbikatın sermaye kontrolü artık `kohort × 5.000 × 0,80` ile ölçülür (`--capital` ile değiştirilebilir).
   - Dashboard'un özet toplamları yalnızca paper run'larını içerir; Testnet run'ları ayrı kartta gösterilir.
 - **Değişmeyenler:** risk limitleri (D7, D22, D25, D29), emir tipleri ve bantlar (A-1, A-2), D30, kabul kriterleri.
+- **v1.2 notu:** D30'un gün şartı §14'te değişti; risk limitleri, emir tipleri, bantlar ve kabul kriterleri değişmedi.
+
+## 14. Ek v1.2 — D30 gün şartı (U, 2026-10-30)
+- **Karar (kullanıcı):** `PaperTrading → TestnetActive` için asgari süre **≥ 10 takvim günü** (önceki 14). Değişmeyenler: ≥ 60 işlenmiş 4h mum (catch-up dahil), son 7 günde sıfır kritik hata, kullanıcı oturumu ve `confirm` (§6.2), DB trigger'ı, V14 hash kontrolü.
+- **Gerekçe:** 60 adet 4h mum tam 10 gündür (60 × 4 saat). Mum şartı kesintisiz çalışmada süreyi zaten 10 güne bağlar; kesinti olursa mum şartı süreyi kendiliğinden uzatır. 14 gün ayrıca bağlayıcı bir güvenlik kazancı sağlamıyordu.
+- **Kanıt durumu (kullanıcının `-ChecksOnly` çıktısı, operasyonel alanlar):** Kohort 0 (`ema-trend`, `supertrend`) `days=10,32`, `bars=61/60`, `criticalErrors7d=0`.
+- **Uygulama (Kapı B, `m9-m10-protocol.md`):** `Promotion.MinimumDays = 10`; 7 günlük pencere SQL'de `ErrorWindow` sabitinden gelir; dashboard metinleri sunucudaki eşiklerden üretilir; sınır testleri 9,99/10 gün, ayrıca 7 günlük pencere sınırı ve catch-up mumlarının sayılması testleri.
+- **Kapsam:** yalnızca Kohort 0 terfi eder (U-M9-2). Kohort 1 yeni eşikle uygun olsa da terfisi ayrı kullanıcı kararıdır.
+- Testnet'te henüz hiçbir strateji `TestnetActive` değilken değiştirildi; açık Testnet run'ı yoktur.

@@ -54,6 +54,8 @@
       "PowerShell(*-File*m8-*)",
       "Bash(*-File*m6-*)",
       "PowerShell(*-File*m6-*)",
+      "Bash(*-File*m10-*)",
+      "PowerShell(*-File*m10-*)",
       "Bash(*-File*m5-bootstrap*)",
       "PowerShell(*-File*m5-bootstrap*)",
       "Bash(*-File*m5-deploy*)",

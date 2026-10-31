@@ -43,6 +43,10 @@ Kullanıcıdan açık onay alınmadan yapılmaz:
   - `scripts/m8-*.ps1`, allocator mod geçişleri, `alloc-spike`/`alloc-register`/`alloc-report`/`alloc-qualify` koşuları ve `--allow-network` komutları **yalnızca kullanıcı** tarafından çalıştırılır.
   - Gölge ve yeterlilik raporlarından yalnızca operasyonel alanlar görülür (karar, gün ve çağrı sayıları, geçerli öneri, clamp, veto, fallback ve güvenlik olayı sayıları, maliyet, süre `N`). Getiri farkı, güven sınırı, σ̂_d ve drawdown değerleri okunmaz, repoya yazılmaz, araştırma girdisi olmaz.
   - `trading.allocator_*` tabloları ve `/allocator` uç noktası gerçek ortamda okunmaz ve çağrılmaz; doğrulama yalnızca sentetik test verisiyle yapılır. Gemini runtime anahtarı yalnızca `secrets/` altındadır ve okunmaz.
+- **M9–M10 alarmlar ve dashboard (m9-m10-protocol §1, §8; ADR-0024):**
+  - `scripts/m10-*.ps1` (alarm tatbikatı) **yalnızca kullanıcı** tarafından çalıştırılır.
+  - `/alarms` ve `/provenance/order/*` uç noktaları gerçek ortamda Claude Code tarafından çağrılmaz; doğrulama yalnızca sentetik test verisiyle yapılır.
+  - Tatbikat ve prova raporlarından yalnızca operasyonel alanlar görülür (alarm kodları, önem, sayılar, zamanlar).
 - Holdout ortamına ait sır adları (`tests/Architecture.Tests/HoldoutSecretReferenceTests.cs`) evaluator projesi dışında hiçbir kaynak, config ya da script dosyasında kullanılmaz.
 
 ## Sırlar

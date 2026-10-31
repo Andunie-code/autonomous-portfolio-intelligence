@@ -117,6 +117,7 @@
 
 ### 7. Yaşam döngüsü (V10; D3, D30)
 - `PaperTrading → TestnetActive` yalnızca Ops API'nin `POST /strategies/{name}/testnet-activate {confirm: true}` yoluyla yapılır. Bu yol bearer token ister (kullanıcı oturumu) ve D30'u sunucuda hesaplar.
+- **Not (2026-11-01, `m6-protocol.md` v1.2):** D30'un gün şartı kullanıcı kararıyla 14'ten 10 takvim gününe indi (U, 2026-10-30). Eşik yalnızca `Promotion.MinimumDays`'tedir; trigger ve geçiş yolu değişmez.
 - `lifecycle_rules()` bu geçişi yalnızca kanıtta `d30` ve `confirm = true` varken kabul eder. `trading_app` ve `research_app` bu geçişi yazamaz.
 - `Frozen` soyu, mevcut zincir kuralıyla zaten zorunludur (`Frozen → PaperTrading → TestnetActive`).
 - **Route değişikliği:** M9a'nın "yeni POST yok" kuralı yalnızca dashboard'a aittir (ADR-0020). M6 bilinçli olarak iki POST ekler: `testnet-activate` ve `/testnet/rebaseline`. Ayrıca iki salt-okunur GET ekler: `/testnet` ve `/promotion`. Pin listesi ve H24 testi bu dört rotayla güncellenir; yasaklı alt dizgi kuralı aynen kalır.
