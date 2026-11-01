@@ -2,6 +2,14 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-11-01 — Tam H-ENV koşusu ve Kohort 1'in Testnet terfisi (U)
+- **H-ENV (aylık kanıt):** `m5-henv-20261101T002326Z.txt`, SHA-256 `a71b3da30fad777a3127069985838ac09c84b60a235fdbffe93086b2f16ebf58`.
+  - `holdout-evaluator` durdurulduktan sonra düzeltilmiş script'le koşuldu: **78 satır, 0 hata**; zorunlu kimliklerin hepsi var; `henv_run_recorded` PASS.
+  - Koşu `-Cohort`'suz yapıldığı için H22 yok; M5'teki 79 satırla fark budur.
+  - 58 satırlık eksik koşu (`018cc233…4fef`) kayıtta kalır ama kanıt sayılmaz.
+- **Kohort 1 (U):** `h08`, `h04` ve `h07` `TestnetActive` (`days=10,24/10`, `bars=61/60`, `criticalErrors7d=0`). D35'teki "yalnızca Kohort 0" kapsamı kullanıcı kararıyla genişledi. Lifecycle `TestnetActive=5`; Testnet sermayesi kohort başına 5.000 USDT (A-4 v1.1).
+- **Belgeler:** `m10-acceptance-report.md` §3, §6 ve §7 eki; `m6-acceptance-report.md` §7; requirements D35 notu; roadmap M10 durumu. Kod değişikliği yok.
+
 ## 2026-11-01 — M9 ve M10 tamamlandı (kullanıcı kabulü; M0–M10 kapandı)
 - **Kapı C (kullanıcı koşuları):**
   - C0: `m6-update.ps1`.

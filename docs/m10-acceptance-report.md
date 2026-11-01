@@ -10,7 +10,7 @@
 | C0 | `m6-update.ps1` (Kapı B kodu; migration yok) | Tamamlandı (kullanıcı) |
 | C1 | Kohort 0 `TestnetActive` (M6 C4) | Tamamlandı: `ema-trend`, `supertrend` (`m6-acceptance-report.md` §7) |
 | C2 | İlk Testnet döngüsü ve `-ChecksOnly`; **prova başlangıcı** | Tamamlandı: açık Testnet run 1, bilinmeyen emir 0, korumasız pozisyon 0, kill switch kapalı; Testnet reconciliation henüz `none` |
-| C3 | H-ENV ve alarm tatbikatı | Tatbikat **PASS** (iki koşu). H-ENV koşusu **eksik** (§3, §5) |
+| C3 | H-ENV ve alarm tatbikatı | Tatbikat **PASS** (iki koşu). H-ENV: ilk koşu eksikti; düzeltmeden sonraki tam koşu **78 satır, 0 hata** (§3) |
 | C4 | Runbook provası (yedek/geri yükleme), mutabakat, tarayıcı kontrolü | Tarayıcı kontrolü tamamlandı. Yedek: kullanıcı kararıyla M5 kanıtı kabul edildi (§4). 2026-10 fatura mutabakatı açık |
 | C5 | Kabul | Bu belge (U, 2026-11-01) |
 
@@ -31,7 +31,10 @@
 - Rapor `m5-henv-20261101T000640Z.txt`, SHA-256 `018cc23389909dacc45f11a100d21c3b9efe2249ad10ff5805a7a1beb2504fef`: **58 satır, 58 PASS**; ops'a `henv_run_recorded` (PASS) yazıldı ve A5 temizlendi.
 - **Koşu eksiktir.** `holdout-evaluator` container'ı açık kaldığı için üç probe `Address already in use` ile çalışmadı. Çalışmayan probe hiç satır yazmadığından rapor 0 hata gösterdi. M5'teki tam koşu 79 satırdı (`-Cohort` ile, H22 dahil). Eksik satırların hangi H kimliklerine ait olduğu Claude Code tarafından incelenmedi (rapor içeriği okunmadı).
 - **Sonuç:** bu koşu aylık H-ENV kanıtı sayılmaz. `HoldoutEnvironmentVerified` bayrağı değişmedi (evaluator digest'i aynı); bu koşuyla yeniden set edilmemelidir.
-- **Düzeltme (§5)** sonrası yapılacak koşu, eksik probe'u FAIL olarak gösterir.
+- **Tam koşu (aylık kanıt, kullanıcı, 2026-11-01; `holdout-evaluator` durdurulduktan sonra, §5 düzeltmesiyle):** Tam koşu `m5-henv-20261101T002326Z.txt`, SHA-256 `a71b3da30fad777a3127069985838ac09c84b60a235fdbffe93086b2f16ebf58`: **78 satır, 0 hata**; ops'a `henv_run_recorded` (PASS) yazıldı.
+  - Çalışan kimlikler: H5, H6, H6b, H9, H10, H14, H15, H16, H19, H20, H21, H23, H24, H25, H26, H27, H28. Bu liste zorunlu kimliklerin hepsini içerir.
+  - Koşu `-Cohort`'suz yapıldı, bu yüzden H22 yok. M5'teki 79 satırlık koşu ile fark bu tek satırdır.
+  - Bir sonraki aylık koşu en geç 2026-12-02'de gelir (A5).
 
 ## 4. Kabul kriterleri (roadmap M10)
 | Kriter | Kanıt | Sonuç |
@@ -53,8 +56,16 @@
 - **Not:** probe'ların başarıda 0 ile çıktığı varsayılır (M5 koşusundaki davranış). Aksi görülürse bir sonraki koşu bunu `probe-…-ran` satırıyla gösterir.
 
 ## 6. Açık kalanlar (kullanıcı)
-1. **H-ENV'in yeniden koşulması:** önce `holdout-evaluator` container'ı durdurulur (iş bazlıdır, sürekli açık kalmamalı; ADR-0013); sonra `scripts/m5-henv.ps1` düzeltilmiş haliyle çalıştırılır. Beklenen: zorunlu kimliklerin hepsi ve `failures: 0`.
+1. ~~H-ENV'in yeniden koşulması~~: **tamamlandı** (2026-11-01, 78 satır, 0 hata; §3).
 2. **İlk Testnet reconciliation kaydı** ve ilk gerçek strateji emri: `m6-update.ps1 -ChecksOnly` ile temiz görülmeli; ilk emirden sonra dashboard'da zincir kontrolü (M9 §4).
 3. **2026-10 AI fatura mutabakatı:** `scripts/m4-ai.ps1 reconcile --month 2026-10 --invoice-try <TL> --usd-try <kur>`.
 4. **30 günlük prova sonu** (≥ 2026-12-01): döngüler, kesintiler, reconciliation, emir yaşam döngüsü sayıları, sıfırlama/rebaseline, alarm geçmişi ve `docker stats` belleği bu rapora ek olarak işlenir (runbook §7). `requirements.md` §8'deki bellek TBD'si bu ölçümle kapanır.
-5. Kohort 1'in Testnet terfisi (D30'u sağlıyor) ayrı kullanıcı kararıdır.
+5. ~~Kohort 1'in Testnet terfisi~~: **yapıldı** (U, 2026-11-01; §7).
+
+## 7. Ek — Kohort 1'in Testnet terfisi (U, 2026-11-01)
+- **Karar (kullanıcı):** D35'teki "yalnızca Kohort 0" kapsamı kullanıcı kararıyla genişletildi. Kohort 1'in üç stratejisi `h08-smabtc-n150-b300`, `h04-macd-f12-s26-g12` ve `h07-volbo-n50-v2p5` `m6-testnet-activate.ps1` ile `TestnetActive` yapıldı.
+- **D30 (terfi anı, kullanıcı çıktısı):** `days=10,24/10`, `bars=61/60`, `criticalErrors7d=0`, `eligible=True`.
+- **Durum:** lifecycle `TestnetActive=5`. Beş strateji Testnet'te; paper run'ları gölge olarak paralel sürer (U-M6-4).
+- **Sermaye (`m6-protocol.md` v1.1 §13, A-4):** Testnet run'ı kohort başına 5.000 USDT nominaldir. İki kohortun en fazla maruziyeti yaklaşık 8.000 USDT'dir ve hesabın yaklaşık 10.000 USDT bakiyesine sığar.
+- **Kontrol edilecek:** Kohort 1'in Testnet run'ı bir sonraki döngüde açılır. Bundan sonraki `m6-update.ps1 -ChecksOnly` çıktısında açık run 2, bilinmeyen emir 0, korumasız pozisyon 0 ve temiz reconciliation görülmelidir. Bu kontrol 30 günlük prova gözlemine dahildir.
+- 30 günlük prova Kohort 0 için 2026-11-01'de, Kohort 1 için terfisiyle başladı.

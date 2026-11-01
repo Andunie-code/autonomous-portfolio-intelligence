@@ -258,7 +258,9 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
 - **Durum:** Kapı A, Kapı B ve Kapı C tamamlandı. Kabul raporu: [`m10-acceptance-report.md`](m10-acceptance-report.md).
   - Kohort 0 `TestnetActive` (M6 C4); 30 günlük prova 2026-11-01'de başladı.
   - Alarm tatbikatı PASS.
-  - Açık kalanlar: H-ENV koşusu eksikti ve yeniden koşulacak (kapanışta `m5-henv.ps1` düzeltildi); ilk Testnet reconciliation kaydı; 2026-10 fatura mutabakatı.
+  - H-ENV: ilk koşu eksikti; `m5-henv.ps1` düzeltildi ve tam koşu 78 satır, 0 hata verdi.
+  - Kohort 1 de `TestnetActive` (U, 2026-11-01); lifecycle `TestnetActive=5`.
+  - Açık kalanlar: ilk Testnet reconciliation kayıtları; 2026-10 fatura mutabakatı.
 - **Kapılar (U):** **A** = alarm kataloğu ve eşikler, tatbikat, runbook kapsamı; **B** = `/alarms`, alarm testleri, `m10-alarm-drill.ps1`, `docs/runbook.md`; **C** = kullanıcının koşuları: M6 C4 (yalnızca Kohort 0, D30 rev. ile), 30 günlük Testnet provasının başlatılması, alarm tatbikatı, H-ENV, yedek ve geri yükleme, AI mutabakatı.
 - **Kabul edilen sapma (U, D35):** 30 günlük prova başlatılıp ilk döngüleri doğrulanınca M10 kapanır; gözlem arka planda sürer.
 - **Kabul kriterleri:**
