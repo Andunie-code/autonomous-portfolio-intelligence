@@ -213,6 +213,24 @@ public class EnvironmentConfigurationTests
     }
 
     [Fact]
+    public void Henv_fails_when_a_probe_did_not_run_or_a_required_id_has_no_line()
+    {
+        // M10 C3: three probes stopped on "Address already in use", printed no H line and the run still read "failures: 0"
+        // (58 lines instead of 79). Every probe call is followed by an exit-code check, and every required id must appear.
+        var lines = File.ReadAllLines(Path.Combine(Root, "scripts", "m5-henv.ps1")).Select(l => l.Trim()).ToList();
+        var probes = lines.Select((l, i) => (Line: l, Index: i)).Where(x => x.Line.StartsWith("Add-Lines (Invoke-Native", StringComparison.Ordinal)).ToList();
+        Assert.Equal(7, probes.Count);
+        Assert.All(probes, p => Assert.StartsWith("Assert-Ran '", lines[p.Index + 1]));
+        var required = lines.Single(l => l.StartsWith("$script:RequiredIds", StringComparison.Ordinal));
+        foreach (var id in new[] { "H5", "H6", "H6b", "H14", "H19", "H20", "H21", "H23", "H24", "H25", "H26", "H27", "H28" })
+        {
+            Assert.Contains($"'{id}'", required);
+        }
+
+        Assert.Contains(lines, l => l.Contains("\"missing-$id\" $false", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Every_script_that_recreates_trading_host_decides_testnet_execution_explicitly()
     {
         // M10 (runbook §3): a script that recreates Trading.Host must set PI_TRADING_TESTNET itself; compose's default is

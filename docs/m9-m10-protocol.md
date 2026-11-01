@@ -1,6 +1,6 @@
 # M9–M10 Protokolü — Dashboard tamamlaması, alarmlar, runbook ve 30 günlük Testnet provası (v1)
 
-- Durum: **Ön kayıt — kullanıcı tarafından onaylandı (Kapı A, U, 2026-11-01; §0.1 U-M9-1…U-M9-5 ve §0.2 B-1…B-5 dahil).** Ön kayıt kanıtı, bu belgenin onaylandığı git commit'idir. O commit'ten önce M9/M10 kodu yazılmaz.
+- Durum: **Ön kayıt — kullanıcı tarafından onaylandı (Kapı A, U, 2026-11-01; §0.1 U-M9-1…U-M9-5 ve §0.2 B-1…B-5 dahil).** Kapı B `ae630ca`; Kapı C ve kabul 2026-11-01 (`m9-acceptance-report.md`, `m10-acceptance-report.md`). Ön kayıt kanıtı, bu belgenin onaylandığı git commit'idir. O commit'ten önce M9/M10 kodu yazılmaz.
 - Karar türleri: **U** = kullanıcı, **T** = teknik lider, **P** = öneri (kullanıcı onayı gerekir).
 - İlgili: ADR-0010, ADR-0013, ADR-0018, ADR-0020, ADR-0021, ADR-0023, **ADR-0024**; `m6-protocol.md` v1.2; `m8-protocol.md`; `architecture.md` §3.4, §11; `risk-model.md` §3–§4; `testing-strategy.md` §1, §5, §6.3; D3, D4, D11, D30 (rev.), D32, **D35**.
 - Değiştirilmeyenler:

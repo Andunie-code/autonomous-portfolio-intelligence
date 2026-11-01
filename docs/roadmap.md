@@ -1,8 +1,8 @@
 # Yol Haritası
 
-Son güncelleme: 2026-11-01 (rev. 5.11; D30 rev., M9–M10 Kapı A onaylandı) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-11-01 (rev. 5.12; M9 ve M10 tamamlandı, M0–M10 kapandı; kabul edilen sapmalar) · Değişiklikler: [CHANGELOG.md](CHANGELOG.md)
 
-> Durum: **M0 yerelde tamamlandı** (2026-10-13; doğrulama `716a1bd` commit'inde, temiz klonda). Uzak depo: private GitHub deposu `Andunie-code/autonomous-portfolio-intelligence`. M1 ve sonrası başlamadı; her milestone ayrı kullanıcı onayı gerektirir. Bir milestone, kabul kriterlerindeki testler **gerçekten uygulanıp geçtiğinde** tamamlanmış sayılır.
+> Durum: **M0–M10 tamamlandı** (2026-11-01; kullanıcı kabulleri). Kapanıştan sonra arka planda süren operasyonel gözlemler: M8 gölge pilotu ve yeterlilik penceresi (U-M8-4), M10 30 günlük Testnet provası (D35). Uzak depo: private GitHub deposu `Andunie-code/autonomous-portfolio-intelligence`. Yeni bir çalışma ayrı kullanıcı onayı gerektirir. Bir milestone, kabul kriterlerindeki testler **gerçekten uygulanıp geçtiğinde** tamamlanmış sayılır.
 
 ## Sıralamanın mantığı
 1. Önce kanıt altyapısı (veri, backtest, değerlendirme), sonra para hareketi.
@@ -244,18 +244,21 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
   - Aktif moda geçiş yalnızca nitelik varsa ve kullanıcı onayıyla.
   - Allocator ağırlığı yalnızca `Validated` stratejilere veriliyor; diğerlerinde varsayılan politika uygulanıyor.
 
-### M9 — Dashboard (M)
+### M9 — Dashboard (M) — ✅ tamamlandı (2026-11-01; kullanıcı kabulü)
 - **Ön kayıt:** [`m9-m10-protocol.md`](m9-m10-protocol.md) v1 ve ADR-0024 (Kapı A, kullanıcı onayı 2026-11-01). M9 ve M10 birlikte yürütülür (D35). M9a kısmı M5b'de tamamlandı (ADR-0020).
-- **Durum:** Kapı A (`d202bae`) ve Kapı B (çevrimdışı kod ve testler, `verify.ps1` yeşil, 794 test) tamamlandı; Kapı C kullanıcının koşularıdır.
+- **Durum:** Kapı A (`d202bae`), Kapı B (`ae630ca`, 794 test) ve Kapı C (güncelleme, tarayıcı kontrolü) tamamlandı. Kabul raporu: [`m9-acceptance-report.md`](m9-acceptance-report.md). Gerçek bir Testnet emrinden zincir, ilk emirden sonra kullanıcı tarafından görülür.
 - **Kapılar (U):** **A** = protokol, ADR-0024, D30 rev. belgeleri, T17; **B** = çevrimdışı kod ve testler (Testnet emrinden zincir, allocator düğümü, DecisionTrace alanları, bütçe çubuğu), `verify.ps1` yeşil; **C** = kullanıcının tarayıcı kontrolü.
 - **Kabul kriterleri:**
   - Emirden veri setine kadar zincir gezilebiliyor.
   - DecisionTrace, degraded işaretleri ve LLM acil durdurma durumu görünüyor.
   - Görev sınıfı bazında maliyet görünüyor.
 
-### M10 — Sağlamlaştırma (S)
+### M10 — Sağlamlaştırma (S) — ✅ tamamlandı (2026-11-01; kullanıcı kabulü, kabul edilen sapma)
 - **Ön kayıt:** [`m9-m10-protocol.md`](m9-m10-protocol.md) §3–§6 ve ADR-0024 (Kapı A, kullanıcı onayı 2026-11-01).
-- **Durum:** Kapı A ve Kapı B tamamlandı (alarmlar, `m10-alarm-drill.ps1`, [`runbook.md`](runbook.md)); Kapı C kullanıcının koşularıdır.
+- **Durum:** Kapı A, Kapı B ve Kapı C tamamlandı. Kabul raporu: [`m10-acceptance-report.md`](m10-acceptance-report.md).
+  - Kohort 0 `TestnetActive` (M6 C4); 30 günlük prova 2026-11-01'de başladı.
+  - Alarm tatbikatı PASS.
+  - Açık kalanlar: H-ENV koşusu eksikti ve yeniden koşulacak (kapanışta `m5-henv.ps1` düzeltildi); ilk Testnet reconciliation kaydı; 2026-10 fatura mutabakatı.
 - **Kapılar (U):** **A** = alarm kataloğu ve eşikler, tatbikat, runbook kapsamı; **B** = `/alarms`, alarm testleri, `m10-alarm-drill.ps1`, `docs/runbook.md`; **C** = kullanıcının koşuları: M6 C4 (yalnızca Kohort 0, D30 rev. ile), 30 günlük Testnet provasının başlatılması, alarm tatbikatı, H-ENV, yedek ve geri yükleme, AI mutabakatı.
 - **Kabul edilen sapma (U, D35):** 30 günlük prova başlatılıp ilk döngüleri doğrulanınca M10 kapanır; gözlem arka planda sürer.
 - **Kabul kriterleri:**

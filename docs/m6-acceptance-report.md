@@ -12,7 +12,7 @@
 | C1 | Testnet HMAC anahtarı, işlem izni açık (`m6-testnet-key.ps1`) | Tamamlandı (2026-10-27, kullanıcı) |
 | C2 | Tatbikat, ≥ 20 emir (`m6-testnet-drill.ps1`) | **PASS** (2026-10-27T22:35Z) |
 | C3 | Migration 0009, Trading.Host yeniden derleme, Testnet etkin (`m6-update.ps1`) | **Tamamlandı** (2026-10-27T22:51Z, kullanıcı; §4) |
-| C4 | `PaperTrading → TestnetActive` (D30 dolunca), ilk Testnet döngüleri, kill switch denemesi | **Kapanıştan sonraki operasyonel adım** (§5): en erken Kohort 0 için 2026-11-03, Kohort 1 için 2026-11-04 |
+| C4 | `PaperTrading → TestnetActive` (D30 dolunca), ilk Testnet döngüleri, kill switch denemesi | **Tamamlandı (Kohort 0, 2026-11-01; §7 eki).** D30 rev. 10 gün ile; Kohort 1 ayrı kullanıcı kararına bağlı |
 | C5 | Kabul | **Tamamlandı** (kullanıcı kabulü, 2026-10-28; §6) |
 
 **Script düzeltmeleri (C2 öncesi, CHANGELOG 2026-10-28):**
@@ -94,3 +94,14 @@
 | `PaperTrading → TestnetActive` yalnızca `Frozen` soyundaki stratejiler için ve kullanıcı oturumuyla; doğrulama gerektirmez; `experimental` etiketi | Kapı B: V10 testleri (401/400/409, DB trigger'ı, roller); gerçek geçiş C4'te | Karşılandı (çevrimdışı); gerçek geçiş kabul edilen sapma |
 
 - **Kapanış sonrası düzeltme:** `m6-update.ps1`'in lifecycle sayımı, Windows PowerShell 5.1'in JSON dizisini tek nesne döndürmesi yüzünden tüm durumları tek grupta topluyordu. Dizi artık pipeline ile açılıyor (M5b'deki `m5-cohort1-activate.ps1` düzeltmesiyle aynı).
+
+## 7. Ek — C4: Kohort 0'ın `TestnetActive` terfisi (2026-11-01; M9–M10 Kapı C)
+- **Dayanak:** D30 rev. (U, 2026-10-30; `m6-protocol.md` v1.2 §14: ≥ 10 gün, ≥ 60 mum, son 7 günde 0 kritik hata) ve D35 (yalnızca Kohort 0). Kod `ae630ca` ile güncellendi (`m6-update.ps1`, kullanıcı).
+- **Terfi (kullanıcı, `m6-testnet-activate.ps1`):** `ema-trend` ve `supertrend` `PaperTrading → TestnetActive`. Geçiş Ops API ve DB trigger'ı tarafından kabul edildi.
+- **Sonraki döngüden sonra `m6-update.ps1 -ChecksOnly` (kullanıcı çıktısı, operasyonel alanlar):**
+  - lifecycle `PaperTrading=3`, `TestnetActive=2`;
+  - Testnet `enabled=True`, açık run 1, bilinmeyen emir 0, korumasız pozisyon 0, Testnet reconciliation `none` (henüz kayıt yok);
+  - son döngü `degraded` (`stale-data`), `bars=269`, kill switch kapalı. Yeni Testnet run'ı açılışta 269 ısınma mumunu işledi; ısınmadaki `stale-data` M5b'de de görülen beklenen durumdur;
+  - D30: Kohort 0 `days=11,38/10`, `bars=68/60`, `criticalErrors7d=0`; Kohort 1'in üç stratejisi `days=10,22/10`, `bars=61/60`, `criticalErrors7d=0`, `eligible=True` (terfi edilmedi; ayrı kullanıcı kararı).
+- **Kill switch denemesi** (`m10-alarm-drill.ps1`, rapor SHA-256 `da035d6838d3cc63bee19da87204ea3bcda68933d763ba7db76a1df70bcf0745`): kill switch açıldı, A1 alarmı görüldü, kapatıldı, alarm temizlendi; Testnet'te açık giriş emri 0, korumasız pozisyon 0. **Sınır:** o anda Testnet pozisyonu ve borsada stop emri yoktu (`positions=0`, `acceptedStops=0`); "stop'lar borsada kalır" davranışı bu kez gerçek pozisyonla sınanmadı. Bu davranışın gerçek Testnet kanıtı C2 tatbikatıdır (§2, kill switch senaryosu), çevrimdışı kanıtı Kapı B testleridir.
+- **Açık kalanlar (operasyonel gözlem, M10 30 günlük provası):** ilk Testnet reconciliation kaydının temiz görülmesi; ilk gerçek strateji emrinin, koruyucu stop'unun ve L3 Testnet sapmalarının gözlenmesi (Kohort 0'ın işlem sıklığı düşük).

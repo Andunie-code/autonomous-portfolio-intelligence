@@ -91,6 +91,7 @@ Kodumuzdan bağımsız son çare. Anahtar dosyaları yalnızca `secrets/` altın
 ### 5.1 H-ENV ayrıntısı
 - H-ENV, Research ve Trading konumlarından holdout'a erişilemediğini sınar (`testing-strategy.md` §7.2). Trading.Host çalışırken koşulur (H23, H24).
 - Son koşu FAIL ise `HoldoutEnvironmentVerified` set edilmez; A5 kritik görünür.
+- Koşudan önce `holdout-evaluator` container'ının açık olmadığından emin olun (`docker compose --profile evaluator ps`). Açık kalmış bir evaluator, probe'ların `Address already in use` ile çalışmamasına yol açar. Script artık çalışmayan probe'u (`HENV FAIL probe-…-ran`) ve satırı çıkmayan zorunlu kimliği (`HENV FAIL missing-…`) hata sayar (M10 kapanış düzeltmesi).
 
 ### 5.2 Yedek ayrıntısı
 - Hedef klasör mutlak yol olmalı; repo dizini ve `OneDrive` altı reddedilir. Anahtar `secrets/backup_key`'tir; anahtar kaybolursa yedek açılamaz, anahtarın kendisini de ayrı ve güvenli bir yerde saklayın.

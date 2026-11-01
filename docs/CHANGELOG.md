@@ -2,6 +2,28 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-11-01 — M9 ve M10 tamamlandı (kullanıcı kabulü; M0–M10 kapandı)
+- **Kapı C (kullanıcı koşuları):**
+  - C0: `m6-update.ps1`.
+  - C1: Kohort 0 (`ema-trend`, `supertrend`) `TestnetActive` (M6 C4). D30 Kohort 0 için 11,38/10 gün, 68/60 mum, kritik hata 0.
+  - C2: açık Testnet run 1, bilinmeyen emir 0, korumasız pozisyon 0; Testnet reconciliation henüz `none`. 30 günlük prova başladı.
+  - C3: alarm tatbikatı PASS (`da035d68…0745`; ikinci koşu `8fbb3c0c…ab4f`), kritik 0, uyarı 0.
+  - Tarayıcı kontrolü yapıldı.
+- **H-ENV koşusu eksik:** `m5-henv-20261101T000640Z.txt` (`018cc233…4fef`) 58/58 PASS. Ancak açık kalan evaluator container'ı yüzünden üç probe çalışmadı (M5'te 79 satır). Bu koşu aylık kanıt sayılmaz ve yeniden koşulur.
+- **Düzeltme:** `m5-henv.ps1` artık çıkış kodu sıfır olmayan probe'u ve satırı çıkmayan zorunlu kimliği FAIL yazıyor (`EnvironmentConfigurationTests`). Runbook §5.1'e not eklendi.
+- **C4 yedeği:** kullanıcı kararıyla M5 kanıtı (33/33 tablo eşleşti) kabul edildi; bu Kapı C'de yeni yedek alınmadı.
+- **Kabul edilen sapmalar ve açık konular:**
+  - 30 günlük Testnet provası arka planda sürer (D35).
+  - Gerçek Testnet emrinden zincir, ilk emirden sonra kontrol edilecek.
+  - Kill switch tatbikatında Testnet pozisyonu yoktu. Stop'ların korunmasının gerçek ortam kanıtı M6 C2 tatbikatıdır.
+  - 2026-10 fatura mutabakatı açık.
+- **Belgeler:**
+  - Yeni: [`m9-acceptance-report.md`](m9-acceptance-report.md), [`m10-acceptance-report.md`](m10-acceptance-report.md).
+  - `m6-acceptance-report.md` §7 (C4 eki).
+  - roadmap M9 ✅ ve M10 ✅ (rev. 5.12), requirements rev. 5.12.
+  - ADR-0024 ve protokol durum satırları.
+- **`verify.ps1`:** yeşil, **795 test** (Architecture 129: H-ENV eksik koşu testi).
+
 ## 2026-11-01 — M9–M10 Kapı B: D30 kodu (10 gün), dashboard tamamlaması, alarmlar, alarm tatbikatı ve runbook
 - **D30 (`m6-protocol.md` v1.2 §14):** `Promotion.MinimumDays = 10`; 7 günlük kritik hata penceresi SQL'de `ErrorWindow`'dan gelir; dashboard D30 metinleri sunucudaki eşiklerden üretilir. Yeni testler: 9,99/10 gün sınırı, 7 günlük pencerenin dışlayıcı sınırı, tek catch-up'ta işlenen mumların sayılması.
 - **M9 (`m9-m10-protocol.md` §2):**

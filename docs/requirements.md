@@ -1,8 +1,8 @@
 # Gereksinimler
 
-Son güncelleme: 2026-11-01 (rev. 5.11; D30 rev. 10 gün, D35 ve M9–M10 Kapı A onayı) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
+Son güncelleme: 2026-11-01 (rev. 5.12; M9 ve M10 tamamlandı, M0–M10 kapandı) · Değişiklik geçmişi: [CHANGELOG.md](CHANGELOG.md)
 
-> Durum: M0–M5 ve M5b (Kohort 1, M9a dashboard) tamamlandı (roadmap). M6 tamamlandı (kullanıcı kabulü 2026-10-28; gerçek Testnet terfisi D30 sonrasında, `m6-acceptance-report.md` §5). M7 tamamlandı (kullanıcı kabulü 2026-10-28; FindingExtraction yeterliliği `Failed`, web araştırması kapalı, `m7-acceptance-report.md`). M8 tamamlandı (kullanıcı kabulü 2026-10-31, kabul edilen sapma; allocator gölge modda, AllocationProposal pilotu ve yeterlilik penceresi arka planda sürer, `m8-acceptance-report.md`). M9 ve sonrasındaki kontroller ve testler **planlanmıştır, henüz uygulanmamıştır.** rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
+> Durum: M0–M5 ve M5b (Kohort 1, M9a dashboard) tamamlandı (roadmap). M6 tamamlandı (kullanıcı kabulü 2026-10-28; gerçek Testnet terfisi D30 sonrasında, `m6-acceptance-report.md` §5). M7 tamamlandı (kullanıcı kabulü 2026-10-28; FindingExtraction yeterliliği `Failed`, web araştırması kapalı, `m7-acceptance-report.md`). M8 tamamlandı (kullanıcı kabulü 2026-10-31, kabul edilen sapma; allocator gölge modda, AllocationProposal pilotu ve yeterlilik penceresi arka planda sürer, `m8-acceptance-report.md`). M9 ve M10 tamamlandı (kullanıcı kabulü 2026-11-01; `m9-acceptance-report.md`, `m10-acceptance-report.md`): dashboard tamamlaması, hesaplanan alarmlar, runbook; Kohort 0 Testnet'te (D30 rev., D35), 30 günlük Testnet provası arka planda sürer (kabul edilen sapma). rev. 5: VPS yok; tüm sistem yerel tek makinede (ADR-0013).
 
 ## Karar durumu etiketleri
 | Etiket | Anlamı |

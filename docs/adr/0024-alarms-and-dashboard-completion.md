@@ -4,7 +4,7 @@
 - Karar türü:
   - **U:** `m9-m10-protocol.md` U-M9-1…U-M9-5 (D30 rev., yalnızca Kohort 0'ın terfisi, yeni dış kanal yok, kapılar, kabul edilen sapma; D35).
   - **T:** alarm modeli, katalog ve eşikler (B-1…B-5), H-ENV kaydı, yeni uç noktalar, zincir anahtarı.
-- Uygulama durumu: **Kapı B'de çevrimdışı uygulandı (2026-11-01; `verify.ps1` yeşil).** Gerçek ortam kontrolleri kullanıcının Kapı C koşularıdır (`m9-m10-protocol.md` §6).
+- Uygulama durumu: **Kapı B'de çevrimdışı uygulandı (`ae630ca`); Kapı C tamamlandı (2026-11-01; alarm tatbikatı PASS; `m10-acceptance-report.md`).** Kapanışta H-ENV kaydının eksik koşuyu PASS sayması düzeltildi (`m5-henv.ps1`: çıkış kodu ve zorunlu kimlik kontrolü).
 - Uygulama notları (Kapı B; ayrıntı `m9-m10-protocol.md` §9):
   - Alarmlar `AlarmEvaluator` (saf) ve `AlarmEvaluator.ReadAsync` (`ops_api`, tek sorgu) ile hesaplanır. Migration gerekmedi: gereken bütün `SELECT` yetkileri 0008, 0009 ve 0011'de vardı.
   - `unprotected-position` ve `testnet-reset-suspected`, son döngülerin `degraded` listesindeki kesintisiz seriden hesaplanır (motorun kendi kararı); seri, bayraksız ilk döngüde biter.

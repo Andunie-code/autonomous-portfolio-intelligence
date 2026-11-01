@@ -25,6 +25,10 @@ Confirm-Interactive 'Run H-ENV (connection attempts from every network position;
 $lines = New-Object System.Collections.Generic.List[string]
 function Add-Lines($output) { foreach ($l in @($output)) { if ("$l" -match '^(H\d+[a-z]?) (PASS|FAIL) ') { $lines.Add("$l".Trim()) } } }
 function Add-Result([string] $Id, [string] $Check, [bool] $Pass, [string] $Reason) { $lines.Add("$Id $(if ($Pass) { 'PASS' } else { 'FAIL' }) $Check $Reason") }
+# M10 (m9-m10-protocol §9): a probe that did not run (e.g. "Address already in use") prints no H line, so it would
+# otherwise look like a pass. A non-zero exit and a required id without any line are failures of the run.
+function Assert-Ran([string] $Probe) { if ($LASTEXITCODE -ne 0) { Add-Result 'HENV' "probe-$Probe-ran" $false "exit:$LASTEXITCODE" } }
+$script:RequiredIds = @('H5', 'H6', 'H6b', 'H14', 'H19', 'H20', 'H21', 'H23', 'H24', 'H25', 'H26', 'H27', 'H28')  # H22 only with -Cohort
 
 # H19: scratch database with the real image, logins and pg_hba.
 Invoke-Psql 'postgres' @'
@@ -37,22 +41,28 @@ $env:PI_EVAL_DATABASE = 'holdout_henv'
 $env:PI_EVALUATOR_WINDOW_SOURCE = 'synthetic'
 try {
     Add-Lines (Invoke-Native docker @('compose', '--profile', 'evaluator', 'run', '--rm', 'holdout-evaluator', 'henv-selftest'))
+    Assert-Ran 'selftest'
 } finally {
     Remove-Item Env:PI_EVAL_DATABASE, Env:PI_EVALUATOR_WINDOW_SOURCE -ErrorAction SilentlyContinue
 }
 
 # H20: the running image digest has its release record.
 Add-Lines (Invoke-Native docker @('compose', '--profile', 'evaluator', 'run', '--rm', 'holdout-evaluator', 'release-check', $digest))
+Assert-Ran 'release-check'
 
 # H6, H6b, H21 (outside position), H25 (database part): Research.Host position. H14: Trading.Host position.
 Add-Lines (Invoke-Native docker @('compose', '--profile', 'henv', 'run', '--rm', 'henv-probe-research', '--ops-db', 'ops', '--holdout-dbs', 'holdout,holdout_henv'))
+Assert-Ran 'probe-research'
 Add-Lines (Invoke-Native docker @('compose', '--profile', 'henv', 'run', '--rm', 'henv-probe-trading'))
+Assert-Ran 'probe-trading'
 # H21, H22 (real database, optional), H26: the evaluator's own position.
 $probe = @('compose', '--profile', 'evaluator', 'run', '--rm', '--entrypoint', 'dotnet', 'holdout-evaluator', '/app/probe/PortfolioIntelligence.HoldoutEvaluator.EnvironmentProbe.dll', 'evaluator', '--ops-db', 'ops', '--holdout-dbs', 'holdout')
 if ($Cohort) { $probe += @('--cohort', $Cohort) }
 Add-Lines (Invoke-Native docker $probe)
+Assert-Ran 'probe-evaluator'
 # H25: no status_relay credential inside the Research.Host container.
 Add-Lines (Invoke-Native docker @('compose', '--profile', 'research', 'run', '--rm', 'research-host', 'job', 'henv-credentials'))
+Assert-Ran 'research-credentials'
 
 Invoke-Psql 'postgres' 'DROP DATABASE IF EXISTS holdout_henv;' -Quiet
 
@@ -65,6 +75,7 @@ try {
     [System.IO.File]::WriteAllText((Join-Path $hostSecrets 'pi_dev'), (Get-SuperuserPassword))
     $port = if ($settings['PI_DEV_DB_PORT']) { $settings['PI_DEV_DB_PORT'] } else { '55432' }
     Add-Lines (Invoke-Native dotnet @('run', '--project', 'src/HoldoutEvaluator/EnvironmentProbe', '-c', 'Release', '--', 'host', '--host', '127.0.0.1', '--port', $port, '--secrets', $hostSecrets, '--ops-db', 'ops', '--holdout-dbs', 'holdout,holdout_henv,holdout_synth'))
+    Assert-Ran 'probe-host'
 } finally {
     Remove-Item $hostSecrets -Recurse -Force
 }
@@ -108,6 +119,11 @@ Add-Result 'H27' 'no-market-or-holdout-files-in-repository' (@($stray).Count -eq
 $deny = (Get-Content '.claude/settings.json' -Raw | ConvertFrom-Json).permissions.deny
 foreach ($rule in @('Bash(docker exec*)', 'Bash(docker compose exec*)', 'Bash(docker cp*)', 'PowerShell(docker exec*)', 'PowerShell(docker compose exec*)', 'PowerShell(docker cp*)', 'PowerShell(*-File*m5-henv*)', 'WebFetch(domain:data-api.binance.vision)')) {
     Add-Result 'H28' "deny-$rule" ($deny -contains $rule) 'settings'
+}
+
+$seenIds = @($lines | ForEach-Object { ("$_" -split ' ')[0] }) | Sort-Object -Unique
+foreach ($id in $script:RequiredIds + $(if ($Cohort) { @('H22') } else { @() })) {
+    if ($seenIds -notcontains $id) { Add-Result 'HENV' "missing-$id" $false 'no-line' }
 }
 
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
