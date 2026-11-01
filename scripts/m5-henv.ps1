@@ -9,6 +9,9 @@
   database for that cohort after the Kohort 0 seed (nothing is written). Trading.Host must be running (H23, H24).
   If every line passes, set the flag (interactive, audited):
     docker compose --profile evaluator run --rm holdout-evaluator henv-mark-verified <digest> <report hash>
+  M10 (ADR-0024 §3): at the end the run is recorded in ops as the audit event henv_run_recorded (verdict, line and
+  failure counts, report SHA-256, evaluator digest; no holdout data). The A5 alarm reads it for the monthly cadence.
+  It is a record of the run, not the HoldoutEnvironmentVerified flag, which stays in the holdout database.
 #>
 param([string] $Cohort = '')
 . "$PSScriptRoot\lib\m5-common.ps1"
@@ -113,10 +116,15 @@ $hash = Get-Sha256Text $report
 $path = Join-Path (Get-ReportDirectory) "m5-henv-$stamp.txt"
 [System.IO.File]::WriteAllText($path, $report)
 $failed = @($lines | Where-Object { $_ -match ' FAIL ' }).Count
+# M10 A5: record the run in ops (operational fields only). The payload has no single quote (fixed keys, hex hash, digest).
+$verdict = if ($failed -eq 0) { 'PASS' } else { 'FAIL' }
+$payload = [ordered]@{ verdict = $verdict; lines = $lines.Count; failures = $failed; reportSha256 = $hash; evaluatorDigest = $digest } | ConvertTo-Json -Compress
+if ($payload.Contains("'")) { throw 'Unexpected quote in the H-ENV run record.' }
+Invoke-Psql 'ops' "INSERT INTO audit.events (actor, event, payload, payload_hash) SELECT 'user', 'henv_run_recorded', p, encode(sha256(convert_to(p::text, 'UTF8')), 'hex') FROM (SELECT '$payload'::jsonb AS p) q;" -Quiet
 Write-Host $report
 Write-Host "H-ENV report: $path"
 Write-Host "Report SHA-256: $hash"
-Write-Host "Lines: $($lines.Count), failures: $failed"
+Write-Host "Lines: $($lines.Count), failures: $failed (recorded in ops as henv_run_recorded, verdict $verdict)"
 if ($failed -eq 0) {
     Write-Host "All passed. To set the flag: docker compose --profile evaluator run --rm holdout-evaluator henv-mark-verified $digest $hash"
 } else {

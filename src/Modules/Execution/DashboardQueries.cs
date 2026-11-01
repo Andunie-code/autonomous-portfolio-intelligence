@@ -18,6 +18,7 @@ public sealed class DashboardQueries(string connectionString)
 
     private static readonly string[] SignalKinds = ["EntrySignal", "ExitSignal"];
     private static readonly string[] DecisionKinds = ["Approved", "Clipped", "Rejected", "Canceled"];
+    private static readonly string[] AllocatorKinds = ["AllocatorAdjusted", "AllocatorIgnored"];
 
     private async Task<NpgsqlConnection> OpenAsync(CancellationToken ct)
     {
@@ -290,35 +291,35 @@ public sealed class DashboardQueries(string connectionString)
     {
         await using var connection = await OpenAsync(ct);
         return Json(new JsonArray([.. await RowsAsync(connection, """
-            SELECT id, run_id, bar_time, sleeve, strategy, cohort_id, symbol, side, fill_time, price, quantity, fee, reason
-            FROM trading.fills ORDER BY id DESC LIMIT $1
+            SELECT f.id, f.run_id, p.venue, f.bar_time, f.sleeve, f.strategy, f.cohort_id, f.symbol, f.side, f.fill_time, f.price, f.quantity, f.fee, f.reason
+            FROM trading.fills f JOIN trading.paper_runs p ON p.id = f.run_id ORDER BY f.id DESC LIMIT $1
             """, ct, Limit(limit))]));
     }
 
-    /// <summary>Recent L1 signals and L2 risk decisions with their reason codes (ADR-0018 §1).</summary>
+    /// <summary>Recent L1 signals and L2 risk decisions, with the allocator's adjustments (ADR-0023), and their reason codes (ADR-0018 §1).</summary>
     public async Task<string> DecisionsAsync(int? limit, CancellationToken ct)
     {
         await using var connection = await OpenAsync(ct);
         return Json(new JsonArray([.. await RowsAsync(connection, """
-            SELECT e.run_id, e.bar_time, e.seq, e.event_time, e.sleeve, r.config -> 'sleeves' -> e.sleeve ->> 'name' AS strategy,
+            SELECT e.run_id, r.venue, e.bar_time, e.seq, e.event_time, e.sleeve, r.config -> 'sleeves' -> e.sleeve ->> 'name' AS strategy,
                    e.symbol, e.kind, e.value, e.detail, e.before, e.after
             FROM trading.engine_events e JOIN trading.paper_runs r ON r.id = e.run_id
             WHERE e.kind = ANY($1)
             ORDER BY e.bar_time DESC, e.run_id DESC, e.seq DESC LIMIT $2
-            """, ct, SignalKinds.Concat(DecisionKinds).ToArray(), Limit(limit))]));
+            """, ct, SignalKinds.Concat(DecisionKinds).Concat(AllocatorKinds).ToArray(), Limit(limit))]));
     }
 
     /// <summary>
-    /// The chain of one fill (roadmap M9 criterion 1): fill → L2 risk decision (intent) → L1 signal → sleeve →
-    /// frozen strategy (definition and structure hash, DSL) → cohort manifest hash and fields → research-window
-    /// experiments (result hashes) → dataset snapshot.
+    /// The chain of one fill (roadmap M9 criterion 1): fill (and, on Testnet, its exchange order) → L2 risk decision
+    /// (intent) with the allocator node → L1 signal → sleeve → frozen strategy (definition and structure hash, DSL) →
+    /// cohort manifest hash and fields → research-window experiments (result hashes) → dataset snapshot.
     /// </summary>
     public async Task<string?> ProvenanceAsync(long fillId, CancellationToken ct)
     {
         await using var connection = await OpenAsync(ct);
         var fill = (await RowsAsync(connection, """
-            SELECT id, run_id, bar_time, sleeve, strategy, cohort_id, symbol, side, fill_time, price, quantity, fee, reason
-            FROM trading.fills WHERE id = $1
+            SELECT f.id, f.run_id, p.venue, f.bar_time, f.sleeve, f.strategy, f.cohort_id, f.symbol, f.side, f.fill_time, f.price, f.quantity, f.fee, f.reason
+            FROM trading.fills f JOIN trading.paper_runs p ON p.id = f.run_id WHERE f.id = $1
             """, ct, fillId)).SingleOrDefault();
         if (fill is null)
         {
@@ -329,15 +330,164 @@ public sealed class DashboardQueries(string connectionString)
         var sleeve = fill["sleeve"]!.GetValue<int>();
         var symbol = fill["symbol"]!.GetValue<string>();
         var barTime = fill["bar_time"]!.GetValue<DateTimeOffset>();
+        // A Testnet fill is applied in the step of its exchange trade (step_bar); its order names the decision bar.
+        var orderId = (await RowsAsync(connection, """
+            SELECT o.id FROM trading.exchange_orders o JOIN trading.exchange_fills x ON x.order_id = o.id
+            WHERE o.run_id = $1 AND o.sleeve = $2 AND o.symbol = $3 AND x.step_bar = $4 AND lower(o.side) = $5
+            ORDER BY o.id DESC LIMIT 1
+            """, ct, runId, sleeve, symbol, barTime, fill["side"]!.GetValue<string>())).SingleOrDefault()?["id"]?.GetValue<long>();
+        var order = orderId is { } id ? await OrderAsync(connection, id, ct) : null;
+        // Decisions are taken at a close and filled at the next open: without an order, the fill's bar is the anchor.
+        var anchor = order?["decision_bar"]?.GetValue<DateTimeOffset>() ?? barTime;
+        return Json(await ChainAsync(connection, new JsonObject { ["fill"] = fill, ["order"] = order }, runId, sleeve, symbol, anchor, ct));
+    }
+
+    /// <summary>
+    /// The chain of one Testnet exchange order (M9, m9-m10-protocol §2.1), found by its clientOrderId or by the
+    /// exchange's order id: the order with its status history and trades, the fills it produced, then the same chain
+    /// as a fill, anchored at the order's decision bar.
+    /// </summary>
+    public async Task<string?> OrderProvenanceAsync(string id, CancellationToken ct)
+    {
+        await using var connection = await OpenAsync(ct);
+        var orderId = (await RowsAsync(connection, """
+            SELECT id FROM (
+              SELECT o.id, 0 AS pass FROM trading.exchange_orders o WHERE o.client_order_id = $1
+              UNION ALL
+              SELECT e.order_id, 1 FROM trading.exchange_order_events e WHERE e.exchange_order_id = $2) q
+            ORDER BY pass, id DESC LIMIT 1
+            """, ct, id, long.TryParse(id, out var exchangeId) ? exchangeId : -1L)).SingleOrDefault()?["id"]?.GetValue<long>();
+        if (orderId is not { } found)
+        {
+            return null;
+        }
+
+        var order = (await OrderAsync(connection, found, ct))!;
+        var runId = order["run_id"]!.GetValue<long>();
+        var sleeve = order["sleeve"]!.GetValue<int>();
+        var symbol = order["symbol"]!.GetValue<string>();
+        var fills = await RowsAsync(connection, """
+            SELECT f.id, f.run_id, f.bar_time, f.sleeve, f.strategy, f.cohort_id, f.symbol, f.side, f.fill_time, f.price, f.quantity, f.fee, f.reason
+            FROM trading.fills f
+            WHERE f.run_id = $1 AND f.sleeve = $2 AND f.symbol = $3 AND f.side = lower($4)
+              AND f.bar_time IN (SELECT x.step_bar FROM trading.exchange_fills x WHERE x.order_id = $5)
+            ORDER BY f.id
+            """, ct, runId, sleeve, symbol, order["side"]!.GetValue<string>(), found);
+        var result = new JsonObject { ["order"] = order, ["fills"] = new JsonArray([.. fills]) };
+        return Json(await ChainAsync(connection, result, runId, sleeve, symbol, order["decision_bar"]!.GetValue<DateTimeOffset>(), ct));
+    }
+
+    /// <summary>One exchange order: its fields, the exchange's order id, status history (reason only) and trades.</summary>
+    private static async Task<JsonObject?> OrderAsync(NpgsqlConnection connection, long orderId, CancellationToken ct)
+    {
+        var order = (await RowsAsync(connection, """
+            SELECT o.id, o.created_at, o.run_id, o.sleeve, o.symbol, o.purpose, o.side, o.order_type, o.time_in_force, o.quantity, o.price, o.stop_price,
+                   o.decision_bar, o.attempt, o.client_order_id, o.replaces, o.sent_at, trading.order_status(o.id) AS status,
+                   (SELECT max(e.exchange_order_id) FROM trading.exchange_order_events e WHERE e.order_id = o.id) AS exchange_order_id
+            FROM trading.exchange_orders o WHERE o.id = $1
+            """, ct, orderId)).SingleOrDefault();
+        if (order is null)
+        {
+            return null;
+        }
+
+        order["history"] = new JsonArray([.. await RowsAsync(connection, """
+            SELECT recorded_at, status, exchange_order_id, executed_quantity, detail ->> 'reason' AS reason
+            FROM trading.exchange_order_events WHERE order_id = $1 ORDER BY id
+            """, ct, orderId)]);
+        order["trades"] = new JsonArray([.. await RowsAsync(connection, """
+            SELECT trade_id, trade_time, step_bar, price, quantity, quote_quantity, commission, commission_asset
+            FROM trading.exchange_fills WHERE order_id = $1 ORDER BY id
+            """, ct, orderId)]);
+        return order;
+    }
+
+    /// <summary>
+    /// The allocator at the decision bar (ADR-0023): the applied adjustment (T11 weight → applied weight and
+    /// multiplier), an ignored item or a veto, and the stored proposal items of this sleeve and symbol (shadow or
+    /// active) with their decision trace (models, outcome, degraded, cost; no text). Null when the allocator took no part.
+    /// </summary>
+    private static async Task<JsonObject?> AllocatorNodeAsync(NpgsqlConnection connection, long runId, int sleeve, string symbol, List<JsonObject> events, DateTimeOffset decisionBar, CancellationToken ct)
+    {
+        JsonObject? At(Func<JsonObject, bool> match) =>
+            events.LastOrDefault(e => match(e) && e["bar_time"]!.GetValue<DateTimeOffset>() == decisionBar);
+        var adjusted = At(e => e["kind"]!.GetValue<string>() == "AllocatorAdjusted");
+        var ignored = At(e => e["kind"]!.GetValue<string>() == "AllocatorIgnored");
+        var veto = At(e => e["kind"]!.GetValue<string>() == "Rejected" && e["detail"]?.GetValue<string>() == "allocator-veto");
+        var proposals = await RowsAsync(connection, """
+            SELECT bar_time, role, outcome, task_id, protocol_hash, items, jsonb_array_length(safety) AS safety_events
+            FROM trading.allocator_proposals WHERE run_id = $1 AND bar_time = $2 ORDER BY id
+            """, ct, runId, decisionBar);
+        var items = new JsonArray();
+        foreach (var proposal in proposals)
+        {
+            var item = proposal["items"]?.AsArray().Select(n => n?.AsObject())
+                .FirstOrDefault(i => i?["sleeve"]?.GetValue<int>() == sleeve && i["symbol"]?.GetValue<string>() == symbol);
+            if (item is null)
+            {
+                continue;
+            }
+
+            JsonObject? trace = null;
+            if (proposal["task_id"]?.GetValue<string>() is { } task && Guid.TryParse(task, out var taskId))
+            {
+                trace = (await RowsAsync(connection, """
+                    SELECT task_id, task_class, requested_model, actual_model, outcome, degraded, latency_ms, input_tokens, output_tokens, actual_usd
+                    FROM ai.decision_traces WHERE task_id = $1
+                    """, ct, taskId)).SingleOrDefault();
+            }
+
+            items.Add(new JsonObject
+            {
+                ["barTime"] = proposal["bar_time"]!.DeepClone(),
+                ["role"] = proposal["role"]!.DeepClone(),
+                ["outcome"] = proposal["outcome"]!.DeepClone(),
+                ["taskId"] = proposal["task_id"]?.DeepClone(),
+                ["protocolHash"] = proposal["protocol_hash"]?.DeepClone(),
+                ["safetyEvents"] = proposal["safety_events"]?.DeepClone(),
+                ["item"] = item.DeepClone(),
+                ["trace"] = trace,
+            });
+        }
+
+        if (adjusted is null && ignored is null && veto is null && items.Count == 0)
+        {
+            return null;
+        }
+
+        var t11 = adjusted?["before"]?.GetValue<decimal>() ?? 0m;
+        decimal? multiplier = t11 > 0 && adjusted?["after"]?.GetValue<decimal>() is { } appliedWeight ? Math.Round(appliedWeight / t11, 6) : null;
+        return new JsonObject
+        {
+            ["band"] = AllocatorBand.Version,
+            ["applied"] = adjusted is null ? null : new JsonObject
+            {
+                ["t11Weight"] = adjusted["before"]?.DeepClone(),
+                ["appliedWeight"] = adjusted["after"]?.DeepClone(),
+                ["multiplier"] = multiplier,
+            },
+            ["ignored"] = ignored?.DeepClone(),
+            ["veto"] = veto?.DeepClone(),
+            ["proposals"] = items,
+        };
+    }
+
+    /// <summary>
+    /// The rest of the chain from (run, sleeve, symbol) at the anchor bar: the engine events of the anchor and the two
+    /// bars before it, the last L2 decision and L1 signal, the allocator node, then sleeve → strategy → manifest →
+    /// experiments → dataset snapshots. Written into <paramref name="result"/> after its own fields.
+    /// </summary>
+    private static async Task<JsonObject> ChainAsync(NpgsqlConnection connection, JsonObject result, long runId, int sleeve, string symbol, DateTimeOffset anchor, CancellationToken ct)
+    {
         var run = (await RunsAsync(connection, ct)).Single(r => r.Id == runId);
         var config = run.Config.Sleeves[sleeve];
-        // Decisions are taken at a close and filled at the next open: the events of the fill's bar and the two before.
         var events = await RowsAsync(connection, """
             SELECT bar_time, seq, event_time, kind, value, detail, before, after FROM trading.engine_events
             WHERE run_id = $1 AND sleeve = $2 AND symbol = $3 AND bar_time BETWEEN $4 - interval '8 hours' AND $4
             ORDER BY bar_time, seq
-            """, ct, runId, sleeve, symbol, barTime);
+            """, ct, runId, sleeve, symbol, anchor);
         JsonNode? Last(string[] kinds) => events.LastOrDefault(e => kinds.Contains(e["kind"]!.GetValue<string>()))?.DeepClone();
+        var decision = Last(DecisionKinds);
         var frozen = (await RowsAsync(connection, """
             SELECT f.id, f.cohort_id, f.member_index, f.name, f.definition_hash, f.manifest_hash, f.manifest, f.recorded_at
             FROM research.frozen_strategies f WHERE f.cohort_id = $1 AND f.member_index = $2
@@ -370,30 +520,29 @@ public sealed class DashboardQueries(string connectionString)
         }
 
         var strategy = definition is null ? null : DslStrategy.FromJson(definition.ToJsonString());
-        return Json(new JsonObject
+        result["decision"] = decision;
+        result["signal"] = Last(SignalKinds);
+        result["allocator"] = await AllocatorNodeAsync(connection, runId, sleeve, symbol, events, decision?["bar_time"]?.GetValue<DateTimeOffset>() ?? anchor, ct);
+        result["events"] = new JsonArray([.. events]);
+        result["sleeve"] = new JsonObject
         {
-            ["fill"] = fill,
-            ["decision"] = Last(DecisionKinds),
-            ["signal"] = Last(SignalKinds),
-            ["events"] = new JsonArray([.. events]),
-            ["sleeve"] = new JsonObject
-            {
-                ["runId"] = runId, ["sleeve"] = sleeve, ["name"] = config.Name, ["cohortId"] = config.CohortId, ["memberIndex"] = config.MemberIndex, ["capital"] = config.Capital,
-            },
-            ["strategy"] = new JsonObject
-            {
-                ["definitionHash"] = config.DefinitionHash,
-                ["structureHash"] = strategy?.StructureHash,
-                ["verified"] = strategy?.DefinitionHash == config.DefinitionHash,
-                ["frozenAt"] = frozen?["recorded_at"]?.DeepClone(),
-                ["definition"] = definition?.DeepClone(),
-                ["lifecycle"] = new JsonArray([.. lifecycle]),
-            },
-            ["cohort"] = manifest,
-            ["experiments"] = new JsonArray([.. experiments]),
-            ["datasetSnapshots"] = new JsonArray(experiments.Select(e => e["dataset_snapshot_hash"]!.GetValue<string>())
-                .Append(manifest?["datasetSnapshot"]?.GetValue<string>()).OfType<string>().Distinct().Select(s => (JsonNode)JsonValue.Create(s)!).ToArray()),
-        });
+            ["runId"] = runId, ["venue"] = run.Config.IsTestnet ? PaperRunConfig.TestnetVenue : "paper", ["sleeve"] = sleeve, ["name"] = config.Name,
+            ["cohortId"] = config.CohortId, ["memberIndex"] = config.MemberIndex, ["capital"] = config.Capital,
+        };
+        result["strategy"] = new JsonObject
+        {
+            ["definitionHash"] = config.DefinitionHash,
+            ["structureHash"] = strategy?.StructureHash,
+            ["verified"] = strategy?.DefinitionHash == config.DefinitionHash,
+            ["frozenAt"] = frozen?["recorded_at"]?.DeepClone(),
+            ["definition"] = definition?.DeepClone(),
+            ["lifecycle"] = new JsonArray([.. lifecycle]),
+        };
+        result["cohort"] = manifest;
+        result["experiments"] = new JsonArray([.. experiments]);
+        result["datasetSnapshots"] = new JsonArray(experiments.Select(e => e["dataset_snapshot_hash"]!.GetValue<string>())
+            .Append(manifest?["datasetSnapshot"]?.GetValue<string>()).OfType<string>().Distinct().Select(s => (JsonNode)JsonValue.Create(s)!).ToArray());
+        return result;
     }
 
     /// <summary>
@@ -495,7 +644,8 @@ public sealed class DashboardQueries(string connectionString)
             ["unprotected"] = positions.Count(p => p!["protected"]!.GetValue<bool>() == false),
             ["recentOrders"] = new JsonArray([.. await RowsAsync(connection, """
                 SELECT o.id, o.created_at, o.run_id, o.sleeve, o.symbol, o.purpose, o.side, o.order_type, o.quantity, o.price, o.stop_price, o.attempt,
-                       o.client_order_id, e.status, e.executed_quantity, e.detail ->> 'reason' AS reason, e.recorded_at AS status_at
+                       o.client_order_id, (SELECT max(x.exchange_order_id) FROM trading.exchange_order_events x WHERE x.order_id = o.id) AS exchange_order_id,
+                       e.status, e.executed_quantity, e.detail ->> 'reason' AS reason, e.recorded_at AS status_at
                 FROM trading.exchange_orders o
                 JOIN LATERAL (SELECT * FROM trading.exchange_order_events x WHERE x.order_id = o.id ORDER BY x.id DESC LIMIT 1) e ON true
                 ORDER BY o.id DESC LIMIT 50
@@ -524,17 +674,52 @@ public sealed class DashboardQueries(string connectionString)
         }, JsonSerializerOptions.Web);
     }
 
-    /// <summary>Monthly AI cost by task class (settlements and open reservations), from ai.cost_ledger.</summary>
-    public async Task<string> AiCostsAsync(CancellationToken ct)
+    /// <summary>
+    /// AI cost from ai.cost_ledger (roadmap M9 criterion 3; m9-m10-protocol §2.3): a call counts its settlement when
+    /// settled, otherwise its open reservation, in the UTC month of its reservation (as the ledger's cap check,
+    /// LedgerMath). Rows by month × task class × job kind, month subtotals, all-time totals per task class, this
+    /// month's jobs against their caps, and this month's use of the monthly cap.
+    /// </summary>
+    public async Task<string> AiCostsAsync(AiBudget budget, DateTimeOffset now, CancellationToken ct)
     {
         await using var connection = await OpenAsync(ct);
-        return Json(new JsonArray([.. await RowsAsync(connection, """
-            SELECT to_char(date_trunc('month', at), 'YYYY-MM') AS month, coalesce(task_class, '(none)') AS task_class, job_kind,
-                   coalesce(sum(amount_usd) FILTER (WHERE entry_kind = 'Settlement'), 0) AS settled_usd,
-                   coalesce(sum(amount_usd) FILTER (WHERE entry_kind = 'Reservation'), 0) AS reserved_usd,
-                   count(DISTINCT call_id) AS calls, sum(input_tokens) AS input_tokens, sum(output_tokens) AS output_tokens
-            FROM ai.cost_ledger GROUP BY 1, 2, 3 ORDER BY 1 DESC, 2, 3
-            """, ct)]));
+        var month = AiSpend.MonthStart(now);
+        var used = await AiSpend.CommittedSinceAsync(connection, month, ct);
+        var jobs = await RowsAsync(connection, $"""
+            {AiSpend.Committed}
+            SELECT job_id, job_kind, sum(committed_usd) AS committed_usd, count(*) AS calls FROM c WHERE at >= $1 GROUP BY 1, 2 ORDER BY 3 DESC, 1
+            """, ct, month);
+        foreach (var job in jobs)
+        {
+            var share = budget.JobShares.GetValueOrDefault(job["job_kind"]!.GetValue<string>());
+            job["cap_usd"] = share > 0 ? budget.MonthlyCapUsd * share : null;
+        }
+
+        return Json(new JsonObject
+        {
+            ["month"] = month.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture),
+            ["monthlyCapUsd"] = budget.MonthlyCapUsd,
+            ["monthUsedUsd"] = used,
+            ["monthShare"] = budget.MonthlyCapUsd > 0 ? Math.Round(used / budget.MonthlyCapUsd, 6) : null,
+            ["warningShare"] = AlarmThresholds.BudgetWarningShare,
+            ["rows"] = new JsonArray([.. await RowsAsync(connection, $"""
+                {AiSpend.Committed}
+                SELECT to_char(at AT TIME ZONE 'UTC', 'YYYY-MM') AS month, task_class, job_kind, sum(committed_usd) AS committed_usd,
+                       sum(settled_usd) AS settled_usd, sum(open_usd) AS open_usd, count(*) AS calls, sum(input_tokens) AS input_tokens, sum(output_tokens) AS output_tokens
+                FROM c GROUP BY 1, 2, 3 ORDER BY 1 DESC, 2, 3
+                """, ct)]),
+            ["months"] = new JsonArray([.. await RowsAsync(connection, $"""
+                {AiSpend.Committed}
+                SELECT to_char(at AT TIME ZONE 'UTC', 'YYYY-MM') AS month, sum(committed_usd) AS committed_usd, sum(open_usd) AS open_usd, count(*) AS calls
+                FROM c GROUP BY 1 ORDER BY 1 DESC
+                """, ct)]),
+            ["taskClasses"] = new JsonArray([.. await RowsAsync(connection, $"""
+                {AiSpend.Committed}
+                SELECT task_class, sum(committed_usd) AS committed_usd, count(*) AS calls, sum(input_tokens) AS input_tokens, sum(output_tokens) AS output_tokens
+                FROM c GROUP BY 1 ORDER BY 1
+                """, ct)]),
+            ["jobs"] = new JsonArray([.. jobs]),
+        });
     }
 
     /// <summary>
@@ -569,13 +754,27 @@ public sealed class DashboardQueries(string connectionString)
         });
     }
 
-    /// <summary>Recent decision traces: task class, model, outcome, degraded flag, validator results; no prompt or answer text.</summary>
+    /// <summary>The computed alarms (M10, ADR-0024; catalogue m9-m10-protocol §3.2) at <paramref name="now"/>.</summary>
+    public async Task<string> AlarmsAsync(AiBudget budget, DateTimeOffset now, CancellationToken ct)
+    {
+        await using var connection = await OpenAsync(ct);
+        return AlarmEvaluator.Document(AlarmEvaluator.Evaluate(await AlarmEvaluator.ReadAsync(connection, now, ct), budget, now), now);
+    }
+
+    /// <summary>
+    /// Recent decision traces (roadmap M9 criterion 2): task class, requested and actual model, degraded flag, the
+    /// validators that failed (names and count only), safety violation count, latency, tokens, estimated and actual
+    /// cost. No prompt, answer or validator message text.
+    /// </summary>
     public async Task<string> AiTracesAsync(int? limit, CancellationToken ct)
     {
         await using var connection = await OpenAsync(ct);
         return Json(new JsonArray([.. await RowsAsync(connection, """
-            SELECT task_id, at, job_id, task_class, mode, provider, actual_model, prompt_version, calls, input_tokens, output_tokens,
-                   latency_ms, estimated_usd, actual_usd, outcome, degraded, reason, validator_results, safety_violations
+            SELECT task_id, at, job_id, task_class, mode, provider, requested_model, actual_model, prompt_version, calls, input_tokens, output_tokens,
+                   latency_ms, estimated_usd, actual_usd, outcome, degraded, reason,
+                   jsonb_array_length(validator_results) AS validator_failures,
+                   (SELECT coalesce(jsonb_agg(DISTINCT split_part(v, ':', 1)), '[]'::jsonb) FROM jsonb_array_elements_text(validator_results) v) AS failed_validators,
+                   jsonb_array_length(safety_violations) AS safety_violations
             FROM ai.decision_traces ORDER BY at DESC LIMIT $1
             """, ct, Limit(limit))]));
     }

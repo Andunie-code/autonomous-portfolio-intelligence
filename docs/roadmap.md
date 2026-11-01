@@ -246,6 +246,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
 
 ### M9 — Dashboard (M)
 - **Ön kayıt:** [`m9-m10-protocol.md`](m9-m10-protocol.md) v1 ve ADR-0024 (Kapı A, kullanıcı onayı 2026-11-01). M9 ve M10 birlikte yürütülür (D35). M9a kısmı M5b'de tamamlandı (ADR-0020).
+- **Durum:** Kapı A (`d202bae`) ve Kapı B (çevrimdışı kod ve testler, `verify.ps1` yeşil, 794 test) tamamlandı; Kapı C kullanıcının koşularıdır.
 - **Kapılar (U):** **A** = protokol, ADR-0024, D30 rev. belgeleri, T17; **B** = çevrimdışı kod ve testler (Testnet emrinden zincir, allocator düğümü, DecisionTrace alanları, bütçe çubuğu), `verify.ps1` yeşil; **C** = kullanıcının tarayıcı kontrolü.
 - **Kabul kriterleri:**
   - Emirden veri setine kadar zincir gezilebiliyor.
@@ -254,6 +255,7 @@ Veri doğruluğu, iki baseline, benchmark'lar, maliyet modeli ve deterministik b
 
 ### M10 — Sağlamlaştırma (S)
 - **Ön kayıt:** [`m9-m10-protocol.md`](m9-m10-protocol.md) §3–§6 ve ADR-0024 (Kapı A, kullanıcı onayı 2026-11-01).
+- **Durum:** Kapı A ve Kapı B tamamlandı (alarmlar, `m10-alarm-drill.ps1`, [`runbook.md`](runbook.md)); Kapı C kullanıcının koşularıdır.
 - **Kapılar (U):** **A** = alarm kataloğu ve eşikler, tatbikat, runbook kapsamı; **B** = `/alarms`, alarm testleri, `m10-alarm-drill.ps1`, `docs/runbook.md`; **C** = kullanıcının koşuları: M6 C4 (yalnızca Kohort 0, D30 rev. ile), 30 günlük Testnet provasının başlatılması, alarm tatbikatı, H-ENV, yedek ve geri yükleme, AI mutabakatı.
 - **Kabul edilen sapma (U, D35):** 30 günlük prova başlatılıp ilk döngüleri doğrulanınca M10 kapanır; gözlem arka planda sürer.
 - **Kabul kriterleri:**

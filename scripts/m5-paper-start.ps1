@@ -6,6 +6,7 @@
   Starts Trading.Host with live market data enabled: closed 4h klines of the frozen strategies' pairs from
   https://data-api.binance.vision/api/v3/klines only (no key, no order endpoint), written to market.live_candles.
   The user's confirmation opens this network access; -Stop restarts Trading.Host with live data disabled.
+  Testnet execution stays enabled when its key is stored (secrets/testnet_api_key and _secret not empty).
 #>
 param([switch] $Stop)
 . "$PSScriptRoot\lib\m5-common.ps1"
@@ -14,6 +15,12 @@ Set-Location $script:Root
 Ensure-EmptySecret $script:OpsSecrets 'testnet_api_key' | Out-Null
 Ensure-EmptySecret $script:OpsSecrets 'testnet_api_secret' | Out-Null
 Ensure-EmptySecret $script:OpsSecrets 'gemini_runtime_api_key' | Out-Null
+# M10 (runbook §3): a recreated Trading.Host keeps Testnet execution when the Testnet key is stored, as
+# scripts/m6-update.ps1 does; otherwise a restart after sleep or reboot would silently turn Testnet off.
+$testnetKey = Join-Path $script:OpsSecrets 'testnet_api_key'
+$testnetSecret = Join-Path $script:OpsSecrets 'testnet_api_secret'
+$env:PI_TRADING_TESTNET = if (((Get-Item $testnetKey).Length -gt 0) -and ((Get-Item $testnetSecret).Length -gt 0)) { 'enabled' } else { 'disabled' }
+Write-Host "Testnet execution: $env:PI_TRADING_TESTNET (enabled when the Testnet key is stored)."
 
 if ($Stop) {
     $env:PI_TRADING_LIVE_DATA = 'disabled'

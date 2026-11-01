@@ -144,3 +144,16 @@ Zincir: borsa emri / dolum → `OrderIntent` karşılığı L2 olayı (+ allocat
 ## 8. Korkuluklar (T17; Kapı A'da uygulanır)
 - `.claude/settings.json`: `Bash(*-File*m10-*)` ve `PowerShell(*-File*m10-*)` deny kuralları.
 - `CLAUDE.md`: M9/M10 maddesi (`m10-*.ps1`, `/alarms` ve `/provenance/order/*` gerçek ortamda Claude Code tarafından çalıştırılmaz ve çağrılmaz).
+
+## 9. Kapı B uygulama notları (2026-11-01)
+- **Kod:**
+  - Execution: `Promotion.MinimumDays = 10`, 7 günlük pencere parametre; `Alarms.cs` (`AiBudget`, `AiSpend`, `AlarmThresholds`, `AlarmEvaluator`); `DashboardQueries`'te ortak zincir kurucusu (`ChainAsync`), `OrderProvenanceAsync`, allocator düğümü, yeni maliyet ve iz sorguları, `AlarmsAsync`.
+  - Trading.Host: `GET /provenance/order/{id}` (yalnızca `clientOrderId` karakterleri, ≤ 36), `GET /alarms`; `AiBudget` `ai.v1.json`'dan (`TradingHost.Budget`). Dashboard: alarm şeridi, alarm tablosu, bütçe çubuğu, görev sınıfı/ay/iş tabloları, DecisionTrace sütunları, kill switch ayrıntıları, Testnet emrinden zincir, allocator adımı, D30 metinleri sunucudan.
+  - Script'ler: `m10-alarm-drill.ps1` (yeni); `m5-henv.ps1` bitişte `henv_run_recorded` yazar; `m5-paper-start.ps1` Testnet anahtarı kayıtlıysa Testnet'i açık tutar.
+- **Sapma ve kararlar (T):**
+  - Migration yok: gereken bütün `SELECT` yetkileri mevcuttu.
+  - Zincir, borsa emrinin `decision_bar`'ında biten pencereyle (o mum ve önceki iki mum) sabitlenir; paper dolumunda pencere dolum mumunda biter (M9a ile aynı).
+  - `unprotected-position` ve `testnet-reset-suspected` alarmlarının kaynağı, son döngülerin `degraded` listesindeki kesintisiz seridir (`unprotected-stop`, `testnet-reset-suspected`); rebaseline ya da stop yerleşince bir sonraki döngüde kaybolur.
+  - `/ai/traces` ham `validator_results` ve `safety_violations` metnini artık dönmez; validator adları, ret sayısı ve ihlal sayısı döner (model çıktısından türeyen metin dashboard'a taşınmaz).
+  - **Bulunan operasyon tuzağı:** `m5-paper-start.ps1` Trading.Host'u `PI_TRADING_TESTNET` ayarlamadan yeniden oluşturuyordu (compose varsayılanı `disabled`). Makine yeniden başlatıldıktan sonra bu script kullanılsaydı 30 günlük prova sessizce Testnet'siz sürerdi. Düzeltildi; mimari test her yeniden oluşturma script'inin Testnet kararını açıkça verdiğini sabitler.
+- **Testler:** `AlarmTests` (sınır değerleri, `ops_api` okuması, rota), `DashboardTests` (yeni rotalar, sentetik iz/maliyet/bütçe, allocator düğümü, model metni sızmaz), `TestnetTradingTests` (borsa emrinden ve Testnet dolumundan zincir), `PromotionTests` (10 gün, pencere sınırı, catch-up mumları), `RepositoryRuleTests` (`m10-*`), `EnvironmentConfigurationTests` (Testnet kararı).

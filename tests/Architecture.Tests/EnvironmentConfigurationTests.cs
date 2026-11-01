@@ -213,6 +213,22 @@ public class EnvironmentConfigurationTests
     }
 
     [Fact]
+    public void Every_script_that_recreates_trading_host_decides_testnet_execution_explicitly()
+    {
+        // M10 (runbook §3): a script that recreates Trading.Host must set PI_TRADING_TESTNET itself; compose's default is
+        // "disabled", so a restart after sleep would otherwise silently stop the Testnet rehearsal. m5-cohort1-activate
+        // restarts with live data off and is not used once Testnet runs.
+        var scripts = Directory.EnumerateFiles(Path.Combine(Root, "scripts"), "*.ps1", SearchOption.AllDirectories)
+            .Where(f => File.ReadAllLines(f).Any(l => !l.TrimStart().StartsWith('#') && l.Contains("docker compose", StringComparison.Ordinal)
+                && l.Contains(" up ", StringComparison.Ordinal) && l.TrimEnd().EndsWith("trading-host", StringComparison.Ordinal)))
+            .Select(Path.GetFileName)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+        Assert.Equal(["m5-paper-start.ps1", "m6-update.ps1"], scripts);
+        Assert.All(scripts, s => Assert.Contains("$env:PI_TRADING_TESTNET =", File.ReadAllText(Path.Combine(Root, "scripts", s!))));
+    }
+
+    [Fact]
     public void Missing_copy_check_finds_a_dropped_transitive_reference()
     {
         // Self-test: the Trading.Host Dockerfile without its Ai line (the build failure of M8 C0).

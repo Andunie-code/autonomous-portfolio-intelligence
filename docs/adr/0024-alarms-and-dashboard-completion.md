@@ -4,7 +4,12 @@
 - Karar türü:
   - **U:** `m9-m10-protocol.md` U-M9-1…U-M9-5 (D30 rev., yalnızca Kohort 0'ın terfisi, yeni dış kanal yok, kapılar, kabul edilen sapma; D35).
   - **T:** alarm modeli, katalog ve eşikler (B-1…B-5), H-ENV kaydı, yeni uç noktalar, zincir anahtarı.
-- Uygulama durumu: Kapı B'de uygulanacak.
+- Uygulama durumu: **Kapı B'de çevrimdışı uygulandı (2026-11-01; `verify.ps1` yeşil).** Gerçek ortam kontrolleri kullanıcının Kapı C koşularıdır (`m9-m10-protocol.md` §6).
+- Uygulama notları (Kapı B; ayrıntı `m9-m10-protocol.md` §9):
+  - Alarmlar `AlarmEvaluator` (saf) ve `AlarmEvaluator.ReadAsync` (`ops_api`, tek sorgu) ile hesaplanır. Migration gerekmedi: gereken bütün `SELECT` yetkileri 0008, 0009 ve 0011'de vardı.
+  - `unprotected-position` ve `testnet-reset-suspected`, son döngülerin `degraded` listesindeki kesintisiz seriden hesaplanır (motorun kendi kararı); seri, bayraksız ilk döngüde biter.
+  - Zincir, borsa emrinin karar mumuyla sabitlenir (o mum ve önceki iki mumun olayları).
+  - Validator ve güvenlik ihlali metinleri API'den dönmez; yalnızca validator adları ve sayılar döner.
 - İlgili: ADR-0010, ADR-0013, ADR-0018, ADR-0020, ADR-0021, ADR-0023; `m9-m10-protocol.md`; `architecture.md` §3.4, §11; `risk-model.md` §3–§4
 
 ## Bağlam

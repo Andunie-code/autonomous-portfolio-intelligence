@@ -46,6 +46,8 @@ public sealed record OpsToken(string? Value)
 /// M6 (ADR-0021 §7) adds two read routes (/testnet, /promotion) and two confirmed user actions: the
 /// PaperTrading → TestnetActive transition (V10) and the Testnet rebaseline after an exchange reset.
 /// M8 (ADR-0023) adds the allocator's read route (/allocator) and its confirmed mode transition (/allocator/mode).
+/// M9–M10 (ADR-0024) add two read routes: the chain of a Testnet exchange order (/provenance/order/{id}) and the
+/// computed alarms (/alarms). No write route.
 /// </summary>
 public static class OpsApi
 {
@@ -64,6 +66,7 @@ public static class OpsApi
         "GET /fills",
         "GET /decisions",
         "GET /provenance/{fillId}",
+        "GET /provenance/order/{id}",
         "GET /radar",
         "GET /system",
         "GET /ai/costs",
@@ -74,6 +77,7 @@ public static class OpsApi
         "GET /testnet",
         "GET /promotion",
         "GET /allocator",
+        "GET /alarms",
         "POST /kill-switch",
         "POST /strategies/{name}/disable",
         "POST /positions/close",
@@ -145,6 +149,10 @@ public static class OpsApi
             long.TryParse((string?)request.RouteValues["fillId"], out var id)
                 ? await s.GetRequiredService<DashboardQueries>().ProvenanceAsync(id, ct) ?? throw new OpsRequestException($"no fill {id}")
                 : throw new OpsRequestException("fillId must be a number"));
+        Get(app, "/provenance/order/{id}", async (s, request, ct) =>
+            (string?)request.RouteValues["id"] is { Length: > 0 and <= 36 } id && id.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_')
+                ? await s.GetRequiredService<DashboardQueries>().OrderProvenanceAsync(id, ct) ?? throw new OpsRequestException($"no exchange order {id}")
+                : throw new OpsRequestException("id must be a clientOrderId or an exchange order id"));
         Get(app, "/radar", (s, _, ct) => s.GetRequiredService<RadarService>().ReportAsync(s.GetRequiredService<TimeProvider>().GetUtcNow(), ct));
         Get(app, "/system", async (s, _, ct) =>
         {
@@ -153,7 +161,7 @@ public static class OpsApi
             json["host"] = System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(new { health.LastCycle, health.Outcome, health.Degraded }, JsonSerializerOptions.Web));
             return json.ToJsonString();
         });
-        Get(app, "/ai/costs", (s, _, ct) => s.GetRequiredService<DashboardQueries>().AiCostsAsync(ct));
+        Get(app, "/ai/costs", (s, _, ct) => s.GetRequiredService<DashboardQueries>().AiCostsAsync(s.GetRequiredService<AiBudget>(), s.GetRequiredService<TimeProvider>().GetUtcNow(), ct));
         Get(app, "/ai/traces", (s, request, ct) => s.GetRequiredService<DashboardQueries>().AiTracesAsync(Limit(request), ct));
 
         // M6 (m6-protocol §7): Testnet orders and protective stops, and the D30 progress.
@@ -162,6 +170,9 @@ public static class OpsApi
 
         // M8 (m8-protocol §4): the allocator's mode, decisions and shadow values.
         Get(app, "/allocator", (s, request, ct) => s.GetRequiredService<DashboardQueries>().AllocatorAsync(Limit(request), ct));
+
+        // M10 (ADR-0024): the computed alarms; nothing is stored or sent.
+        Get(app, "/alarms", (s, _, ct) => s.GetRequiredService<DashboardQueries>().AlarmsAsync(s.GetRequiredService<AiBudget>(), s.GetRequiredService<TimeProvider>().GetUtcNow(), ct));
 
         // The dashboard's static files: no data and no token (the page asks for the token and sends it as a header).
         Asset(app, "/dashboard", "index.html", "text/html; charset=utf-8");

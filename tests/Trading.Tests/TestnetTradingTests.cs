@@ -129,6 +129,57 @@ public class TestnetTradingTests(OpsDatabase fixture) : IClassFixture<OpsDatabas
     }
 
     [Fact]
+    public async Task An_exchange_order_opens_the_chain_to_the_dataset_and_a_testnet_fill_shows_its_order()
+    {
+        // M9 criterion 1 (m9-m10-protocol §2.1): from a Testnet exchange order, by clientOrderId or the exchange's order id.
+        var (h, _, testnetRun, _, _) = await RunAsync(fixture, days: 10);
+        var queries = new DashboardQueries(h.Db.As("ops_api"));
+        var entry = (await Rows(h.Db, $"""
+            SELECT o.client_order_id, (SELECT max(e.exchange_order_id) FROM trading.exchange_order_events e WHERE e.order_id = o.id)
+            FROM trading.exchange_orders o WHERE o.run_id = {testnetRun} AND o.purpose = 'Entry' AND trading.order_status(o.id) = 'Filled' ORDER BY o.id DESC LIMIT 1
+            """, r => (Client: r.GetString(0), Exchange: r.GetInt64(1)))).Single();
+
+        long fillId = 0;
+        foreach (var id in new[] { entry.Client, entry.Exchange.ToString(System.Globalization.CultureInfo.InvariantCulture) })
+        {
+            var chain = JsonDocument.Parse((await queries.OrderProvenanceAsync(id, default))!).RootElement;
+            var order = chain.GetProperty("order");
+            Assert.Equal(entry.Client, order.GetProperty("client_order_id").GetString());
+            Assert.Equal(entry.Exchange, order.GetProperty("exchange_order_id").GetInt64());
+            Assert.Equal("Entry", order.GetProperty("purpose").GetString());
+            Assert.Equal("Filled", order.GetProperty("status").GetString());
+            Assert.Equal("Submitting", order.GetProperty("history")[0].GetProperty("status").GetString());
+            Assert.NotEmpty(order.GetProperty("trades").EnumerateArray());
+            var fills = chain.GetProperty("fills").EnumerateArray().ToList();
+            Assert.NotEmpty(fills);
+            Assert.All(fills, f => Assert.Equal("buy", f.GetProperty("side").GetString()));
+            fillId = fills[0].GetProperty("id").GetInt64();
+
+            // The chain is anchored at the order's decision bar: L2 decision and L1 signal, then strategy → manifest → dataset.
+            var decision = chain.GetProperty("decision");
+            Assert.Contains(decision.GetProperty("kind").GetString(), new[] { "Approved", "Clipped" });
+            var decisionBar = order.GetProperty("decision_bar").GetDateTimeOffset();
+            Assert.InRange(decision.GetProperty("bar_time").GetDateTimeOffset(), decisionBar.AddHours(-8), decisionBar);
+            Assert.Equal("EntrySignal", chain.GetProperty("signal").GetProperty("kind").GetString());
+            Assert.Equal("testnet", chain.GetProperty("sleeve").GetProperty("venue").GetString());
+            Assert.True(chain.GetProperty("strategy").GetProperty("verified").GetBoolean());
+            Assert.Matches("^[0-9a-f]{64}$", chain.GetProperty("cohort").GetProperty("manifestHash").GetString());
+            Assert.NotEqual(0, chain.GetProperty("datasetSnapshots").GetArrayLength());
+        }
+
+        // From the Testnet fill back to its exchange order; the fill and order lists name the venue and the exchange's id.
+        var fromFill = JsonDocument.Parse((await queries.ProvenanceAsync(fillId, default))!).RootElement;
+        Assert.Equal(entry.Client, fromFill.GetProperty("order").GetProperty("client_order_id").GetString());
+        Assert.Equal("testnet", fromFill.GetProperty("fill").GetProperty("venue").GetString());
+        var testnet = JsonDocument.Parse(await queries.TestnetAsync(true, default)).RootElement;
+        var recent = testnet.GetProperty("recentOrders").EnumerateArray().ToList();
+        Assert.NotEmpty(recent);
+        Assert.All(recent, o => Assert.True(o.TryGetProperty("exchange_order_id", out _)));
+        Assert.Contains(recent, o => o.GetProperty("exchange_order_id").ValueKind == JsonValueKind.Number);
+        Assert.Null(await queries.OrderProvenanceAsync("no-such-order", default));
+    }
+
+    [Fact]
     public async Task Partly_filled_entries_get_a_stop_for_the_filled_quantity()
     {
         var (h, _, testnetRun, _, _) = await RunAsync(fixture, days: 10, exchange: fake => fake.FillFraction = 0.5m);

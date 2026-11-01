@@ -20,7 +20,7 @@ namespace PortfolioIntelligence.Trading.Tests;
 public class DashboardTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
 {
     private const string Token = "dashboard-test-token-456";
-    private static readonly string[] DataRoutes = ["/overview", "/sleeves", "/fills", "/decisions", "/provenance/1", "/radar", "/system", "/ai/costs", "/ai/traces", "/testnet", "/promotion", "/allocator"];
+    private static readonly string[] DataRoutes = ["/overview", "/sleeves", "/fills", "/decisions", "/provenance/1", "/provenance/order/abc", "/radar", "/system", "/ai/costs", "/ai/traces", "/testnet", "/promotion", "/allocator", "/alarms"];
 
     private static async Task<(WebApplication App, HttpClient Http)> StartAsync(OpsDatabase.OpsDb db)
     {
@@ -184,7 +184,8 @@ public class DashboardTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
         Assert.True(fills.GetArrayLength() is > 0 and <= DashboardQueries.MaxRows);
         var decisions = await Json(http, "/decisions?limit=20");
         Assert.InRange(decisions.GetArrayLength(), 1, 20);
-        Assert.All(decisions.EnumerateArray(), e => Assert.Contains(e.GetProperty("kind").GetString(), new[] { "EntrySignal", "ExitSignal", "Approved", "Clipped", "Rejected", "Canceled" }));
+        Assert.All(decisions.EnumerateArray(), e => Assert.Contains(e.GetProperty("kind").GetString(), new[] { "EntrySignal", "ExitSignal", "Approved", "Clipped", "Rejected", "Canceled", "AllocatorAdjusted", "AllocatorIgnored" }));
+        Assert.All(fills.EnumerateArray(), f => Assert.Equal("paper", f.GetProperty("venue").GetString()));
 
         var buy = fills.EnumerateArray().Last(f => f.GetProperty("side").GetString() == "buy" && f.GetProperty("strategy").GetString() == "ema-trend");
         var chain = await Json(http, $"/provenance/{buy.GetProperty("id").GetInt64()}");
@@ -197,8 +198,13 @@ public class DashboardTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
         Assert.Equal(run.GetProperty("manifestHash").GetString(), chain.GetProperty("cohort").GetProperty("manifestHash").GetString());
         Assert.Equal(new string('c', 64), Assert.Single(chain.GetProperty("experiments").EnumerateArray()).GetProperty("result_hash").GetString());
         Assert.Equal(["a6c4e89b98364a2e2b3479e81a9e7188ffb27e08a4d444723523e413f7509e82"], chain.GetProperty("datasetSnapshots").EnumerateArray().Select(s => s.GetString()));
+        Assert.Equal(JsonValueKind.Null, chain.GetProperty("order").ValueKind); // a paper fill has no exchange order
+        Assert.Equal(JsonValueKind.Null, chain.GetProperty("allocator").ValueKind); // no allocator in this run
+        Assert.Equal("paper", chain.GetProperty("sleeve").GetProperty("venue").GetString());
         Assert.Equal(HttpStatusCode.BadRequest, (await Get(http, "/provenance/999999")).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Get(http, "/provenance/abc")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Get(http, "/provenance/order/unknown-order")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Get(http, "/provenance/order/a%27b")).StatusCode); // only clientOrderId characters
 
         var radar = await Json(http, "/radar");
         Assert.Equal(20, radar.GetProperty("symbols").GetArrayLength()); // watch symbols without candles are not shown
@@ -211,7 +217,10 @@ public class DashboardTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
         Assert.Contains(system.GetProperty("audit").EnumerateArray(), a => a.GetProperty("event").GetString() == "paper_run_created");
         Assert.All(system.GetProperty("audit").EnumerateArray(), a => Assert.False(a.TryGetProperty("payload", out var _payload)));
         Assert.StartsWith("not readable from ops", system.GetProperty("holdoutEnvironmentVerified").GetString());
-        Assert.Equal(0, (await Json(http, "/ai/costs")).GetArrayLength());
+        var costs = await Json(http, "/ai/costs");
+        Assert.Equal(0, costs.GetProperty("rows").GetArrayLength());
+        Assert.Equal(10m, costs.GetProperty("monthlyCapUsd").GetDecimal());
+        Assert.Equal(0m, costs.GetProperty("monthUsedUsd").GetDecimal());
         Assert.Equal(0, (await Json(http, "/ai/traces")).GetArrayLength());
 
         // No secret in any response: the token, connection strings and passwords never appear.
@@ -222,6 +231,93 @@ public class DashboardTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
             Assert.DoesNotContain("Password", body, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("Username=", body, StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public async Task Traces_costs_the_budget_and_the_allocator_node_are_shown_without_model_text()
+    {
+        var db = await PaperAsync();
+        var now = DateTimeOffset.UtcNow;
+        // Synthetic AI records: a degraded allocation trace whose validator rejected a claim, and three calls of which two are this month.
+        var task = Guid.Parse("bbbbbbbb-0000-0000-0000-000000000001");
+        await db.ExecuteAsync("""
+            INSERT INTO ai.decision_traces (task_id, at, job_id, task_class, mode, input_hash, evidence_ids, provider, requested_model, actual_model, prompt_version,
+                calls, input_tokens, output_tokens, latency_ms, estimated_usd, actual_usd, validator_results, safety_violations, outcome, degraded, reason)
+            VALUES ($1, $2, 'alloc-test', 'AllocationProposal', 'Production', $3, '[]', 'gemini', 'gemini-3.5-flash-lite', 'gemini-3.5-flash-lite-preview', 'allocation-prompt v1',
+                1, 1200, 80, 900, 0.0006, 0.0005, '["evidence: SECRET-CLAIM-TEXT has no reference"]', '[]', 'Completed', true, null)
+            """, null, task, now, new string('d', 64));
+        await db.ExecuteAsync("""
+            INSERT INTO ai.cost_ledger (at, call_id, job_id, job_kind, task_class, entry_kind, amount_usd, provider, model, input_tokens, output_tokens, price_version) VALUES
+              ($1, 'cccccccc-0000-0000-0000-000000000001', 'alloc-test', 'Allocation', 'AllocationProposal', 'Reservation', 0.5, 'gemini', 'm', 0, 0, 'p'),
+              ($1, 'cccccccc-0000-0000-0000-000000000001', 'alloc-test', 'Allocation', 'AllocationProposal', 'Settlement', 8.2, 'gemini', 'm', 1200, 80, 'p'),
+              ($1, 'cccccccc-0000-0000-0000-000000000002', 'hg-test', 'Qualification', 'HypothesisGeneration', 'Reservation', 0.3, 'gemini', 'm', 0, 0, 'p'),
+              ($2, 'cccccccc-0000-0000-0000-000000000003', 'fe-test', 'Qualification', 'FindingExtraction', 'Reservation', 5, 'gemini', 'm', 0, 0, 'p'),
+              ($2, 'cccccccc-0000-0000-0000-000000000003', 'fe-test', 'Qualification', 'FindingExtraction', 'Settlement', 1.5, 'gemini', 'm', 900, 50, 'p')
+            """, null, now, AiSpend.MonthStart(now).AddDays(-3));
+        var (app, http) = await StartAsync(db);
+        await using var _ = app;
+
+        // An allocator adjustment at the decision of a buy fill (active mode, synthetic): T11 0.05 → 0.06, ×1.2, with the proposal and its trace.
+        var fills = await Json(http, "/fills?limit=200");
+        var buy = fills.EnumerateArray().Last(f => f.GetProperty("side").GetString() == "buy" && f.GetProperty("strategy").GetString() == "ema-trend");
+        var chain = await Json(http, $"/provenance/{buy.GetProperty("id").GetInt64()}");
+        var decisionBar = chain.GetProperty("decision").GetProperty("bar_time").GetDateTimeOffset();
+        var (run, sleeve, symbol) = (buy.GetProperty("run_id").GetInt64(), buy.GetProperty("sleeve").GetInt32(), buy.GetProperty("symbol").GetString()!);
+        await db.ExecuteAsync("""
+            INSERT INTO trading.engine_events (run_id, bar_time, seq, event_time, sleeve, symbol, kind, value, detail, before, after)
+            VALUES ($1, $2, 100000, $2, $3, $4, 'AllocatorAdjusted', 0.06, 'allocator-band v1', 0.05, 0.06)
+            """, null, run, decisionBar, sleeve, symbol);
+        await db.ExecuteAsync("""
+            INSERT INTO trading.allocator_proposals (run_id, bar_time, role, outcome, task_id, items, safety)
+            VALUES ($1, $2, 'active', 'proposal', $3, jsonb_build_array(jsonb_build_object('sleeve', $4::int, 'symbol', $5::text, 't11Weight', 0.05, 'proposed', 0.06, 'multiplier', 1.2, 'veto', false, 'clamp', null)), '[]')
+            """, null, run, decisionBar, task, sleeve, symbol);
+
+        var withAllocator = await Json(http, $"/provenance/{buy.GetProperty("id").GetInt64()}");
+        var allocator = withAllocator.GetProperty("allocator");
+        Assert.Equal(1.2m, allocator.GetProperty("applied").GetProperty("multiplier").GetDecimal());
+        Assert.Equal(0.05m, allocator.GetProperty("applied").GetProperty("t11Weight").GetDecimal());
+        var proposal = Assert.Single(allocator.GetProperty("proposals").EnumerateArray());
+        Assert.Equal("active", proposal.GetProperty("role").GetString());
+        Assert.Equal(1.2m, proposal.GetProperty("item").GetProperty("multiplier").GetDecimal());
+        Assert.Equal("gemini-3.5-flash-lite", proposal.GetProperty("trace").GetProperty("requested_model").GetString());
+        Assert.True(proposal.GetProperty("trace").GetProperty("degraded").GetBoolean());
+
+        // DecisionTrace: requested and actual model, degraded, validator names and counts, tokens, costs; never the validator's message text.
+        var tracesBody = await (await Get(http, "/ai/traces")).Content.ReadAsStringAsync();
+        Assert.DoesNotContain("SECRET-CLAIM-TEXT", tracesBody);
+        var trace = Assert.Single(JsonDocument.Parse(tracesBody).RootElement.EnumerateArray());
+        Assert.Equal("gemini-3.5-flash-lite", trace.GetProperty("requested_model").GetString());
+        Assert.Equal("gemini-3.5-flash-lite-preview", trace.GetProperty("actual_model").GetString());
+        Assert.True(trace.GetProperty("degraded").GetBoolean());
+        Assert.Equal(1, trace.GetProperty("validator_failures").GetInt32());
+        Assert.Equal(["evidence"], trace.GetProperty("failed_validators").EnumerateArray().Select(v => v.GetString()));
+        Assert.Equal(0, trace.GetProperty("safety_violations").GetInt32());
+        Assert.Equal(1200, trace.GetProperty("input_tokens").GetInt32());
+        Assert.Equal(0.0006m, trace.GetProperty("estimated_usd").GetDecimal());
+        Assert.False(trace.TryGetProperty("validator_results", out var _raw));
+
+        // Cost by task class and month, this month's jobs against their caps, and the budget: 8.2 settled + 0.3 open = 8.5 of 10 USD.
+        var costs = await Json(http, "/ai/costs");
+        Assert.Equal(10m, costs.GetProperty("monthlyCapUsd").GetDecimal());
+        Assert.Equal(8.5m, costs.GetProperty("monthUsedUsd").GetDecimal());
+        Assert.Equal(0.85m, costs.GetProperty("monthShare").GetDecimal());
+        Assert.Equal(0.80m, costs.GetProperty("warningShare").GetDecimal());
+        var classes = costs.GetProperty("taskClasses").EnumerateArray().ToDictionary(c => c.GetProperty("task_class").GetString()!, c => c.GetProperty("committed_usd").GetDecimal());
+        Assert.Equal(new Dictionary<string, decimal> { ["AllocationProposal"] = 8.2m, ["FindingExtraction"] = 1.5m, ["HypothesisGeneration"] = 0.3m }, classes);
+        Assert.Equal(2, costs.GetProperty("months").GetArrayLength());
+        var jobs = costs.GetProperty("jobs").EnumerateArray().ToDictionary(j => j.GetProperty("job_id").GetString()!, j => j.GetProperty("cap_usd").GetDecimal());
+        Assert.Equal(new Dictionary<string, decimal> { ["alloc-test"] = 1.0m, ["hg-test"] = 3.0m }, jobs);
+
+        var alarms = await Json(http, "/alarms");
+        var budget = Assert.Single(alarms.GetProperty("alarms").EnumerateArray(), a => a.GetProperty("code").GetString() == "ai-budget");
+        Assert.Equal("warning", budget.GetProperty("severity").GetString());
+
+        // System view: the AI kill switch with its trigger, actor, reason and time once it has been used.
+        await db.ExecuteAsync("INSERT INTO ai.kill_switch_events (at, tripped, actor, trigger_kind, reason) VALUES ($1, true, 'user:test', 'Manual', 'drill')", null, now);
+        var system = await Json(http, "/system");
+        Assert.Equal("Manual", system.GetProperty("aiKillSwitch").GetProperty("trigger_kind").GetString());
+        Assert.Equal("drill", system.GetProperty("aiKillSwitch").GetProperty("reason").GetString());
+        Assert.Contains((await Json(http, "/alarms")).GetProperty("alarms").EnumerateArray(), a => a.GetProperty("code").GetString() == "ai-kill-switch");
     }
 
     [Fact]

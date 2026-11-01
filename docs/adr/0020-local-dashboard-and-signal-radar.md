@@ -53,6 +53,10 @@ M9'un üç kabul kriteri (zincir, DecisionTrace/degraded/LLM acil durdurma, gör
 | `/system` | Trading ve AI kill switch'leri, son döngü metrikleri, reconciliation, `HoldoutEnvironmentVerified` durumu, son audit olayları (tür, zaman, aktör) |
 | `/ai/costs` | `ai.cost_ledger`: ay × görev sınıfı toplamları |
 | `/ai/traces?limit=` | `ai.decision_traces` özeti: görev sınıfı, `degraded`, validator sonucu, maliyet; prompt ve yanıt metni yok |
+| `/provenance/order/{id}` (M9, ADR-0024) | Testnet borsa emri (`clientOrderId` ya da borsa emir no) → durum geçmişi ve trade'ler → dolumlar → aynı zincir; allocator düğümü |
+| `/alarms` (M10, ADR-0024) | Hesaplanan alarmlar (A1–A7) ve eşikler |
+
+**M9 güncellemesi (ADR-0024):** `/fills` ve zincir venue (paper/Testnet) döner; `/provenance/{fillId}` Testnet dolumunda borsa emrini ve her zincirde allocator düğümünü verir; `/decisions` allocator olaylarını içerir; `/ai/traces` istenen modeli, token'ları, tahmini maliyeti, validator adlarını ve sayılarını döner (ham validator metni dönmez); `/ai/costs` ay ara toplamı, görev sınıfı toplamı, bu ayın işleri ve iş tavanları ile aylık tavanı ve kullanım oranını döner.
 
 - Paper modunda "OrderIntent" karşılığı L2 olayıdır (before/after notional ve gerekçe). Ekran bunu açıkça etiketler.
 - Migration `0008`: yalnızca `GRANT SELECT` ve view. `ops_api`'ye `ai.cost_ledger`, `ai.decision_traces`, `ai.kill_switch_events`, `audit.events`, `research.strategy_versions` okuma izni ve yalnızca dondurulmuş tanımların deney/snapshot bilgisini gösteren `research.frozen_provenance` view'ı. Yeni tablo yok; `research_app`'in ve holdout'un izinleri değişmez.

@@ -2,6 +2,19 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-11-01 — M9–M10 Kapı B: D30 kodu (10 gün), dashboard tamamlaması, alarmlar, alarm tatbikatı ve runbook
+- **D30 (`m6-protocol.md` v1.2 §14):** `Promotion.MinimumDays = 10`; 7 günlük kritik hata penceresi SQL'de `ErrorWindow`'dan gelir; dashboard D30 metinleri sunucudaki eşiklerden üretilir. Yeni testler: 9,99/10 gün sınırı, 7 günlük pencerenin dışlayıcı sınırı, tek catch-up'ta işlenen mumların sayılması.
+- **M9 (`m9-m10-protocol.md` §2):**
+  - Zincir Testnet borsa emrinden açılır: `GET /provenance/order/{id}` (`clientOrderId` ya da borsa emir no); emir, durum geçmişi, trade'ler, dolumlar, karar mumuyla sabitlenmiş L2/L1, strateji, manifesto, deneyler, veri seti. Testnet dolumu borsa emrini gösterir; `/fills` ve zincir venue döner; Testnet emir tablosu tıklanabilir.
+  - Allocator düğümü: `AllocatorAdjusted` (T11 → uygulanan ağırlık, çarpan), `AllocatorIgnored`, veto, öneri kaydı ve DecisionTrace bağlantısı; `/decisions` allocator olaylarını içerir.
+  - DecisionTrace: istenen ve gerçek model, `degraded`, validator adları ve ret sayısı, güvenlik ihlali sayısı, gecikme, token, tahmini ve gerçek maliyet. Ham validator ve ihlal metni artık dönmez.
+  - Maliyet: ay × görev sınıfı × iş türü, ay ara toplamı, görev sınıfı toplamı, bu ayın işleri ve iş tavanları, aylık tavan ve kullanım oranı (ledger'ın cap hesabıyla aynı: kesinleşen ya da açık rezervasyon); bütçe çubuğu. Kill switch kartları aktör, neden ve zamanı gösterir.
+- **M10 (ADR-0024):** `GET /alarms` ve `AlarmEvaluator` (A1–A7, B-1…B-5); her sekmede alarm şeridi ve "Sistem ve AI"de alarm tablosu; `scripts/m10-alarm-drill.ps1` (yalnızca kullanıcı); `m5-henv.ps1` bitişte ops'a `henv_run_recorded` yazar; [`runbook.md`](runbook.md) (alarm → eylem, bant dışı anahtar iptali, kapanma sonrası devam, `.wslconfig`, aylık takvim, Testnet sıfırlaması, prova kontrol listesi).
+- **Bulunan ve düzeltilen tuzak:** `m5-paper-start.ps1` Trading.Host'u `PI_TRADING_TESTNET` ayarlamadan yeniden oluşturuyordu; yeniden başlatma sonrası Testnet sessizce kapanırdı. Artık Testnet anahtarı kayıtlıysa açık kalır (mimari testle sabit).
+- **Migration yok;** gereken `SELECT` yetkileri mevcuttu. Yeni POST yok; `research_app` izinleri değişmedi.
+- **Belgeler:** ADR-0020 uç nokta tablosu, ADR-0024 uygulama durumu, `m9-m10-protocol.md` §9, `testing-strategy.md` §5.1, roadmap M9/M10 durumu.
+- **`verify.ps1`:** yeşil, **794 test** (önceki 773; Ai 171, Architecture 128, Backtest 136, HoldoutEvaluator 46, Infrastructure 27, MarketData 97, SourceGateway 69, Trading 120). API maliyeti 0.
+
 ## 2026-11-01 — M9–M10 Kapı A (kullanıcı onayı): `m9-m10-protocol.md` v1, ADR-0024, D30 rev., D35
 - **D30 rev. (U, 2026-10-30):** `PaperTrading → TestnetActive` asgari süresi 14'ten **10 takvim gününe** indi; ≥ 60 işlenmiş 4h mum ve son 7 günde sıfır kritik hata değişmedi. Gerekçe: 60 × 4h = 10 gün. `m6-protocol.md` **v1.2** (§14; §6.2'deki lifecycle aktörü kodla uyumlu olarak `user`), `requirements.md` D30, `architecture.md` §5 (eski "TBD" satırı), ADR-0021 notu, `m6-acceptance-report.md` §5.
 - **Yeni ön kayıt:** [`m9-m10-protocol.md`](m9-m10-protocol.md) v1 ve [ADR-0024](adr/0024-alarms-and-dashboard-completion.md); karar **D35** (U, 2026-11-01): M6 C4'te yalnızca Kohort 0; alarmlar için yeni dış kanal yok; M10, 30 günlük prova başlatılınca kabul edilen sapmayla kapanır.

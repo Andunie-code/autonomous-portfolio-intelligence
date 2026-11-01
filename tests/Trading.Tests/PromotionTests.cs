@@ -23,13 +23,18 @@ public class PromotionTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
     private static readonly DateTimeOffset Now = new(2026, 11, 3, 8, 0, 15, TimeSpan.Zero);
 
     [Theory]
-    [InlineData(13.99, 60, 0, "days")]
-    [InlineData(14.0, 59, 0, "bars")]
-    [InlineData(14.0, 60, 1, "critical-errors")]
-    [InlineData(14.0, 60, 0, null)]
+    [InlineData(9.99, 60, 0, "days")]
+    [InlineData(10.0, 59, 0, "bars")]
+    [InlineData(10.0, 60, 1, "critical-errors")]
+    [InlineData(10.0, 60, 0, null)]
     [InlineData(30, 400, 0, null)]
-    public void D30_needs_14_days_60_bars_and_no_critical_error(double days, int bars, int errors, string? missing)
+    public void D30_needs_10_days_60_bars_and_no_critical_error(double days, int bars, int errors, string? missing)
     {
+        // D30 rev. (U, 2026-10-30; m6-protocol v1.2 §14): 10 calendar days, the bar and error conditions unchanged.
+        Assert.Equal(10, Promotion.MinimumDays);
+        Assert.Equal(60, Promotion.MinimumBars);
+        Assert.Equal(TimeSpan.FromDays(7), Promotion.ErrorWindow);
+
         var result = Promotion.Missing(Now, Now.AddDays(-days), bars, errors);
 
         Assert.Equal(missing is null ? [] : new[] { missing }, result);
@@ -149,6 +154,43 @@ public class PromotionTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
             Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
             Assert.Contains("Frozen", await refused.Content.ReadAsStringAsync());
         }
+    }
+
+    [Fact]
+    public async Task Bars_processed_in_one_catch_up_count_toward_d30()
+    {
+        // The whole 11-day run is processed in a single call after start (one catch-up after an "outage"): every bar counts.
+        var db = await PaperAsync(paperDays: 11, runDays: 11);
+        await using var connection = new NpgsqlConnection(db.As("ops_api"));
+        await connection.OpenAsync();
+        var ema = (await Promotion.ReadAsync(connection, Now, "ema-trend", default)).Single();
+        var expected = await db.ScalarAsync<long>("SELECT count(*) FROM trading.steps s JOIN trading.paper_runs p ON p.id = s.run_id WHERE p.venue = 'paper' AND s.bar_time >= p.trading_start");
+
+        Assert.Equal(expected, ema.Bars);
+        Assert.True(ema.Bars >= Promotion.MinimumBars);
+        Assert.DoesNotContain("bars", ema.Missing);
+    }
+
+    [Fact]
+    public async Task The_critical_error_window_is_seven_days_and_its_bound_is_exclusive()
+    {
+        var db = await PaperAsync(paperDays: 11, runDays: 11);
+        await using var connection = new NpgsqlConnection(db.As("ops_api"));
+        await connection.OpenAsync();
+        Task<PromotionStatus> Read() => Promotion.ReadAsync(connection, Now, "ema-trend", default).ContinueWith(t => t.Result.Single());
+        Assert.Equal(0, (await Read()).CriticalErrors7d);
+
+        // A failed reconciliation exactly 7 days (and 1 s more) before now is outside the window; 1 s inside counts.
+        var run = await db.ScalarAsync<long>("SELECT max(id) FROM trading.paper_runs WHERE venue = 'paper'");
+        const string Failed = "INSERT INTO trading.reconciliation_runs (checked_at, run_id, ok, detail) VALUES ($1, $2, false, '{}')";
+        await db.ExecuteAsync(Failed, null, Now - Promotion.ErrorWindow - TimeSpan.FromSeconds(1), run);
+        await db.ExecuteAsync(Failed, null, Now - Promotion.ErrorWindow, run);
+        Assert.Equal(0, (await Read()).CriticalErrors7d);
+
+        await db.ExecuteAsync(Failed, null, Now - Promotion.ErrorWindow + TimeSpan.FromSeconds(1), run);
+        var status = await Read();
+        Assert.Equal(1, status.CriticalErrors7d);
+        Assert.Contains("critical-errors", status.Missing);
     }
 
     [Fact]

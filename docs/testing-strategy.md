@@ -66,6 +66,14 @@ Son güncelleme: 2026-10-14 (rev. 5) · Değişiklikler: [CHANGELOG.md](CHANGELO
 - Kanarya secret testi.
 - Audit tablosunda `UPDATE`/`DELETE` reddedilir.
 
+### 5.1 Dashboard ve alarmlar (M9–M10; ADR-0020, ADR-0024)
+- **Kapı B listesi:** `m9-m10-protocol.md` §2 ve §3.3 bağlayıcıdır.
+- **Zincir:** paper dolumundan ve Testnet borsa emrinden (`clientOrderId` ya da borsa emir no) veri setine kadar; Testnet dolumundan borsa emrine; allocator düğümü (çarpan, öneri, DecisionTrace).
+- **Görünürlük:** DecisionTrace alanları (istenen/gerçek model, degraded, validator adları ve sayıları, token, maliyet; model ve validator metni yok); görev sınıfı, ay ve iş bazında maliyet ve bütçe yüzdesi.
+- **Alarmlar:** her alarmın tetiklenmesi ve temizlenmesi sınır değerlerinde (bütçe %80/%100, H-ENV 31 gün, heartbeat 75 dk, takılı emir 60 dk, 7 günlük pencere); girdiler `ops_api` ile okunur.
+- **Güvenlik:** yeni rotalar H24 kurallarına uyar (401, 421, yasaklı alt dizgi yok, yanıtta secret yok); yeni POST yoktur.
+- **Gerçek ortam:** `m10-alarm-drill.ps1` (kullanıcı) ile tatbikat.
+
 ## 6. Model yeterliliği (D16, D20, T7, T8, ADR-0010)
 
 ### 6.1 Süreç

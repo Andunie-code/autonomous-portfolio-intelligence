@@ -7,7 +7,7 @@
 const TOKEN_KEY = 'pi-ops-token';
 const THEME_KEY = 'pi-theme';
 const REFRESH_MS = 60_000;
-const state = { tab: 'overview', timer: null, radarSort: { key: 'symbol', dir: 1 }, fills: [], traceFill: null };
+const state = { tab: 'overview', timer: null, radarSort: { key: 'symbol', dir: 1 }, fills: [], trace: null };
 
 // ---------- names ----------
 // Readable names of the frozen strategies; unknown names are shown as they are.
@@ -117,7 +117,9 @@ function stateBadge(s) { const [label, kind] = STATE_VIEW[s] || [s, 'muted']; re
 const EVENT_VIEW = {
   EntrySignal: ['Giriş sinyali', 'info', 'zap'], ExitSignal: ['Çıkış sinyali', 'info', 'zap'],
   Approved: ['Onaylandı', 'good', 'check'], Clipped: ['Kırpıldı', 'warn', 'alert'], Rejected: ['Reddedildi', 'bad', 'x'], Canceled: ['İptal', 'bad', 'x'],
+  AllocatorAdjusted: ['Allocator ayarı', 'info', 'target'], AllocatorIgnored: ['Allocator yok sayıldı', 'muted', 'dot'],
 };
+const venueBadge = (venue) => badge(venue === 'testnet' ? 'Testnet' : 'Paper', venue === 'testnet' ? 'info' : 'muted');
 function eventBadge(kind) { const [label, k, i] = EVENT_VIEW[kind] || [kind, 'muted']; return badge(label, k, i); }
 
 function strategyCell(name, cohortId) {
@@ -234,11 +236,17 @@ function progress(label, value, target, unit) {
     el('div', { class: 'track', role: 'meter', 'aria-valuemin': '0', 'aria-valuemax': String(target), 'aria-valuenow': String(value), 'aria-label': label }, fill));
 }
 
-const MISSING_TEXT = { days: '14 gün dolmadı', bars: '60 mum dolmadı', 'critical-errors': 'son 7 günde kritik hata var' };
+// Thresholds come from the server (Promotion.MinimumDays/MinimumBars; D30 rev. 2026-10-30: 10 days).
+function missingText(code, promotion) {
+  if (code === 'days') return `${promotion.minimumDays} gün dolmadı`;
+  if (code === 'bars') return `${promotion.minimumBars} mum dolmadı`;
+  if (code === 'critical-errors') return 'son 7 günde kritik hata var';
+  return code;
+}
 
 function promotionCard(promotion) {
   const rows = promotion.strategies.filter((s) => ['PaperTrading', 'TestnetActive'].includes(s.state));
-  return card('Testnet terfisi (D30: ≥ 14 gün, ≥ 60 işlenmiş 4h mum, son 7 günde 0 kritik hata)',
+  return card(`Testnet terfisi (D30: ≥ ${promotion.minimumDays} gün, ≥ ${promotion.minimumBars} işlenmiş 4h mum, son 7 günde 0 kritik hata)`,
     rows.length === 0 ? el('p', { class: 'note', text: 'Paper\'da strateji yok.' }) : rows.map((s) => el('div', { class: 'promotion' },
       el('div', { class: 'card-head' }, strategyCell(s.name, s.cohortId),
         s.state === 'TestnetActive' ? badge('Testnet', 'good', 'check') : s.eligible ? badge('Uygun · kullanıcı onayı bekliyor', 'good', 'check') : badge('Bekliyor', 'muted', 'clock'),
@@ -246,7 +254,7 @@ function promotionCard(promotion) {
       progress(`${cohortLabel(s.cohortId).replace('K', 'Kohort ')}: gün`, s.days, promotion.minimumDays, 'gün'),
       progress('İşlenmiş 4h mum', s.bars, promotion.minimumBars, 'mum'),
       el('p', { class: 'note', text: `Kritik hata (7 gün): ${s.criticalErrors7d} · kesinti oranı ${pct(s.outageRatio)} · paper başlangıcı ${time(s.paperSince)}`
-        + (s.missing.length ? ` · eksik: ${s.missing.map((m) => MISSING_TEXT[m] || m).join(', ')}` : '') }))),
+        + (s.missing.length ? ` · eksik: ${s.missing.map((m) => missingText(m, promotion)).join(', ')}` : '') }))),
     el('p', { class: 'note', text: 'Geçiş yalnızca kullanıcı oturumuyla yapılır (scripts/m6-testnet-activate.ps1, confirm: true). Doğrulama gerekmez; Validated olmayan stratejiler "deneysel" etiketi taşır.' }));
 }
 
@@ -337,7 +345,9 @@ async function renderTestnet(view) {
       { label: 'Miktar', num: true, render: (o) => num(o.quantity, 6) }, { label: 'Limit', num: true, render: (o) => price(o.price) }, { label: 'Stop', num: true, render: (o) => price(o.stop_price) },
       { label: 'Durum', render: (o) => orderBadge(o.status) }, { label: 'Gerekçe', render: (o) => o.reason || '' },
       { label: 'clientOrderId', render: (o) => el('span', { class: 'mono muted', text: o.client_order_id }) },
-    ], data.recentOrders)),
+      { label: 'Borsa emir no', render: (o) => el('span', { class: 'mono muted', text: o.exchange_order_id ?? '—' }) },
+    ], data.recentOrders, (o) => openOrderTrace(o.client_order_id)),
+    el('p', { class: 'note', text: 'Bir emre tıklayınca emirden veri setine kadar izlenebilirlik zinciri açılır.' })),
     scrollCard('Testnet run\'ları', table([
       { label: 'Run', key: 'run_id', num: true }, { label: 'Kohort', render: (r) => (r.cohort_ids || []).map((c) => cohortLabel(c)).join(', ') },
       { label: 'İşlem başlangıcı', render: (r) => time(r.trading_start) },
@@ -421,6 +431,7 @@ async function renderSleeves(view) {
     ], positions, (p) => { const f = lastBuy(p); if (f) openTrace(f.id); })),
     scrollCard('Son dolumlar', table([
       { label: '#', key: 'id', num: true }, { label: 'Zaman', render: (f) => time(f.fill_time) }, { label: 'Strateji', render: (f) => strategyCell(f.strategy, f.cohort_id) },
+      { label: 'Run', render: (f) => el('span', {}, venueBadge(f.venue), ` ${f.run_id}`) },
       { label: 'Parite', render: (f) => el('strong', { text: f.symbol }) },
       { label: 'Yön', render: (f) => badge(f.side === 'buy' ? 'Alış' : 'Satış', f.side === 'buy' ? 'good' : 'bad', f.side === 'buy' ? 'up' : 'down') },
       { label: 'Fiyat', num: true, render: (f) => price(f.price) }, { label: 'Miktar', num: true, render: (f) => num(f.quantity, 6) },
@@ -628,29 +639,74 @@ async function renderRadar(view) {
 
 // ---------- trace ----------
 function openTrace(fillId) {
-  state.traceFill = fillId;
+  state.trace = { kind: 'fill', id: String(fillId) };
   selectTab('trace');
 }
 
+function openOrderTrace(orderId) {
+  state.trace = { kind: 'order', id: String(orderId) };
+  selectTab('trace');
+}
+
+function fillStep(f) {
+  return el('li', {}, el('div', { class: 'step' }, `Dolum #${f.id} · `, badge(f.side === 'buy' ? 'Alış' : 'Satış', f.side === 'buy' ? 'good' : 'bad'), ` ${f.symbol} `, f.venue ? venueBadge(f.venue) : null),
+    kv([['Strateji', strategyTitle(f.strategy, f.cohort_id)], ['Zaman', time(f.fill_time)], ['Fiyat × miktar', `${price(f.price)} × ${num(f.quantity, 6)}`], ['Ücret', num(f.fee, 4)], ['Neden', f.reason]]));
+}
+
+function orderStep(o) {
+  return el('li', {}, el('div', { class: 'step' }, `Borsa emri (Testnet) · ${PURPOSE_TEXT[o.purpose] || o.purpose} · `, orderBadge(o.status), ` ${o.symbol}`),
+    kv([['clientOrderId', o.client_order_id], ['Borsa emir no', o.exchange_order_id === null || o.exchange_order_id === undefined ? '—' : String(o.exchange_order_id)],
+      ['Tip / yön', `${o.order_type} · ${o.side}${o.time_in_force ? ` · ${o.time_in_force}` : ''}`], ['Miktar', num(o.quantity, 6)],
+      ['Limit / stop', `${price(o.price)} / ${price(o.stop_price)}`], ['Karar mumu', time(o.decision_bar)], ['Deneme', String(o.attempt)],
+      ['Yerine geçtiği', o.replaces || '—']]),
+    table([{ label: 'Zaman', render: (h) => time(h.recorded_at) }, { label: 'Durum', render: (h) => orderBadge(h.status) },
+      { label: 'Dolan', num: true, render: (h) => num(h.executed_quantity, 6) }, { label: 'Gerekçe', render: (h) => h.reason || '' }], o.history || []),
+    (o.trades || []).length ? table([{ label: 'Trade id', key: 'trade_id' }, { label: 'Zaman', render: (t) => time(t.trade_time) }, { label: 'Uygulandığı mum', render: (t) => time(t.step_bar) },
+      { label: 'Fiyat', num: true, render: (t) => price(t.price) }, { label: 'Miktar', num: true, render: (t) => num(t.quantity, 6) },
+      { label: 'Komisyon', num: true, render: (t) => `${num(t.commission, 8)} ${t.commission_asset}` }], o.trades) : null);
+}
+
+const PROPOSAL_ROLE = { shadow: 'gölge', active: 'aktif' };
+function allocatorStep(a) {
+  if (!a) return el('li', {}, el('div', { class: 'step', text: 'Allocator' }), el('p', { class: 'note', text: 'Bu kararda allocator yer almadı ya da öneri yok (T11 ağırlığı).' }));
+  return el('li', {}, el('div', { class: 'step', text: `Allocator (${a.band})` }),
+    kv([['Uygulanan', a.applied ? `T11 ${num(a.applied.t11Weight, 4)} → ${num(a.applied.appliedWeight, 4)} (×${num(a.applied.multiplier, 3)})` : 'Gerçek adımda ayar yok (T11)'],
+      ['Veto', a.veto ? eventBadge('Rejected') : 'yok'], ['Yok sayılan öğe', a.ignored ? a.ignored.detail : 'yok']]),
+    table([{ label: 'Rol', render: (p) => PROPOSAL_ROLE[p.role] || p.role }, { label: 'Sonuç', render: (p) => OUTCOME_TEXT[p.outcome] || p.outcome },
+      { label: 'Öneri', render: (p) => itemsCell(p.item ? [p.item] : []) }, { label: 'Güvenlik olayı', num: true, key: 'safetyEvents' },
+      { label: 'Model (istenen → gerçek)', render: (p) => (p.trace ? `${p.trace.requested_model ?? '—'} → ${p.trace.actual_model ?? '—'}` : '—') },
+      { label: 'Degraded', render: (p) => (p.trace && p.trace.degraded ? badge('degraded', 'bad', 'alert') : '') },
+      { label: 'USD', num: true, render: (p) => (p.trace ? num(p.trace.actual_usd, 6) : '—') },
+      { label: 'Görev', render: (p) => el('span', { class: 'mono muted', text: short(p.taskId, 8) }) }], a.proposals || []));
+}
+
 async function renderTrace(view) {
-  const input = el('input', { type: 'number', min: '1', placeholder: 'Dolum #', 'aria-label': 'Dolum numarası', value: state.traceFill || '' });
-  const go = el('button', { class: 'btn primary', type: 'button', text: 'Zinciri göster', onclick: () => { state.traceFill = Number(input.value); refresh(); } });
+  const current = state.trace || { kind: 'fill', id: '' };
+  const kind = el('select', { 'aria-label': 'Başlangıç türü' },
+    el('option', { value: 'fill', text: 'Dolum #', selected: current.kind === 'fill' }), el('option', { value: 'order', text: 'Borsa emri (clientOrderId ya da borsa emir no)', selected: current.kind === 'order' }));
+  const input = el('input', { type: 'text', placeholder: 'Dolum # ya da emir kimliği', 'aria-label': 'Dolum numarası ya da emir kimliği', value: current.id || '', maxlength: '36', spellcheck: 'false' });
+  const go = el('button', { class: 'btn primary', type: 'button', text: 'Zinciri göster', onclick: () => { state.trace = { kind: kind.value, id: input.value.trim() }; refresh(); } });
   const header = el('div', {},
-    callout('Bu ekran bir dolumun nereden geldiğini adım adım gösterir: dolum → risk kararı (L2) → sinyal (L1) → strateji tanımı ve hash\'i → kohort manifestosu → araştırma deneyleri → veri seti. '
+    callout('Bu ekran bir dolumun ya da Testnet borsa emrinin nereden geldiğini adım adım gösterir: borsa emri / dolum → risk kararı (L2) ve allocator → sinyal (L1) → strateji tanımı ve hash\'i → kohort manifestosu → araştırma deneyleri → veri seti. '
       + 'Paper modunda ayrı OrderIntent tablosu yoktur: L2 risk kararı olayı intent ile kararı birlikte taşır.'),
-    el('div', { class: 'card' }, el('div', { class: 'toolbar' }, input, go)));
-  if (!state.traceFill) { show(view, header); return; }
-  const p = await api(`/provenance/${encodeURIComponent(state.traceFill)}`);
+    el('div', { class: 'card' }, el('div', { class: 'toolbar' }, kind, input, go)));
+  if (!current.id) { show(view, header); return; }
+  const p = await api(current.kind === 'order' ? `/provenance/order/${encodeURIComponent(current.id)}` : `/provenance/${encodeURIComponent(current.id)}`);
   const f = p.fill; const d = p.decision; const s = p.signal; const c = p.cohort || {};
+  const stopFill = (f && f.reason === 'Stop') || (p.order && p.order.purpose === 'Stop');
   show(view, header, el('div', { class: 'card' }, el('ol', { class: 'chain' },
-    el('li', {}, el('div', { class: 'step' }, `Dolum #${f.id} · `, badge(f.side === 'buy' ? 'Alış' : 'Satış', f.side === 'buy' ? 'good' : 'bad'), ` ${f.symbol}`),
-      kv([['Strateji', strategyTitle(f.strategy, f.cohort_id)], ['Zaman', time(f.fill_time)], ['Fiyat × miktar', `${price(f.price)} × ${num(f.quantity, 6)}`], ['Ücret', num(f.fee, 4)], ['Neden', f.reason]])),
+    p.order ? orderStep(p.order) : null,
+    f ? fillStep(f) : null,
+    p.fills ? el('li', {}, el('div', { class: 'step', text: `Bu emrin dolumları (${p.fills.length})` }),
+      table([{ label: '#', key: 'id', num: true }, { label: 'Zaman', render: (x) => time(x.fill_time) }, { label: 'Fiyat', num: true, render: (x) => price(x.price) },
+        { label: 'Miktar', num: true, render: (x) => num(x.quantity, 6) }, { label: 'Neden', key: 'reason' }], p.fills, (x) => openTrace(x.id))) : null,
     el('li', {}, el('div', { class: 'step', text: 'Risk kararı (L2) · OrderIntent karşılığı' }),
       d ? kv([['Karar', eventBadge(d.kind)], ['Gerekçe', d.detail], ['Nominal (önce → sonra)', `${num(d.before, 2)} → ${num(d.after, 2)}`], ['Mum', time(d.bar_time)]])
-        : el('p', { class: 'note', text: f.reason === 'Stop' ? 'Koruyucu stop dolumu: risk kararı gerekmez.' : 'Bu dolumun penceresinde L2 olayı yok.' })),
+        : el('p', { class: 'note', text: stopFill ? 'Koruyucu stop: risk kararı gerekmez.' : 'Bu pencerede L2 olayı yok.' })),
+    allocatorStep(p.allocator),
     el('li', {}, el('div', { class: 'step', text: 'Sinyal (L1)' }),
       s ? kv([['Olay', eventBadge(s.kind)], ['Mum', time(s.bar_time)], ['Değer', num(s.value, 6)]]) : el('p', { class: 'note', text: 'Sinyal yok (stop, manuel kapatma ya da tümünü kapat).' })),
-    el('li', {}, el('div', { class: 'step', text: `Sleeve · ${strategyTitle(p.sleeve.name, p.sleeve.cohortId)}` }),
+    el('li', {}, el('div', { class: 'step' }, `Sleeve · ${strategyTitle(p.sleeve.name, p.sleeve.cohortId)} `, venueBadge(p.sleeve.venue)),
       kv([['Run / sleeve', `${p.sleeve.runId} / ${p.sleeve.sleeve}`], ['Kohort / üye', `${cohortLabel(p.sleeve.cohortId)} (#${p.sleeve.cohortId}) / ${p.sleeve.memberIndex}`], ['Sermaye', money(p.sleeve.capital)]])),
     el('li', {}, el('div', { class: 'step', text: 'Strateji tanımı (StrategyDefinition)' }),
       kv([['definitionHash', p.strategy.definitionHash], ['structureHash', p.strategy.structureHash],
@@ -666,10 +722,35 @@ async function renderTrace(view) {
     el('li', {}, el('div', { class: 'step', text: 'Veri seti (DatasetSnapshot)' }), kv(p.datasetSnapshots.map((h) => ['snapshot', h]))))));
 }
 
+// ---------- alarms (M10, ADR-0024) ----------
+const ALARM_TEXT = {
+  'trading-kill-switch': 'Trading kill switch açık', 'ai-kill-switch': 'LLM acil durdurma açık', 'ai-budget': 'AI bütçesi',
+  'ai-auto-trip': 'Otomatik AI durdurma (7 gün)', 'henv-stale': 'Aylık H-ENV koşusu', heartbeat: 'Döngü yok (heartbeat)',
+  'unprotected-position': 'Korumasız Testnet pozisyonu', 'order-unknown': 'Takılı borsa emri', 'testnet-reset-suspected': 'Testnet sıfırlaması şüphesi',
+  reconciliation: 'Reconciliation hatası (7 gün)', 'strategy-hash-mismatch': 'Strateji hash uyuşmazlığı (7 gün)', 'cycle-error': 'Döngü hatası (24 saat)',
+};
+const alarmBadge = (a) => badge(a.severity === 'critical' ? 'Kritik' : 'Uyarı', a.severity === 'critical' ? 'bad' : 'warn', 'alert');
+
+async function renderAlarmStrip() {
+  const strip = $('alarm-strip');
+  let data;
+  try { data = await api('/alarms'); } catch (e) {
+    if (e instanceof Unauthorized) throw e;
+    show(strip, callout(`Alarmlar okunamadı: ${e.message}`, 'warn')); strip.hidden = false; return null;
+  }
+  if (data.alarms.length === 0) { strip.replaceChildren(); strip.hidden = true; return data; }
+  const critical = data.critical > 0;
+  show(strip, el('div', { class: `callout ${critical ? 'bad' : 'warn'}`, role: critical ? 'alert' : 'status' }, icon('alert'),
+    el('div', {}, el('strong', { text: `${data.alarms.length} alarm (${data.critical} kritik, ${data.warning} uyarı): ` }),
+      data.alarms.map((a) => ALARM_TEXT[a.code] || a.code).join(' · '), ' — ayrıntı "Sistem ve AI" sekmesinde; eylemler docs/runbook.md\'de.')));
+  strip.hidden = false;
+  return data;
+}
+
 // ---------- system ----------
 async function renderSystem(view) {
   const sys = await api('/system');
-  const [costs, traces] = await Promise.all([api('/ai/costs').catch((e) => e), api('/ai/traces?limit=50').catch((e) => e)]);
+  const [costs, traces, alarms] = await Promise.all([api('/ai/costs').catch((e) => e), api('/ai/traces?limit=50').catch((e) => e), api('/alarms').catch((e) => e)]);
   const ks = sys.tradingKillSwitch; const ai = sys.aiKillSwitch;
   const unavailable = sys.unavailable || [];
   const aiMissing = unavailable.includes('aiKillSwitch');
@@ -679,13 +760,19 @@ async function renderSystem(view) {
       + 'Trading kill switch açıkken yeni giriş yapılmaz; çıkışlar ve stop\'lar çalışmaya devam eder.'),
     unavailable.length ? callout(`Okunamayan bölümler: ${unavailable.join(', ')}. ${sys.unavailableReason || ''}`, 'warn') : null,
     el('div', { class: 'kpis' },
-      kpi('Trading kill switch', ks && ks.engaged ? 'AKTİF' : 'Kapalı', ks && ks.engaged ? 'neg' : 'pos', ks ? `${ks.actor} · ${time(ks.recorded_at)}` : ''),
-      kpi('LLM acil durdurma', aiMissing ? '—' : ai && ai.tripped ? `AKTİF (${ai.trigger_kind})` : 'Kapalı', aiMissing ? '' : ai && ai.tripped ? 'neg' : 'pos', aiMissing ? 'migration 0008 gerekli' : ''),
+      kpi('Trading kill switch', ks && ks.engaged ? 'AKTİF' : 'Kapalı', ks && ks.engaged ? 'neg' : 'pos', ks ? `${ks.actor} · ${ks.reason} · ${time(ks.recorded_at)}` : 'hiç açılmadı'),
+      kpi('LLM acil durdurma', aiMissing ? '—' : ai && ai.tripped ? `AKTİF (${ai.trigger_kind})` : 'Kapalı', aiMissing ? '' : ai && ai.tripped ? 'neg' : 'pos',
+        aiMissing ? 'migration 0008 gerekli' : ai ? `${ai.trigger_kind} · ${ai.actor} · ${ai.reason} · ${time(ai.at)}` : 'hiç açılmadı'),
       kpi('Son döngü', sys.host.outcome || '—', sys.host.outcome === 'ok' ? 'pos' : sys.host.outcome ? 'neg' : '', sys.host.lastCycle ? time(sys.host.lastCycle) : ''),
       kpi('Geç döngü (7 gün, > 60 sn)', String(sys.lateCycles7d ?? '—'), Number(sys.lateCycles7d) > 0 ? 'neg' : 'pos'),
       kpi('Reconciliation', sys.reconciliation ? (sys.reconciliation.ok ? 'Temiz' : 'UYUMSUZ') : '—', sys.reconciliation ? (sys.reconciliation.ok ? 'pos' : 'neg') : '',
         sys.reconciliation ? time(sys.reconciliation.checked_at) : ''),
       kpi('Reconciliation hatası (7 gün)', String(sys.reconciliationFailures7d ?? '—'), Number(sys.reconciliationFailures7d) > 0 ? 'neg' : '')),
+    scrollCard('Alarmlar (ADR-0024)', failed(alarms) ? el('p', { class: 'note', text: `Okunamadı: ${alarms.message}` }) : [
+      table([{ label: 'Önem', render: alarmBadge }, { label: 'Alarm', render: (a) => ALARM_TEXT[a.code] || a.code }, { label: 'Kod', render: (a) => el('span', { class: 'mono muted', text: a.code }) },
+        { label: 'Başlangıç', render: (a) => time(a.since) }, { label: 'Ayrıntı', key: 'detail' }, { label: 'Runbook', key: 'runbook' }], alarms.alarms),
+      el('p', { class: 'note', text: `Eşikler: bütçe uyarı ${pct(alarms.thresholds.budgetWarningShare, 0)} / kritik ${pct(alarms.thresholds.budgetCriticalShare, 0)}; H-ENV ${alarms.thresholds.henvMaxAgeDays} gün; `
+        + `heartbeat ${alarms.thresholds.heartbeatMaxAgeMinutes} dk; takılı emir ${alarms.thresholds.unknownMaxAgeMinutes} dk; pencere ${alarms.thresholds.windowDays} gün. Alarmlar her istekte mevcut kayıtlardan hesaplanır; saklanmaz ve dışarı gönderilmez.` })]),
     el('div', { class: 'grid2' },
       card('Holdout ve kohort durumu',
         kv([['HoldoutEnvironmentVerified', 'ops tarafından okunamaz (holdout veritabanı; H-ENV raporuna bakın)']]),
@@ -701,17 +788,36 @@ async function renderSystem(view) {
       { label: 'Sonuç', render: (c) => badge(c.outcome, c.outcome === 'ok' ? 'good' : c.outcome === 'degraded' ? 'warn' : 'bad') },
       { label: 'Degraded nedeni', render: (c) => (c.degraded || []).join(', ') },
     ], sys.cycles)),
-    scrollCard('AI maliyet defteri (ay × görev sınıfı)', failed(costs) ? el('p', { class: 'note', text: `Okunamadı: ${costs.message}` }) : table([
-      { label: 'Ay', key: 'month' }, { label: 'Görev sınıfı', key: 'task_class' }, { label: 'İş türü', key: 'job_kind' },
-      { label: 'Kesinleşen USD', num: true, render: (r) => num(r.settled_usd, 4) }, { label: 'Rezervasyon USD', num: true, render: (r) => num(r.reserved_usd, 4) },
-      { label: 'Çağrı', num: true, key: 'calls' }, { label: 'Girdi token', num: true, key: 'input_tokens' }, { label: 'Çıktı token', num: true, key: 'output_tokens' },
-    ], costs)),
+    failed(costs) ? scrollCard('AI maliyeti', el('p', { class: 'note', text: `Okunamadı: ${costs.message}` })) : [
+      card(`AI bütçesi · ${costs.month} (aylık tavan ${num(costs.monthlyCapUsd, 2)} USD)`,
+        meter(`Bu ay: ${num(costs.monthUsedUsd, 6)} USD (kesinleşen + açık rezervasyon)`, costs.monthShare ?? 0, 1, costs.warningShare),
+        el('p', { class: 'note', text: 'Tavana ulaşılırsa çağrı yapılmaz ve LLM acil durdurma otomatik açılır; %80\'de uyarı alarmı (A3) görünür.' })),
+      el('div', { class: 'grid2' },
+        card('Görev sınıfı bazında toplam (tüm zamanlar)', table([
+          { label: 'Görev sınıfı', key: 'task_class' }, { label: 'USD', num: true, render: (r) => num(r.committed_usd, 6) }, { label: 'Çağrı', num: true, key: 'calls' },
+          { label: 'Girdi token', num: true, key: 'input_tokens' }, { label: 'Çıktı token', num: true, key: 'output_tokens' }], costs.taskClasses)),
+        card('Aylık toplam', table([
+          { label: 'Ay', key: 'month' }, { label: 'USD', num: true, render: (r) => num(r.committed_usd, 6) }, { label: 'Açık rezervasyon', num: true, render: (r) => num(r.open_usd, 6) },
+          { label: 'Çağrı', num: true, key: 'calls' }], costs.months))),
+      scrollCard('Bu ayın işleri ve iş tavanları', table([
+        { label: 'İş', render: (j) => el('span', { class: 'mono', text: j.job_id }) }, { label: 'İş türü', key: 'job_kind' },
+        { label: 'USD', num: true, render: (j) => num(j.committed_usd, 6) }, { label: 'İş tavanı', num: true, render: (j) => (isNil(j.cap_usd) ? '—' : num(j.cap_usd, 2)) },
+        { label: 'Çağrı', num: true, key: 'calls' }], costs.jobs)),
+      scrollCard('AI maliyet defteri (ay × görev sınıfı × iş türü)', table([
+        { label: 'Ay', key: 'month' }, { label: 'Görev sınıfı', key: 'task_class' }, { label: 'İş türü', key: 'job_kind' },
+        { label: 'USD', num: true, render: (r) => num(r.committed_usd, 6) }, { label: 'Kesinleşen', num: true, render: (r) => num(r.settled_usd, 6) },
+        { label: 'Açık rezervasyon', num: true, render: (r) => num(r.open_usd, 6) },
+        { label: 'Çağrı', num: true, key: 'calls' }, { label: 'Girdi token', num: true, key: 'input_tokens' }, { label: 'Çıktı token', num: true, key: 'output_tokens' },
+      ], costs.rows))],
     scrollCard('DecisionTrace (son 50)', failed(traces) ? el('p', { class: 'note', text: `Okunamadı: ${traces.message}` }) : table([
-      { label: 'Zaman', render: (t) => time(t.at) }, { label: 'Görev', key: 'task_class' }, { label: 'Mod', key: 'mode' }, { label: 'Model', key: 'actual_model' },
+      { label: 'Zaman', render: (t) => time(t.at) }, { label: 'Görev', key: 'task_class' }, { label: 'Mod', key: 'mode' },
+      { label: 'Model (istenen → gerçek)', render: (t) => el('span', { class: 'mono' }, `${t.requested_model ?? '—'} → ${t.actual_model ?? '—'}`) },
       { label: 'Sonuç', render: (t) => badge(t.outcome, t.outcome === 'Completed' ? 'good' : 'warn') },
       { label: 'Degraded', render: (t) => (t.degraded ? badge('degraded', 'bad', 'alert') : '') },
-      { label: 'Validator', render: (t) => el('span', { class: 'mono', text: JSON.stringify(t.validator_results).slice(0, 80) }) },
-      { label: 'USD', num: true, render: (t) => num(t.actual_usd, 6) }, { label: 'ms', num: true, key: 'latency_ms' },
+      { label: 'Validator', render: (t) => (Number(t.validator_failures) > 0 ? badge(`${t.validator_failures} ret: ${(t.failed_validators || []).join(', ')}`, 'warn', 'x') : badge('geçti', 'good', 'check')) },
+      { label: 'Güvenlik', num: true, render: (t) => (Number(t.safety_violations) > 0 ? el('strong', { class: 'neg', text: String(t.safety_violations) }) : '0') },
+      { label: 'ms', num: true, key: 'latency_ms' }, { label: 'Token (girdi / çıktı)', num: true, render: (t) => `${t.input_tokens} / ${t.output_tokens}` },
+      { label: 'USD (tahmin → gerçek)', num: true, render: (t) => `${num(t.estimated_usd, 6)} → ${num(t.actual_usd, 6)}` },
     ], traces)));
 }
 
@@ -721,7 +827,8 @@ const renderers = { overview: renderOverview, sleeves: renderSleeves, radar: ren
 function showLogin(message) {
   sessionStorage.removeItem(TOKEN_KEY);
   clearInterval(state.timer);
-  for (const id of ['tabs', 'refresh', 'logout']) $(id).hidden = true;
+  for (const id of ['tabs', 'refresh', 'logout', 'alarm-strip']) $(id).hidden = true;
+  $('alarm-strip').replaceChildren();
   document.querySelectorAll('.view').forEach((v) => { v.hidden = true; v.replaceChildren(); });
   $('login').hidden = false;
   $('login-error').hidden = !message;
@@ -731,6 +838,7 @@ function showLogin(message) {
 async function refresh() {
   const view = $(`view-${state.tab}`);
   try {
+    await renderAlarmStrip();
     await renderers[state.tab](view);
     $('updated').textContent = `Güncellendi ${new Date().toLocaleTimeString('tr-TR', { hour12: false })}`;
   } catch (e) {

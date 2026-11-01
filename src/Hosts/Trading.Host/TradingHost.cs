@@ -53,6 +53,7 @@ public static class TradingHost
         builder.Services.AddSingleton(sp => new OpsService(Required(configuration, "OpsApi"), sp.GetRequiredService<TimeProvider>(), credentials is not null));
         builder.Services.AddSingleton(sp => new TestnetRuntime(credentials is null ? null : CreateExecutor(sp, credentials)));
         builder.Services.AddSingleton(_ => new DashboardQueries(Required(configuration, "OpsApi")));
+        builder.Services.AddSingleton(_ => Budget(AiConfiguration.LoadDefault()));
         builder.Services.AddSingleton(_ => new RadarService(Required(configuration, "OpsApi"), watch));
         builder.Services.AddSingleton(sp => new LiveCandleStore(Required(configuration, "Trading")));
         builder.Services.AddSingleton(_ => new AllocatorStore(Required(configuration, "Trading")));
@@ -133,6 +134,10 @@ public static class TradingHost
     /// The allocator (ADR-0023): ledger → AI kill switch → Gemini (its own host guard) → call guard → router → advisor,
     /// all on the trading_app connection. Without the runtime key file no model can be called: every decision is T11.
     /// </summary>
+    /// <summary>The AI caps as plain values for the dashboard and the alarms (Execution stays AI-free; ADR-0024 §1).</summary>
+    public static AiBudget Budget(AiConfiguration ai) =>
+        new(ai.Spend.MonthlyCapUsd, ai.Spend.JobShares.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value, StringComparer.Ordinal));
+
     public static IAllocationAdvisor CreateAllocator(IConfiguration configuration, string connection, TimeProvider time)
     {
         if (configuration["Trading:SecretsDirectory"] is not { Length: > 0 } secrets || ReadSecret(Path.Combine(secrets, GeminiKeyFile)) is not { Length: > 0 } key)

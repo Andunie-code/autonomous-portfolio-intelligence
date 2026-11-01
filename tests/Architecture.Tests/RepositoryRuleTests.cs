@@ -80,6 +80,8 @@ public class RepositoryRuleTests
     [InlineData("PowerShell(*-File*m7-*)")]
     [InlineData("Bash(*-File*m8-*)")]
     [InlineData("PowerShell(*-File*m8-*)")]
+    [InlineData("Bash(*-File*m10-*)")]
+    [InlineData("PowerShell(*-File*m10-*)")]
     public void Claude_project_settings_deny_holdout_and_secret_access(string rule)
     {
         Assert.Contains(rule, ReadPermissionList("deny"));
