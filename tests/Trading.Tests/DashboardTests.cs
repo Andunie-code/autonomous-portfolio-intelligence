@@ -321,6 +321,27 @@ public class DashboardTests(OpsDatabase fixture) : IClassFixture<OpsDatabase>
     }
 
     [Fact]
+    public async Task The_radar_keeps_showing_strategies_after_they_become_testnet_active()
+    {
+        // Regression (M10 Gate C, 2026-11-01): with every strategy TestnetActive the proximity matrix was empty, because the
+        // radar selected PaperTrading members only. A TestnetActive strategy keeps its paper run (U-M6-4) and stays on the radar.
+        var db = await PaperAsync();
+        foreach (var member in new[] { 1, 2 })
+        {
+            var id = await db.ScalarAsync<long>($"SELECT id FROM research.frozen_strategies WHERE cohort_id = 1 AND member_index = {member}");
+            await db.ExecuteAsync("INSERT INTO research.lifecycle_events (frozen_id, from_state, to_state, actor, evidence) VALUES ($1, 'PaperTrading', 'TestnetActive', 'user', '{\"d30\": {}, \"confirm\": true}')",
+                "ops_api", id);
+        }
+
+        var (app, http) = await StartAsync(db);
+        await using var _ = app;
+        Assert.All((await Json(http, "/sleeves")).EnumerateArray(), s => Assert.Equal("TestnetActive", s.GetProperty("state").GetString()));
+        var radar = await Json(http, "/radar");
+        Assert.Equal(["ema-trend", "supertrend"], radar.GetProperty("strategies").EnumerateArray().Select(s => s.GetProperty("name").GetString()));
+        Assert.All(radar.GetProperty("strategies").EnumerateArray(), s => Assert.NotEqual(0, s.GetProperty("symbols").GetArrayLength()));
+    }
+
+    [Fact]
     public void Watch_symbols_are_upper_case_usdt_symbols_only()
     {
         var configuration = new ConfigurationBuilder()

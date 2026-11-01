@@ -57,7 +57,7 @@
 
 ## 6. Açık kalanlar (kullanıcı)
 1. ~~H-ENV'in yeniden koşulması~~: **tamamlandı** (2026-11-01, 78 satır, 0 hata; §3).
-2. **İlk Testnet reconciliation kaydı** ve ilk gerçek strateji emri: `m6-update.ps1 -ChecksOnly` ile temiz görülmeli; ilk emirden sonra dashboard'da zincir kontrolü (M9 §4).
+2. ~~İlk Testnet reconciliation kaydı~~: **temiz** (2026-11-01 00:25 UTC). Açık kalan: ilk gerçek strateji emrinden sonra dashboard'da zincir kontrolü (M9 §4).
 3. **2026-10 AI fatura mutabakatı:** `scripts/m4-ai.ps1 reconcile --month 2026-10 --invoice-try <TL> --usd-try <kur>`.
 4. **30 günlük prova sonu** (≥ 2026-12-01): döngüler, kesintiler, reconciliation, emir yaşam döngüsü sayıları, sıfırlama/rebaseline, alarm geçmişi ve `docker stats` belleği bu rapora ek olarak işlenir (runbook §7). `requirements.md` §8'deki bellek TBD'si bu ölçümle kapanır.
 5. ~~Kohort 1'in Testnet terfisi~~: **yapıldı** (U, 2026-11-01; §7).
@@ -67,5 +67,20 @@
 - **D30 (terfi anı, kullanıcı çıktısı):** `days=10,24/10`, `bars=61/60`, `criticalErrors7d=0`, `eligible=True`.
 - **Durum:** lifecycle `TestnetActive=5`. Beş strateji Testnet'te; paper run'ları gölge olarak paralel sürer (U-M6-4).
 - **Sermaye (`m6-protocol.md` v1.1 §13, A-4):** Testnet run'ı kohort başına 5.000 USDT nominaldir. İki kohortun en fazla maruziyeti yaklaşık 8.000 USDT'dir ve hesabın yaklaşık 10.000 USDT bakiyesine sığar.
-- **Kontrol edilecek:** Kohort 1'in Testnet run'ı bir sonraki döngüde açılır. Bundan sonraki `m6-update.ps1 -ChecksOnly` çıktısında açık run 2, bilinmeyen emir 0, korumasız pozisyon 0 ve temiz reconciliation görülmelidir. Bu kontrol 30 günlük prova gözlemine dahildir.
+- **Kontrol (kullanıcı, 2026-11-01):**
+  - açık Testnet run **2**;
+  - Testnet reconciliation **temiz** (2026-11-01 00:25 UTC);
+  - dashboard'un 7 sekmesi tarayıcıda kontrol edildi.
 - 30 günlük prova Kohort 0 için 2026-11-01'de, Kohort 1 için terfisiyle başladı.
+
+## 8. Ek — Sinyal radarı düzeltmesi (2026-11-01)
+- **Hata (kullanıcının tarayıcı kontrolü):** beş strateji de `TestnetActive` olunca "Sinyal yakınlığı (aktif stratejiler)" tablosu boşaldı (`Eşleşen parite yok.`). Alttaki gösterge tablosu doluydu.
+- **Kök neden:** `RadarService` stratejileri yalnızca `PaperTrading` durumundan seçiyordu. Oysa `TestnetActive` bir strateji paper run'ını sürdürür (U-M6-4); `PaperTrader` da `PaperStates = {PaperTrading, TestnetActive}` kullanır.
+- **Düzeltme:**
+  - Radar `PaperTrader.PaperStates`'i kullanır.
+  - Pozisyonlar yalnızca paper run'ından okunur. Strateji Testnet'e geçince aynı strateji ve parite için ikinci bir pozisyon satırı gelir; radar bunlardan birini belirsiz biçimde seçiyordu.
+- **Regresyon testi:** `DashboardTests.The_radar_keeps_showing_strategies_after_they_become_testnet_active`. Düzeltme olmadan kırmızı (boş liste), düzeltmeyle yeşil.
+- Diğer durum filtreleri gözden geçirildi:
+  - D30 kartı iki durumu da içerir.
+  - `PaperTrader`'ın yeni run açma koşulu bilinçli olarak yalnızca `PaperTrading`'dir (kohort paper'a ilk girdiğinde run açılır).
+- **`no-volatility` reddi** (Supertrend, LINKUSDT, 31.10 16:00 UTC) hata değildir. T11 kuralıdır: ters volatilite için son 31 günün gün sonu kapanışlarından biri eksikse aday reddedilir (`InverseVolatilityAllocation.Volatility`; M2 hash'leriyle kilitli). Isınma 45 gündür. Muhtemel neden, o paritenin canlı mumlarında bir günün 00:00 UTC'de kapanan mumunun eksik olmasıdır. Claude Code canlı mumları okumadığı için bu doğrulanmadı; canlı mum anomalisi ve boşlukları paper raporunda görülür.

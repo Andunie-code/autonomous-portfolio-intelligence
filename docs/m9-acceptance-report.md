@@ -26,4 +26,5 @@
 ## 4. Sınırlar ve açık kalanlar
 - Kriterlerin kanıtı sentetik veriyle yapılan HTTP ve sorgu testleridir (ADR-0020 §6). Gerçek ortamdaki görünüm kullanıcı tarafından kontrol edildi (Kapı C).
 - Kapanışta Kohort 0'ın Testnet'te emri yoktu (`positions=0`). Gerçek bir Testnet emrinden zincirin tarayıcıda açılması, ilk emirden sonra kullanıcı tarafından kontrol edilir ve M10 prova ekine not edilir.
+- **Kapanış sonrası düzeltme (2026-11-01):** strateji `TestnetActive` olunca sinyal radarının yakınlık matrisi boşalıyordu. Düzeltildi ve regresyon testi eklendi (`m10-acceptance-report.md` §8).
 - Allocator gölge modda olduğundan gerçek adımlarda `AllocatorAdjusted` olayı oluşmaz; zincir gölge öneriyi ve izini gösterir. Aktif mod ayrı karardır (M8).

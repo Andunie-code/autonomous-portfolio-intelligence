@@ -2,6 +2,14 @@
 
 M0 ile birlikte git'e geçildi; bundan sonra ayrıntılı geçmiş git'te, karar düzeyindeki değişiklikler burada.
 
+## 2026-11-01 — Sinyal radarı düzeltmesi: `TestnetActive` stratejiler radarda kalır
+- **Hata (kullanıcının tarayıcı kontrolü):** beş strateji de `TestnetActive` olunca yakınlık matrisi boşaldı. Neden: `RadarService` stratejileri yalnızca `PaperTrading` durumundan seçiyordu.
+- **Düzeltme:** radar `PaperTrader.PaperStates` (`PaperTrading`, `TestnetActive`) kullanır. Pozisyonlar yalnızca paper run'ından okunur; Testnet run'ı aynı strateji ve parite için ikinci bir satır getiriyordu ve seçim belirsizdi.
+- **Regresyon testi:** `DashboardTests.The_radar_keeps_showing_strategies_after_they_become_testnet_active` (düzeltme olmadan kırmızı).
+- **Kapı C durumu (kullanıcı):** `TestnetActive=5`, açık Testnet run 2, Testnet reconciliation temiz (00:25 UTC), 7 sekmenin tarayıcı kontrolü.
+- **`no-volatility` reddi** bir hata değil, T11 kuralıdır (31 günlük gün sonu kapanışından biri eksik; `m10-acceptance-report.md` §8).
+- **`verify.ps1`:** yeşil, **796 test** (Trading 121).
+
 ## 2026-11-01 — Tam H-ENV koşusu ve Kohort 1'in Testnet terfisi (U)
 - **H-ENV (aylık kanıt):** `m5-henv-20261101T002326Z.txt`, SHA-256 `a71b3da30fad777a3127069985838ac09c84b60a235fdbffe93086b2f16ebf58`.
   - `holdout-evaluator` durdurulduktan sonra düzeltilmiş script'le koşuldu: **78 satır, 0 hata**; zorunlu kimliklerin hepsi var; `henv_run_recorded` PASS.

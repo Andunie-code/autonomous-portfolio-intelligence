@@ -8,7 +8,7 @@ using PortfolioIntelligence.MarketData.Live;
 namespace PortfolioIntelligence.Execution.Radar;
 
 /// <summary>
-/// Loads the radar's inputs as ops_api (live candles, frozen strategies in PaperTrading, latest positions) and keeps
+/// Loads the radar's inputs as ops_api (live candles, frozen strategies in PaperTrading or TestnetActive, latest paper positions) and keeps
 /// the last report: it is recomputed only when a new bar, strategy state or position appears (ADR-0020 §5).
 /// Computed on request, outside the trading cycle.
 /// </summary>
@@ -59,7 +59,10 @@ public sealed class RadarService(string connectionString, IReadOnlyList<string> 
         }
     }
 
-    /// <summary>Members in PaperTrading, from their frozen manifests (definition hashes verified by the reader).</summary>
+    /// <summary>
+    /// Members that are trading (PaperTrading or TestnetActive, <see cref="PaperTrader.PaperStates"/>: a TestnetActive
+    /// strategy keeps its paper run), from their frozen manifests (definition hashes verified by the reader).
+    /// </summary>
     private async Task<IReadOnlyList<RadarStrategy>> StrategiesAsync(CancellationToken ct)
     {
         await using var connection = new NpgsqlConnection(connectionString);
@@ -67,9 +70,10 @@ public sealed class RadarService(string connectionString, IReadOnlyList<string> 
         await using var command = new NpgsqlCommand("""
             SELECT f.cohort_id, f.member_index, f.manifest
             FROM research.frozen_strategies f
-            WHERE coalesce((SELECT l.to_state FROM research.lifecycle_events l WHERE l.frozen_id = f.id ORDER BY l.id DESC LIMIT 1), 'Candidate') = 'PaperTrading'
+            WHERE coalesce((SELECT l.to_state FROM research.lifecycle_events l WHERE l.frozen_id = f.id ORDER BY l.id DESC LIMIT 1), 'Candidate') = ANY($1)
             ORDER BY f.cohort_id, f.member_index
             """, connection);
+        command.Parameters.AddWithValue(PaperTrader.PaperStates.Order(StringComparer.Ordinal).ToArray());
         var result = new List<RadarStrategy>();
         await using var reader = await command.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
@@ -99,7 +103,8 @@ public sealed class RadarService(string connectionString, IReadOnlyList<string> 
             JOIN trading.paper_runs r ON r.id = b.run_id
             CROSS JOIN LATERAL jsonb_array_elements(r.config -> 'sleeves') WITH ORDINALITY AS s(value, ordinality)
             CROSS JOIN LATERAL jsonb_array_elements(b.positions) AS p
-            WHERE s.ordinality - 1 = b.sleeve AND b.bar_time = (SELECT max(bar_time) FROM trading.balance_snapshots WHERE run_id = b.run_id)
+            WHERE r.venue = 'paper' -- the paper run is the radar's reference; a Testnet run of the same strategy would duplicate it
+              AND s.ordinality - 1 = b.sleeve AND b.bar_time = (SELECT max(bar_time) FROM trading.balance_snapshots WHERE run_id = b.run_id)
             ORDER BY 1, 2
             """, connection);
         var result = new List<RadarPosition>();
